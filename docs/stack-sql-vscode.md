@@ -1,4 +1,4 @@
-# Stack SQL + VS Code + PostgreSQL + Claude Code
+ Stack SQL + VS Code + PostgreSQL + Claude Code
 
 Este documento recoge la guía paso a paso para configurar un entorno de trabajo SQL con:
 
@@ -23,5 +23,19 @@ Estado: COMPLETADO.
 
 - Ruta base de proyectos: ~/dev
 - Carpeta del proyecto de stack: ~/dev/stack-sql-vscode
+- Repo Git inicializado en esa carpeta.
+- Primer commit con este documento y CLAUDE.md.
+
+Estado: COMPLETADO.
+
+## Paso 3 – Integración con Claude
+
+- Archivo CLAUDE.md creado en la raíz del proyecto.
+- CLAUDE.md describe:
+  - Quién soy.
+  - Objetivo del proyecto.
+  - Forma de trabajo paso a paso.
+  - Entorno asumido.
+- (Opcional) Proyecto creado en claude.ai para este stack.
 
 Estado: EN PROGRESO.
