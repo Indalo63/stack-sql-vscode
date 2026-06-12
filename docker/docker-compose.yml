@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: stack-sql-postgres
+    environment:
+      POSTGRES_USER: stack_user
+      POSTGRES_PASSWORD: stack_pass
+      POSTGRES_DB: stack_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../sql/ddl:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
