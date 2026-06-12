@@ -90,5 +90,11 @@ Estado: COMPLETADO.
   - SELECT * FROM sales.customers;
   - SELECT * FROM sales.orders;
   - Join básico entre customers y orders.
+- Nuevas consultas de ejemplo:
+  - sql/queries/customers_with_multiple_orders.sql
+- Scripts DML de ejemplo:
+  - sql/dml/... (seeds para el esquema sales)
+
 
 Estado: COMPLETADO.
+
