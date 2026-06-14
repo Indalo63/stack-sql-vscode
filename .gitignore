@@ -1,0 +1,19 @@
+# Datos persistentes de PostgreSQL (no deben versionarse)
+docker/data/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# VS Code (configuración personal, no del proyecto)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/*.code-workspace
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
