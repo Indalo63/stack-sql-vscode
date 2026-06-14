@@ -31,13 +31,13 @@ run_option() {
             bash "$PROJECT_DIR/scripts/setup.sh"
             ;;
         2)
-            make -C "$PROJECT_DIR" stop
+            make -sC "$PROJECT_DIR" stop
             ;;
         3)
             echo "  ⚠️  Esto borrará todos los datos de la base de datos."
             read -rp "  ¿Confirmas? [s/N]: " confirm
             if [[ "$confirm" =~ ^[sS]$ ]]; then
-                make -C "$PROJECT_DIR" reset
+                make -sC "$PROJECT_DIR" reset
             else
                 echo "  Cancelado."
             fi
@@ -47,10 +47,10 @@ run_option() {
             echo "  VS Code abierto."
             ;;
         5)
-            make -C "$PROJECT_DIR" psql
+            make -sC "$PROJECT_DIR" psql
             ;;
         6)
-            make -C "$PROJECT_DIR" status
+            make -sC "$PROJECT_DIR" status
             ;;
         0)
             echo "  Hasta luego."
