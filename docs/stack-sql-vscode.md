@@ -112,6 +112,8 @@ docker exec -i stack-sql-postgres psql -U postgres -d stack_db \
 
 Esto crea las tablas `sales.customers` y `sales.orders`.
 
+Las convenciones de nomenclatura del esquema están documentadas en `docs/sql/style-guide.md`.
+
 ### Cargar datos de ejemplo
 
 ```bash
