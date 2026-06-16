@@ -132,7 +132,7 @@ ORDER BY a.orden_global;
 -- =============================================================================
 -- 5. BÚSQUEDA SEMÁNTICA CON PGVECTOR
 -- Requiere embeddings generados con scripts/generate_embeddings.py
--- Modelo: text-embedding-3-small (OpenAI) → 1536 dimensiones
+-- Modelo: paraphrase-multilingual-mpnet-base-v2 (HuggingFace) → 768 dimensiones
 -- =============================================================================
 
 -- Estado de embeddings generados

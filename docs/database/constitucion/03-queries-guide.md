@@ -101,8 +101,8 @@ articulo | titulo                                      | capitulo | seccion | co
 Pregunta del usuario
       │
       ▼
-Modelo de embeddings (text-embedding-3-small)
-      │  genera vector de 1536 dimensiones
+Modelo de embeddings (paraphrase-multilingual-mpnet-base-v2 — HuggingFace)
+      │  genera vector de 768 dimensiones
       ▼
 Consulta SQL con operador <=> (distancia coseno)
       │  devuelve top-N artículos más similares
@@ -153,7 +153,7 @@ FROM legislacion.articulos;
 Si `sin_embedding > 0`, ejecutar:
 
 ```bash
-export OPENAI_API_KEY=sk-...
+export HF_TOKEN=hf_xxxxxxxxxxxx
 python3 scripts/generate_embeddings.py
 ```
 

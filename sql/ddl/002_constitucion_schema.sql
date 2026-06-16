@@ -59,7 +59,7 @@ CREATE TABLE legislacion.articulos (
                         )),
     contenido    text   NOT NULL,
     orden_global int    NOT NULL,
-    embedding    vector(1536)
+    embedding    vector(768)
 );
 
 -- Índices de navegación

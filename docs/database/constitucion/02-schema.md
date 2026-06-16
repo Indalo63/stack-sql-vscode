@@ -26,7 +26,7 @@ El preámbulo, los 169 artículos y las 15 disposiciones son estructuralmente id
 
 ### Dimensión del vector de embeddings
 
-Se usa `vector(1536)` para ser compatible con `text-embedding-3-small` de OpenAI (el modelo de embeddings más eficiente en coste/calidad para texto jurídico en español). El índice HNSW con similitud coseno es el estándar para búsqueda semántica en pgvector.
+Se usa `vector(768)` para ser compatible con `paraphrase-multilingual-mpnet-base-v2` de HuggingFace, modelo multilingüe gratuito optimizado para español. El índice HNSW con similitud coseno es el estándar para búsqueda semántica en pgvector.
 
 ---
 
@@ -117,7 +117,7 @@ Unidad mínima de contenido. Almacena el texto literal de cada artículo, dispos
 | tipo         | text          | NOT NULL, CHECK                      | Ver valores permitidos abajo                 |
 | contenido    | text          | NOT NULL                             | Texto literal extraído del BOE               |
 | orden_global | int           | NOT NULL                             | Posición lineal en el documento (1–185)      |
-| embedding    | vector(1536)  | nullable                             | Vector semántico generado con text-embedding-3-small |
+| embedding    | vector(768)   | nullable                             | Vector semántico generado con paraphrase-multilingual-mpnet-base-v2 (HuggingFace) |
 
 **Valores permitidos para `tipo`:**
 
