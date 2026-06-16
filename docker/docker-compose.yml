@@ -10,3 +10,16 @@ services:
       - "5432:5432"
     volumes:
       - ./data/postgres_pgvector:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: stack-sql-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: indaleciopf@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: postgres
+    ports:
+      - "5050:80"
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgres
