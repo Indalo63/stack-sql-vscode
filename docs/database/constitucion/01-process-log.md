@@ -152,7 +152,7 @@ Infraestructura pgvector operativa y verificada. 185 artículos listos para reci
 
 ### Estado
 
-Infraestructura completada. Generación de embeddings pendiente de integración con API.
+Completado. 185/185 embeddings generados y verificados. Búsqueda semántica operativa.
 
 ---
 
@@ -160,5 +160,7 @@ Infraestructura completada. Generación de embeddings pendiente de integración 
 
 Último paso completado: **Paso 6**
 
-La base de datos legislativa está operativa y lista para integrarse con un modelo de lenguaje.
-Próximo hito: ejecutar `scripts/generate_embeddings.py` con `OPENAI_API_KEY` para poblar los vectores y habilitar la búsqueda semántica real.
+La base de datos legislativa está completamente operativa:
+- 185 artículos con texto oficial del BOE
+- 185 embeddings generados con text-embedding-3-small (OpenAI)
+- Búsqueda semántica por similitud coseno verificada y funcionando
