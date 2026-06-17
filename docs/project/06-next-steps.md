@@ -4,83 +4,70 @@
 
 Este documento define los próximos pasos operativos del proyecto `stack-sql-vscode`.
 
-Su función es mantener una dirección clara de avance, separando prioridades inmediatas, evolución de medio plazo y posibles expansiones futuras sin mezclar planificación con estado ya implementado.
+## Estado actual (punto de partida)
 
-## Current priority
+El proyecto tiene una base de datos legislativa completamente operativa:
 
-La prioridad actual del proyecto no es añadir más piezas nuevas de inmediato, sino consolidar la base ya creada.
+- Constitución Española (1978) cargada desde el BOE (texto oficial)
+- 185 elementos (preámbulo + artículos + disposiciones)
+- Embeddings generados con `text-embedding-3-small` (OpenAI, vector 1536)
+- Búsqueda semántica por similitud coseno funcionando con pgvector
 
-Esto significa:
+El siguiente hito es construir la **aplicación de Q&A jurídico** sobre esta base.
 
-- cerrar y revisar la documentación principal del proyecto
-- asegurar coherencia entre archivos de contexto y estado real
-- confirmar que la base PostgreSQL + Docker + `pgvector` está bien entendida y documentada
-- preparar el terreno para pasos posteriores sin precipitar una expansión prematura
+## Próximo hito — App de Q&A jurídico
 
-El foco inmediato es claridad, continuidad y control.
+### Objetivo
 
-## Short-term next steps
+Dado el texto de una pregunta del usuario, la app debe:
 
-Los próximos pasos de corto plazo deberían ser los siguientes:
+1. Generar el embedding de la pregunta
+2. Buscar los artículos más relevantes en la base de datos (pgvector)
+3. Enviar esos artículos como contexto a Claude junto con la pregunta
+4. Devolver una respuesta fundamentada en el texto de la CE
 
-1. completar y revisar todos los archivos de `docs/project/`
-2. revisar `README.md` para asegurar alineación con la nueva estructura documental
-3. verificar que `CLAUDE.md` refleja correctamente el estado, objetivos y reglas del proyecto
-4. revisar la documentación SQL existente para eliminar posibles duplicidades o desalineaciones
-5. validar el estado actual del contenedor PostgreSQL y de la extensión `vector`
-6. dejar definido un punto de partida claro para la siguiente fase técnica
+### Pipeline técnico
 
-Estos pasos deben cerrar la fase de consolidación documental y operativa.
+```
+Pregunta del usuario
+      │
+      ▼
+OpenAI text-embedding-3-small  →  vector(1536)
+      │
+      ▼
+pgvector <=>  →  top-N artículos más similares
+      │
+      ▼
+Claude (claude-sonnet-4-6)  +  artículos como contexto
+      │
+      ▼
+Respuesta con cita del artículo correspondiente
+```
 
-## Medium-term next steps
+### Opciones de implementación
 
-Una vez consolidada la base, los siguientes pasos de medio plazo podrían ser:
+| Opción | Complejidad | Descripción |
+|---|---|---|
+| Script Python | Baja | Script de consola que acepta una pregunta y devuelve respuesta |
+| API REST (FastAPI) | Media | Endpoint HTTP que expone el pipeline |
+| Integración n8n | Media | Flujo visual sin código en el stack Docker |
 
-1. ampliar el esquema SQL con tablas o casos de uso más cercanos al trabajo vectorial
-2. crear ejemplos reales de uso de `pgvector`
-3. diseñar una primera tabla con embeddings
-4. documentar consultas básicas de similitud
-5. explorar cómo encajaría `n8n` dentro del flujo futuro del proyecto
-6. definir una primera miniarquitectura para experimentos tipo RAG
+**Recomendación para empezar:** script Python de consola — valida el pipeline completo antes de añadir capas.
 
-Estos pasos solo deberían abordarse cuando la base actual ya esté suficientemente estable y bien documentada.
+## Pasos inmediatos
 
-## Readiness conditions before vector work
+1. Escribir `scripts/qa_constitucion.py` — script de Q&A con el pipeline completo
+2. Verificar la calidad de las respuestas con preguntas de prueba
+3. Decidir la interfaz definitiva (consola / API / n8n)
+4. Documentar el módulo Q&A en `docs/`
 
-Antes de avanzar seriamente hacia trabajo vectorial, deberían cumplirse estas condiciones mínimas:
+## Expansiones futuras
 
-- la documentación principal del proyecto está cerrada y coherente
-- el entorno local funciona sin fricción relevante
-- PostgreSQL y `pgvector` están verificados y entendidos
-- existe claridad sobre el caso de uso que justificaría embeddings o búsqueda semántica
-- la base relacional actual está suficientemente asentada
-- el siguiente experimento técnico puede formularse como un paso pequeño y verificable
+- Extender el módulo a otras leyes (ET, LOPD, LCSP) siguiendo el mismo proceso
+- Interfaz web sencilla (Streamlit o FastAPI + HTML)
+- Integración con n8n para automatizar flujos de preguntas
+- Histórico de preguntas y respuestas en base de datos
 
-No conviene entrar en una fase vectorial real solo porque la capacidad técnica exista.
+## Review rule
 
-## Possible future expansions
-
-Más adelante, el proyecto podría ampliarse en direcciones como estas:
-
-- tablas vectoriales reales con datos de prueba
-- pipeline de ingesta y generación de embeddings
-- consultas híbridas relacionales + vectoriales
-- integración práctica con `n8n`
-- automatización parcial del flujo documental o técnico
-- experimentos controlados de recuperación semántica
-- evolución hacia un stack pequeño de aprendizaje aplicado sobre RAG
-
-Estas líneas son posibilidades razonables, pero no prioridades inmediatas.
-
-## Review rule for this file
-
-Este archivo debe revisarse cada vez que cambie la prioridad real del proyecto.
-
-La regla de mantenimiento es:
-
-- mover a documentación histórica lo ya realizado
-- mantener aquí solo lo que sigue pendiente o vigente
-- evitar listas infladas de ideas sin compromiso operativo
-- reescribir prioridades cuando cambie el foco real
-
-El valor de este archivo depende de que siga siendo corto, concreto y verdadero.
+Este archivo debe actualizarse cada vez que se complete un hito o cambie la prioridad.

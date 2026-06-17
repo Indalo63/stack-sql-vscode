@@ -2,201 +2,99 @@
 
 ## Purpose of this document
 
-Este documento describe el estado actual real del proyecto `stack-sql-vscode` en el momento de su última actualización válida.
+Este documento describe el estado actual real del proyecto `stack-sql-vscode`.
 
-Su función es permitir retomar el trabajo técnico sin depender de la memoria de sesiones anteriores, dejando claro qué existe ya, qué está verificado y qué queda pendiente de forma inmediata.
+Su función es permitir retomar el trabajo técnico sin depender de la memoria de sesiones anteriores, dejando claro qué existe, qué está verificado y cuál es el siguiente paso.
 
 ## Project identity
 
-`stack-sql-vscode` es un proyecto de aprendizaje y trabajo práctico orientado a SQL con PostgreSQL, VS Code, Docker y Claude Code.
-
-El objetivo actual del proyecto es construir una base técnica y documental sólida para:
-
-- practicar SQL de forma estructurada
-- usar Claude Code como copiloto técnico, profesor y apoyo de arquitectura
-- preparar el terreno para una futura integración con `pgvector`, `n8n` y flujos de tipo RAG
+`stack-sql-vscode` es un proyecto técnico personal orientado a SQL con PostgreSQL, VS Code, Docker y Claude Code. Su objetivo ha evolucionado desde la práctica SQL básica hacia la construcción de una base de datos legislativa con búsqueda semántica, como base para una aplicación de Q&A jurídico.
 
 ## Working environment
 
-Entorno de trabajo actual:
+- Sistema anfitrión: Windows con WSL2 (Ubuntu 24.04 LTS)
+- Editor: VS Code con Claude Code
+- Control de versiones: Git
+- Contenedores: Docker Desktop con integración WSL2
+- Base de datos: PostgreSQL 16 con pgvector
+- Ruta base: `~/dev/stack-sql-vscode`
 
-- sistema anfitrión: Windows
-- entorno de desarrollo principal: WSL2 con Ubuntu
-- editor: VS Code
-- control de versiones: Git
-- contenedores: Docker
-- base de datos principal: PostgreSQL
-- soporte vectorial: `pgvector`
-- asistente de trabajo: Claude Code
+## Docker stack
 
-La ruta base de trabajo del proyecto es:
+| Servicio | Imagen | Puerto | Contenedor |
+|---|---|---|---|
+| PostgreSQL + pgvector | `pgvector/pgvector:pg16` | 5432 | `stack-sql-postgres` |
+| pgAdmin 4 | `dpage/pgadmin4:latest` | 5050 | `stack-sql-pgadmin` |
 
-```text
-~/dev/stack-sql-vscode
-```
+- Base de datos: `stack_db` / usuario: `postgres` / contraseña: `postgres`
+- pgAdmin: `indaleciopf@gmail.com` / contraseña: `postgres`
+- Levantar stack: `docker compose -f docker/docker-compose.yml up -d`
 
-## Repository structure
+## Esquemas activos en stack_db
 
-Estructura relevante del repositorio:
+### Esquema `sales` (práctica SQL básica)
 
-- `docs/`
-  - documentación funcional y de proyecto
-- `docs/database/`
-  - documentación del esquema y estructura de datos
-- `docs/sql/`
-  - guía de estilo SQL y recetas de prompts
-- `docs/project/`
-  - contexto general del proyecto, arquitectura, bitácora, decisiones y próximos pasos
-- `sql/`
-  - scripts SQL del proyecto
-- `sql/ddl/`
-  - scripts de definición de esquema
-- `sql/dml/`
-  - datos de ejemplo y scripts de carga
-- `sql/queries/`
-  - consultas SQL de práctica y ejemplos
-- `docker/`
-  - infraestructura local basada en Docker
-- `CLAUDE.md`
-  - contexto base del proyecto para Claude
+Modelo mínimo de clientes y pedidos para practicar SQL relacional.
 
-## Installed and configured tools
+- `sales.customers` — clientes
+- `sales.orders` — pedidos
 
-Herramientas que forman parte del estado actual del proyecto:
+Scripts: `sql/ddl/001_init_schema.sql`, `sql/dml/001_seed_sales.sql`
 
-- Git en WSL2
-- VS Code como editor principal
-- Docker para ejecutar PostgreSQL localmente
-- PostgreSQL dentro de contenedor Docker
-- extensión `pgvector` disponible a través de la imagen usada
-- documentación SQL base ya creada
-- recetas de prompts para Claude Code ya definidas
+### Esquema `legislacion` (base de datos legislativa CE)
 
-Herramientas previstas pero no consideradas todavía como parte cerrada del estado operativo:
+Base de datos de la Constitución Española (1978) con búsqueda semántica mediante pgvector.
 
-- `n8n` self-hosted en Docker
-- automatismos RAG completos
-- tablas vectoriales de uso real más allá de la verificación de instalación
+**Tablas:**
+- `legislacion.leyes` — metadatos de la ley
+- `legislacion.titulos` — 11 títulos (Preliminar + I al X)
+- `legislacion.capitulos` — 11 capítulos (Títulos I, III y VIII)
+- `legislacion.secciones` — 2 secciones (Título I, Capítulo Segundo)
+- `legislacion.articulos` — 185 elementos: preámbulo, 169 artículos, 15 disposiciones
 
-## PostgreSQL and Docker status
+**Estado:**
+- Texto oficial extraído del BOE (permalink ELI)
+- 185/185 embeddings generados con `text-embedding-3-small` (OpenAI, vector 1536)
+- Índice HNSW operativo para búsqueda semántica por similitud coseno
+- Búsqueda semántica verificada y funcionando
 
-Estado actual de la infraestructura local de base de datos:
+Scripts: `sql/ddl/002_constitucion_schema.sql`, `sql/dml/002_constitucion_seed.sql`
+Documentación: `docs/database/constitucion/`
 
-- archivo de infraestructura principal: `docker/docker-compose.yml`
-- versión de compose declarada: `3.9`
-- servicio: `postgres`
-- imagen actual: `pgvector/pgvector:pg16`
-- nombre del contenedor: `stack-sql-postgres`
-- usuario de PostgreSQL: `postgres`
-- contraseña de PostgreSQL: `postgres`
-- base de datos principal: `stack_db`
-- puerto expuesto: `5432:5432`
-- volumen local de datos: `./data/postgres_pgvector:/var/lib/postgresql/data`
+## Extensión pgvector
 
-Esto significa que PostgreSQL ya no está definido como `postgres:16` genérico, sino como una imagen preparada para trabajar con `pgvector`.
+- Versión: `0.8.2`
+- Esquema: `public`
+- Verificada con `\dx` en `stack_db`
 
-## pgvector status
+## Documentación existente
 
-El proyecto ha evolucionado desde una instalación base de PostgreSQL en Docker hacia una instalación con soporte vectorial integrado.
+| Archivo | Contenido |
+|---|---|
+| `docs/database/schema-summary.md` | Resumen de ambos esquemas (sales + legislacion) |
+| `docs/database/constitucion/` | Documentación completa del módulo legislativo (4 archivos) |
+| `docs/sql/style-guide.md` | Guía de estilo SQL del proyecto |
+| `docs/sql/prompt-recipes.md` | Recetas de prompts para Claude Code |
+| `docs/project/` | Contexto, arquitectura, bitácora, decisiones y próximos pasos |
 
-Estado verificado:
+## Scripts disponibles
 
-- imagen en uso: `pgvector/pgvector:pg16`
-- extensión activada en la base: `vector`
-- verificación realizada con `\dx`
-- versión observada de la extensión: `0.8.2`
-- esquema donde aparece instalada: `public`
+| Script | Propósito |
+|---|---|
+| `scripts/generate_embeddings.py` | Genera embeddings con OpenAI (requiere `OPENAI_API_KEY`) |
+| `scripts/menu.sh` | Menú de gestión del stack |
+| `scripts/setup.sh` | Setup inicial del entorno |
+| `scripts/launcher.bat` | Lanzador desde Windows |
 
-Interpretación práctica:
+## Objetivo actual
 
-- PostgreSQL está preparado para almacenar vectores
-- el proyecto puede evolucionar hacia búsquedas por similitud
-- ya existe base técnica para trabajar con embeddings y futuras automatizaciones RAG
-
-## SQL documentation status
-
-La documentación SQL existente y ya disponible en el proyecto incluye:
-
-- `docs/database/schema-summary.md`
-  - resumen del esquema de ejemplo `sales`
-- `docs/sql/style-guide.md`
-  - reglas de estilo SQL para el proyecto y para el SQL generado por Claude Code
-- `docs/sql/prompt-recipes.md`
-  - recetas reutilizables para pedir a Claude generación, explicación, refactorización, optimización y ejercicios SQL
-
-Esta documentación constituye la base mínima para trabajar SQL en el proyecto con consistencia técnica y pedagógica.
-
-## Query and practice files status
-
-Estado actual conocido de los archivos SQL de práctica:
-
-- existe un script de inicialización de esquema:
-  - `sql/ddl/001_init_schema.sql`
-- existe documentación del esquema de ejemplo `sales`
-- existen consultas básicas en:
-  - `sql/queries/basic_examples.sql`
-- existe al menos una consulta adicional de práctica:
-  - `sql/queries/customers_with_multiple_orders.sql`
-- existe estructura preparada para DDL, DML, queries, snippets y tests
-
-El dominio funcional de práctica sigue siendo un modelo simple de clientes y pedidos:
-
-- `sales.customers`
-- `sales.orders`
-
-## Claude-related project context
-
-El proyecto está preparado para trabajar con Claude de forma estructurada.
-
-Piezas clave ya existentes:
-
-- `CLAUDE.md` en la raíz del proyecto
-- `docs/sql/style-guide.md`
-- `docs/sql/prompt-recipes.md`
-- `docs/database/schema-summary.md`
-- `docs/project/README.md`
-- este archivo `docs/project/01-current-state.md`
-
-El papel esperado de Claude en este proyecto es mixto:
-
-- copiloto técnico
-- profesor para explicación de SQL
-- apoyo de arquitectura y documentación
-
-## Verified current capabilities
-
-Capacidades que pueden considerarse verificadas en el estado actual:
-
-- navegar y mantener un repositorio Git en WSL2
-- editar el proyecto en VS Code
-- ejecutar PostgreSQL en Docker localmente
-- conectarse al contenedor `stack-sql-postgres`
-- trabajar contra la base `stack_db`
-- usar la extensión `vector` en PostgreSQL
-- documentar el esquema `sales`
-- generar y revisar SQL con apoyo de Claude Code
-- aplicar una guía de estilo SQL consistente
-- usar recetas de prompts reutilizables para tareas SQL
+Construir una aplicación de Q&A jurídico sobre la Constitución Española:
+- la base de datos legislativa es la capa de datos
+- pgvector permite búsqueda semántica para recuperar artículos relevantes
+- el siguiente paso es conectar esta base con un modelo de lenguaje (Claude)
 
 ## Immediate pending work
 
-Trabajo inmediato recomendado a partir del estado actual:
-
-1. completar la documentación de `docs/project/`
-2. consolidar la bitácora cronológica real del proyecto
-3. reflejar explícitamente en la documentación la migración a `pgvector`
-4. definir y crear una tabla vectorial realista, por ejemplo `ai_document_chunks`
-5. probar una consulta vectorial sencilla con datos de ejemplo
-6. solo después de validar lo anterior, instalar `n8n` en Docker y conectarlo a `stack_db`
-
-## Risks or open points
-
-Puntos abiertos o sensibles en este momento:
-
-- parte de la documentación antigua todavía refleja una fase anterior del proyecto y debe actualizarse
-- la evolución hacia `pgvector` aún no está consolidada en todos los documentos
-- `n8n` todavía no forma parte del stack operativo actual
-- aún no existe una tabla vectorial de trabajo documentada como parte estable del proyecto
-- todavía queda por separar claramente lo que está verificado de lo que es siguiente paso o hipótesis
-
-Este documento debe actualizarse cada vez que cambie el estado operativo real del proyecto.
+1. Diseñar la arquitectura de la app de Q&A (capa de recuperación + capa de generación)
+2. Implementar el pipeline: pregunta → embedding → búsqueda semántica → contexto → respuesta
+3. Definir la interfaz (script Python, API REST, integración n8n...)
