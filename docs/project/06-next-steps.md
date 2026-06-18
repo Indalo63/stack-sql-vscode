@@ -6,67 +6,63 @@ Este documento define los próximos pasos operativos del proyecto `stack-sql-vsc
 
 ## Estado actual (punto de partida)
 
-El proyecto tiene una base de datos legislativa completamente operativa:
+El MVP de la aplicación de Q&A jurídico está completo y operativo:
 
 - Constitución Española (1978) cargada desde el BOE (texto oficial)
-- 185 elementos (preámbulo + artículos + disposiciones)
-- Embeddings generados con `text-embedding-3-small` (OpenAI, vector 1536)
-- Búsqueda semántica por similitud coseno funcionando con pgvector
+- 185 elementos con embeddings generados (`text-embedding-3-small`, vector 1536)
+- Búsqueda semántica por similitud coseno funcionando con pgvector (índice HNSW)
+- Pipeline Q&A operativo: `python scripts/qa.py "pregunta..."`
+- Pipeline de generación de tests operativo: `python scripts/gentest.py --n 5`
 
-El siguiente hito es construir la **aplicación de Q&A jurídico** sobre esta base.
+## Próximos hitos
 
-## Próximo hito — App de Q&A jurídico
+### ~~Hito 1 — Evaluación de calidad~~ ✅ Completado (2026-06-18)
 
-### Objetivo
+**Pipeline Q&A:** 13/13 preguntas de referencia respondidas correctamente. Precisión de recuperación y calidad de respuesta: alta.
+Ver resultados en `docs/project/eval-qa-referencia.md`.
 
-Dado el texto de una pregunta del usuario, la app debe:
+**Generador de tests:** 8/8 preguntas evaluadas sobre Arts. 14, 33, 34, 55, 87, 145, 155, 169.
+Opciones correctas verificadas contra el texto literal de la CE. Distractores de calidad. 0 errores de fondo.
+Ver resultados en `docs/project/eval-gentest-referencia.md`.
 
-1. Generar el embedding de la pregunta
-2. Buscar los artículos más relevantes en la base de datos (pgvector)
-3. Enviar esos artículos como contexto a Claude junto con la pregunta
-4. Devolver una respuesta fundamentada en el texto de la CE
+### Hito 2 — Interfaz de usuario
 
-### Pipeline técnico
-
-```
-Pregunta del usuario
-      │
-      ▼
-OpenAI text-embedding-3-small  →  vector(1536)
-      │
-      ▼
-pgvector <=>  →  top-N artículos más similares
-      │
-      ▼
-Claude (claude-sonnet-4-6)  +  artículos como contexto
-      │
-      ▼
-Respuesta con cita del artículo correspondiente
-```
-
-### Opciones de implementación
+Elegir e implementar una interfaz más accesible que el CLI.
 
 | Opción | Complejidad | Descripción |
 |---|---|---|
-| Script Python | Baja | Script de consola que acepta una pregunta y devuelve respuesta |
-| API REST (FastAPI) | Media | Endpoint HTTP que expone el pipeline |
-| Integración n8n | Media | Flujo visual sin código en el stack Docker |
+| Streamlit | Baja | Interfaz web local en Python, sin servidor separado |
+| FastAPI REST | Media | Endpoint HTTP que expone los dos modos como API |
+| Integración n8n | Media | Flujo visual sin código adicional en Docker |
 
-**Recomendación para empezar:** script Python de consola — valida el pipeline completo antes de añadir capas.
+**Recomendación:** Streamlit para una demo rápida; FastAPI si el objetivo es exponerlo como servicio.
 
-## Pasos inmediatos
+### Hito 3 — Exportación de tests
 
-1. Escribir `scripts/qa_constitucion.py` — script de Q&A con el pipeline completo
-2. Verificar la calidad de las respuestas con preguntas de prueba
-3. Decidir la interfaz definitiva (consola / API / n8n)
-4. Documentar el módulo Q&A en `docs/`
+Añadir la capacidad de exportar el banco de preguntas generadas a formatos reutilizables.
 
-## Expansiones futuras
+**Pasos:**
+1. Crear `scripts/export_test.py`
+2. Soportar salida a CSV y, opcionalmente, a formato Moodle XML
+3. Añadir opción `--export csv` a `scripts/gentest.py`
 
-- Extender el módulo a otras leyes (ET, LOPD, LCSP) siguiendo el mismo proceso
-- Interfaz web sencilla (Streamlit o FastAPI + HTML)
-- Integración con n8n para automatizar flujos de preguntas
+### Hito 4 — Expansión a otras leyes
+
+Replicar el módulo legislativo para otras leyes relevantes.
+
+**Candidatos:**
+- Estatuto de los Trabajadores (ET)
+- Ley Orgánica de Protección de Datos (LOPD)
+- Ley de Contratos del Sector Público (LCSP)
+
+El proceso está documentado y es repetible: DDL → seed → embeddings → pipeline.
+
+## Expansiones futuras (sin prioridad asignada)
+
+- Caché de embeddings de consultas frecuentes en tabla `qa_cache`
 - Histórico de preguntas y respuestas en base de datos
+- Modo batch en `gentest.py` para generar preguntas por título entero
+- Comparativa de calidad entre embeddings de OpenAI y modelos locales (HuggingFace)
 
 ## Review rule
 

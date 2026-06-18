@@ -4,15 +4,16 @@
 Soy Indalecio Plaza, consultor y formador técnico en bases de datos relacionales (PostgreSQL), desarrollo web y automatización con IA.
 
 ## Objetivo de este proyecto
-Configurar y documentar un stack de trabajo para SQL que combine:
+Construir y documentar un stack de trabajo para SQL y aplicaciones de IA que combina:
 
-- Windows + WSL2 (Ubuntu)
-- VS Code
-- Git
-- PostgreSQL en Docker
-- Extensión PostgreSQL para VS Code
-- Claude Code en VS Code
-- SQL Crack para visualización de SQL
+- Windows + WSL2 (Ubuntu) + VS Code + Git
+- PostgreSQL 16 + pgvector en Docker
+- Python (pipeline Q&A jurídico + generación de tests)
+- Claude (Anthropic API) como motor de generación
+- OpenAI API para embeddings semánticos
+- Claude Code como copiloto técnico y documental
+
+El proyecto incluye una aplicación de Q&A jurídico sobre la Constitución Española: el usuario pregunta en lenguaje natural y el sistema recupera artículos relevantes mediante búsqueda semántica (pgvector) y genera una respuesta fundamentada usando Claude.
 
 La guía debe ser reutilizable para alumnos en prácticas y para mí mismo.
 
@@ -27,10 +28,12 @@ La guía debe ser reutilizable para alumnos en prácticas y para mí mismo.
   - Contenido completo del bloque
 
 ## Entorno asumido
-- Sistema: Windows con WSL2 (Ubuntu).
+- Sistema: Windows con WSL2 (Ubuntu 24.04 LTS).
 - Directorio de proyecto en WSL2: ~/dev/stack-sql-vscode
-- Git ya instalado y configurado en WSL2.
-- Aún sin remoto configurado (esto se hará más adelante).
+- Git instalado y configurado en WSL2.
+- Docker Desktop con integración WSL2 operativo.
+- Python 3 disponible en WSL2.
+- Variables de entorno `OPENAI_API_KEY` y `ANTHROPIC_API_KEY` configuradas en `.env`.
 
 ## Convenciones iniciales
 - Toda la documentación del stack vive en docs/.
@@ -38,8 +41,15 @@ La guía debe ser reutilizable para alumnos en prácticas y para mí mismo.
 - Usar Markdown para cualquier guía o checklist.
 - Cuando se propongan nuevos archivos, ubicarlos dentro de este repo respetando la estructura existente.
 
-## Próximos pasos esperados
-- Paso 3: Conectar este repo con un Proyecto de Claude y usar este CLAUDE.md como referencia.
-- Paso 4: Configurar Docker + PostgreSQL.
-- Paso 5: Instalar y configurar extensiones de VS Code (PostgreSQL, Claude Code, SQL Crack).
-- Paso 6: Estructurar carpetas sql/ y docs/database/ para mejorar prompts SQL.
+## Estado actual del proyecto
+El MVP está completo, operativo y evaluado:
+- Stack Docker levantado: PostgreSQL + pgvector + pgAdmin
+- Esquema `legislacion` con 185 artículos de la CE y embeddings generados
+- Pipeline Q&A operativo y evaluado: 13/13 preguntas de referencia correctas (`docs/project/eval-qa-referencia.md`)
+- Pipeline de generación de tests operativo y evaluado: 8/8 preguntas correctas, sin símbolos matemáticos (`docs/project/eval-gentest-referencia.md`)
+- Restricción activa en `app/test_pipeline.py`: las preguntas, opciones y explicaciones nunca deben contener símbolos matemáticos
+
+## Próximos pasos
+- Exportar banco de tests a CSV / Moodle XML (Hito 3)
+- Añadir interfaz de usuario (Streamlit o FastAPI) (Hito 2)
+- Extender el módulo legislativo a otras leyes (ET, LOPD, LCSP) (Hito 4)

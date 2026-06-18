@@ -91,16 +91,14 @@ Este esquema contiene un modelo mínimo y didáctico:
 
 Su finalidad no es representar un sistema productivo, sino ofrecer una base clara para practicar SQL, documentar consultas y trabajar con Claude sobre ejemplos concretos.
 
-### 6. Vector capability layer
+### 6. Vector and semantic layer
 
-La arquitectura actual ya incluye soporte vectorial gracias a `pgvector`.
+La arquitectura incluye soporte vectorial completo con `pgvector`, ya operativo:
 
-Esto significa que PostgreSQL no solo puede almacenar datos relacionales, sino también vectores y, por tanto, está preparado para evolucionar hacia:
-
-- almacenamiento de embeddings
-- búsquedas por similitud
-- recuperación semántica
-- soporte técnico para futuros flujos RAG
+- embeddings generados con `text-embedding-3-small` (OpenAI, 1536 dims)
+- 185 artículos de la Constitución Española almacenados con sus vectores
+- índice HNSW para búsqueda por similitud coseno
+- pipeline de recuperación semántica verificado en producción
 
 ### 7. Documentation layer
 
@@ -148,16 +146,17 @@ El modelo de trabajo combina:
 
 ## Current role of Claude in the architecture
 
-Claude no es un componente de runtime del sistema, sino un componente de apoyo al desarrollo y a la continuidad del proyecto.
+Claude cumple ahora un doble papel en el proyecto:
 
-Actualmente su papel es:
+**Como componente de runtime** (vía Anthropic API):
+- recibe artículos constitucionales como contexto y genera respuestas fundamentadas (modo Q&A)
+- genera preguntas tipo test a partir del texto de los artículos (modo test)
+- modelo en uso: `claude-sonnet-4-6`
 
-- ayudar a generar SQL inicial
-- explicar consultas existentes
-- refactorizar SQL largo o poco legible
-- proponer mejoras de estructura
-- ayudar a documentar el proyecto
-- actuar como profesor, copiloto y apoyo de arquitectura
+**Como copiloto de desarrollo** (vía Claude Code):
+- ayuda a generar SQL, explicar consultas y refactorizar código
+- propone mejoras de estructura y documenta el proyecto
+- actúa como profesor y apoyo de arquitectura
 
 Claude se apoya en archivos de contexto concretos:
 
@@ -169,17 +168,14 @@ Claude se apoya en archivos de contexto concretos:
 
 ## Short-term target architecture
 
-La arquitectura objetivo a corto plazo no añade todavía muchos componentes nuevos. Busca consolidar lo ya construido.
+El stack base está consolidado y los pipelines han sido evaluados. Los objetivos a corto plazo son:
 
-Objetivos inmediatos:
+- ~~evaluar la calidad de los pipelines Q&A y generación de tests~~ ✅ completado (2026-06-18)
+- implementar exportación de tests a CSV / Moodle XML (siguiente)
+- añadir una interfaz de usuario (Streamlit o FastAPI) sobre los dos modos existentes
+- replicar el módulo legislativo para otras leyes (ET, LOPD, LCSP)
 
-- completar la documentación de `docs/project/`
-- reflejar correctamente la evolución a `pgvector`
-- definir una tabla vectorial de trabajo, por ejemplo `ai_document_chunks`
-- ejecutar pruebas simples de almacenamiento y búsqueda vectorial
-- dejar claro qué parte del stack está verificada y cuál es todavía plan futuro
-
-En esta fase, el foco sigue estando en la estabilidad, la claridad y la documentación.
+En esta fase, el foco está en la usabilidad y la extensión del contenido legislativo.
 
 ## Medium-term evolution path
 
@@ -253,22 +249,18 @@ La arquitectura actual tiene límites claros:
 
 - es un entorno local, no un despliegue productivo
 - no existe todavía una capa de automatización operativa con `n8n`
-- no existe aún un pipeline completo de embeddings
-- el modelo de datos actual es didáctico y pequeño
-- el soporte vectorial está instalado, pero su uso real todavía debe consolidarse
-- la documentación histórica del proyecto aún está siendo normalizada
+- la interfaz de usuario es CLI; aún no hay capa web ni API REST
+- el contenido legislativo se limita actualmente a la Constitución Española
 
 Estos límites son importantes para no confundir capacidad potencial con capacidad ya verificada.
 
 ## Open architecture questions
 
-La arquitectura deja abiertas varias preguntas que deberán resolverse más adelante:
+Las principales preguntas abiertas son:
 
-- cuál será exactamente el papel de `n8n` dentro del stack
-- qué modelo de embeddings se utilizará
-- si el proyecto se apoyará solo en PostgreSQL + `pgvector` o comparará esa vía con una vector database dedicada
-- cómo se modelará la tabla vectorial principal
-- qué tipo de documentos o fuentes se usarán para ingestión futura
-- si el proyecto seguirá siendo solo didáctico o evolucionará hacia un laboratorio de automatización más amplio
+- qué interfaz de usuario se construirá sobre el pipeline (Streamlit / FastAPI / n8n)
+- si el proyecto se apoyará en embeddings de OpenAI o migrará a modelos locales
+- cómo se modelará la expansión a múltiples leyes (esquema único `legislacion` vs. esquemas separados por ley)
+- si el proyecto evolucionará hacia un laboratorio de automatización con `n8n` o se mantendrá como stack Python puro
 
 Mientras estas preguntas no estén cerradas, la arquitectura debe seguir tratándose como una base viva y evolutiva.

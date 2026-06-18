@@ -82,20 +82,13 @@ Documentación: `docs/database/constitucion/`
 | Script | Propósito |
 |---|---|
 | `scripts/generate_embeddings.py` | Genera embeddings con OpenAI (requiere `OPENAI_API_KEY`) |
-| `scripts/menu.sh` | Menú de gestión del stack |
+| `scripts/qa.py` | CLI modo Q&A: `python scripts/qa.py "pregunta..."` |
+| `scripts/gentest.py` | CLI generación de tests: `python scripts/gentest.py --n 5` |
+| `scripts/menu.sh` | Menú interactivo de gestión del stack |
 | `scripts/setup.sh` | Setup inicial del entorno |
 | `scripts/launcher.bat` | Lanzador desde Windows |
 
-## Objetivo actual
-
-Construir una aplicación de Q&A jurídico sobre la Constitución Española con dos modos:
-- **Modo Q&A**: el usuario pregunta en lenguaje natural y el sistema responde citando artículos
-- **Modo test**: el sistema genera preguntas tipo test a partir de artículos de la CE
-
-La base de datos legislativa es la capa de datos; pgvector la capa de recuperación semántica;
-Claude (Anthropic API) la capa de generación.
-
-## App structure (diseñada, pendiente de implementar)
+## App structure (implementada y operativa)
 
 ```
 app/
@@ -106,16 +99,25 @@ app/
 └── test_pipeline.py   # pipeline generación de tests
 scripts/
 ├── qa.py              # CLI: python scripts/qa.py "pregunta..."
-└── gentest.py         # CLI: python scripts/gentest.py --titulo 1 --n 5
+└── gentest.py         # CLI: python scripts/gentest.py --n 5
 requirements.txt       # anthropic + openai + psycopg2-binary
 ```
 
 Arquitectura detallada: `docs/project/08-qa-app-architecture.md`
 
-## Immediate pending work
+## Current state summary
 
-1. Instalar dependencias: `pip install -r requirements.txt`
-2. Configurar `ANTHROPIC_API_KEY` en el entorno
-3. Verificar pipeline Q&A: `python scripts/qa.py "¿Qué es el Estado social?"`
-4. Verificar pipeline test: `python scripts/gentest.py --n 3`
-5. Definir interfaz futura (FastAPI REST, integración n8n...)
+El proyecto está completamente operativo en su MVP, con ambos pipelines evaluados y listos para el siguiente hito:
+
+- Stack Docker levantado y verificado (PostgreSQL + pgvector + pgAdmin)
+- Esquema `legislacion` con 185 artículos y embeddings generados
+- Búsqueda semántica funcionando con índice HNSW
+- Pipeline Q&A operativo y evaluado: 13/13 preguntas de referencia ✅ (`docs/project/eval-qa-referencia.md`)
+- Pipeline de generación de tests operativo y evaluado: 8/8 preguntas correctas ✅ (`docs/project/eval-gentest-referencia.md`)
+- Restricción activa en el generador: ningún símbolo matemático en preguntas, opciones ni explicaciones
+
+## Immediate next steps
+
+- Implementar exportación de tests a CSV / Moodle XML (Hito 3 — siguiente)
+- Añadir interfaz de usuario sobre el pipeline (Streamlit o FastAPI) (Hito 2)
+- Considerar extensión a otras leyes (ET, LOPD, LCSP) (Hito 4)
