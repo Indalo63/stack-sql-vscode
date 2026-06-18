@@ -58,6 +58,10 @@ def _build_test_prompt(articulo: dict) -> list[dict]:
                 f"Eres un experto en Derecho Constitucional español y creador de exámenes.\n"
                 f"A partir del siguiente artículo de la Constitución Española, genera UNA pregunta "
                 f"tipo test con exactamente 4 opciones (A, B, C, D).\n\n"
+                f"REGLA OBLIGATORIA: No uses ningún símbolo matemático en la pregunta, las opciones "
+                f"ni la explicación (quedan prohibidos: =, >, <, ≥, ≤, +, ×, ÷, %, °, →, ←, /, \\, "
+                f"fracciones y cualquier otro símbolo matemático o lógico). "
+                f"Escribe siempre en texto: 'igual a', 'mayor que', 'más', 'porcentaje', etc.\n\n"
                 f"ARTÍCULO {articulo['numero']}:\n{articulo['contenido']}\n\n"
                 f"Responde SOLO con JSON válido con esta estructura exacta:\n"
                 f'{{"articulo": "{articulo["numero"]}", '
