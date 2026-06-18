@@ -88,13 +88,34 @@ Documentación: `docs/database/constitucion/`
 
 ## Objetivo actual
 
-Construir una aplicación de Q&A jurídico sobre la Constitución Española:
-- la base de datos legislativa es la capa de datos
-- pgvector permite búsqueda semántica para recuperar artículos relevantes
-- el siguiente paso es conectar esta base con un modelo de lenguaje (Claude)
+Construir una aplicación de Q&A jurídico sobre la Constitución Española con dos modos:
+- **Modo Q&A**: el usuario pregunta en lenguaje natural y el sistema responde citando artículos
+- **Modo test**: el sistema genera preguntas tipo test a partir de artículos de la CE
+
+La base de datos legislativa es la capa de datos; pgvector la capa de recuperación semántica;
+Claude (Anthropic API) la capa de generación.
+
+## App structure (diseñada, pendiente de implementar)
+
+```
+app/
+├── config.py          # variables de entorno y constantes
+├── db.py              # conexión psycopg2 reutilizable
+├── retrieval.py       # embed_query() + search_articles()
+├── qa_pipeline.py     # pipeline Q&A completo
+└── test_pipeline.py   # pipeline generación de tests
+scripts/
+├── qa.py              # CLI: python scripts/qa.py "pregunta..."
+└── gentest.py         # CLI: python scripts/gentest.py --titulo 1 --n 5
+requirements.txt       # anthropic + openai + psycopg2-binary
+```
+
+Arquitectura detallada: `docs/project/08-qa-app-architecture.md`
 
 ## Immediate pending work
 
-1. Diseñar la arquitectura de la app de Q&A (capa de recuperación + capa de generación)
-2. Implementar el pipeline: pregunta → embedding → búsqueda semántica → contexto → respuesta
-3. Definir la interfaz (script Python, API REST, integración n8n...)
+1. Instalar dependencias: `pip install -r requirements.txt`
+2. Configurar `ANTHROPIC_API_KEY` en el entorno
+3. Verificar pipeline Q&A: `python scripts/qa.py "¿Qué es el Estado social?"`
+4. Verificar pipeline test: `python scripts/gentest.py --n 3`
+5. Definir interfaz futura (FastAPI REST, integración n8n...)
