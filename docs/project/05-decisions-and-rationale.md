@@ -19,6 +19,9 @@ Hasta este momento, las decisiones confirmadas del proyecto son las siguientes:
 - Claude forma parte estructural del workflow del proyecto
 - la documentación del proyecto se almacena dentro del propio repositorio
 - la continuidad del proyecto debe quedar registrada en archivos persistentes, no solo en conversaciones
+- la interfaz de usuario será **Streamlit** (descartados FastAPI y n8n para esta fase)
+- el modelo de datos para múltiples leyes es **un schema por área jurídica en `stack_db`**, no proyectos ni bases de datos separadas; el campo `area_juridica` en `legislacion.leyes` permite filtrar la búsqueda semántica por dominio
+- para dominios no jurídicos o instancias independientes se usará **fork del repositorio** o, a largo plazo, un **template parametrizado**; ver `docs/project/10-replication-and-domains.md`
 
 Estas decisiones deben tratarse como base vigente, salvo reemplazo explícito posterior.
 

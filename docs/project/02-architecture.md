@@ -261,9 +261,36 @@ Estos límites son importantes para no confundir capacidad potencial con capacid
 Las principales preguntas abiertas son:
 
 - ~~qué interfaz de usuario se construirá sobre el pipeline~~ → **Streamlit** (decidido, Hito 2)
+- ~~un proyecto por ley o una base de datos unificada~~ → **schema por área jurídica en `stack_db`** (decidido, ver abajo)
 - si el proyecto se apoyará en embeddings de OpenAI o migrará a modelos locales
-- cómo se modelará la expansión a múltiples leyes (esquema único `legislacion` vs. esquemas separados por ley)
 - cómo se integrará el módulo de oposiciones con el esquema `legislacion` existente (esquema propio `oposiciones` vs. extensión del actual)
 - si el proyecto evolucionará hacia un laboratorio de automatización con `n8n` o se mantendrá como stack Python puro
+
+## Architectural decisions
+
+### Modelo de datos para múltiples leyes y dominios
+
+**Decisión:** una sola base de datos (`stack_db`) con schemas separados por área temática. No se crearán proyectos ni bases de datos independientes por cada ley.
+
+**Estructura objetivo:**
+```
+stack_db
+├── legislacion      ← Constitución Española (activo)
+├── laboral          ← ET, LOPD, convenios colectivos  (Hito 4)
+├── fiscal           ← LGT, IRPF, IVA, IS              (Hito 4)
+├── administrativo   ← LCSP, LRJSP, PAC                (Hito 4)
+└── oposiciones      ← banco de preguntas reales        (Hito 6)
+```
+
+**Campo `area_juridica` en `legislacion.leyes`:** cada ley registrada incluye su área temática para permitir filtrado previo en la búsqueda semántica.
+
+```sql
+ALTER TABLE legislacion.leyes ADD COLUMN area_juridica TEXT;
+-- Valores: 'constitucional', 'laboral', 'fiscal', 'administrativo', 'penal', etc.
+```
+
+**Motivo:** el esquema `legislacion` ya está diseñado para múltiples leyes (`leyes` es un registro, `articulos` referencia a la ley). Solo se extiende con metadatos, no se rediseña.
+
+**Para dominios completamente distintos** (no jurídicos, clientes independientes, formación): ver `docs/project/10-replication-and-domains.md`.
 
 Mientras estas preguntas no estén cerradas, la arquitectura debe seguir tratándose como una base viva y evolutiva.
