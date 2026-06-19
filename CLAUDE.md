@@ -50,6 +50,8 @@ El MVP está completo, operativo y evaluado:
 - Restricción activa en `app/test_pipeline.py`: las preguntas, opciones y explicaciones nunca deben contener símbolos matemáticos
 
 ## Próximos pasos
+- Añadir interfaz web con Streamlit (Hito 2) — **siguiente**
 - Exportar banco de tests a CSV / Moodle XML (Hito 3)
-- Añadir interfaz de usuario (Streamlit o FastAPI) (Hito 2)
 - Extender el módulo legislativo a otras leyes (ET, LOPD, LCSP) (Hito 4)
+- Sincronización automática con el BOE para detectar reformas legislativas (Hito 5)
+- Módulo de oposiciones: banco de preguntas reales + generación guiada por convocatoria (Hito 6)

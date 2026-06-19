@@ -57,6 +57,61 @@ Replicar el módulo legislativo para otras leyes relevantes.
 
 El proceso está documentado y es repetible: DDL → seed → embeddings → pipeline.
 
+### Hito 5 — Sincronización automática con el BOE
+
+Detectar reformas legislativas publicadas en el BOE y mantener la base de datos actualizada sin intervención manual.
+
+**Problema que resuelve:** una ley cargada en `legislacion.articulos` puede quedar desactualizada si el BOE publica una disposición que la modifica o deroga. Los embeddings existentes reflejarían texto obsoleto.
+
+**Enfoque propuesto:**
+
+1. Crear `scripts/sync_boe.py` que consulte la API pública del BOE (`api.boe.es`) buscando disposiciones que referencien las leyes cargadas en la base de datos.
+2. Comparar el texto recuperado con el almacenado en `legislacion.articulos`.
+3. Marcar los artículos afectados con un campo `desactualizado = true`.
+4. Regenerar embeddings únicamente de los artículos modificados.
+5. Registrar cada sincronización en una tabla de auditoría (`legislacion.sync_log`).
+
+**Opciones de activación:**
+
+| Mecanismo | Descripción |
+|---|---|
+| Cron / scheduler | Ejecución periódica automática (semanal o mensual) |
+| RSS/Atom del BOE | Suscripción a feeds por sección; dispara revisión manual antes de ingestar |
+
+**Prioridad por ley:** la CE es muy difícil de reformar (Arts. 167-169), por lo que este hito tiene mayor impacto práctico sobre las leyes del Hito 4 (ET, LOPD, LCSP), donde las modificaciones son frecuentes.
+
+**Dependencia:** se recomienda implementar después del Hito 4.
+
+### Hito 6 — Módulo de oposiciones
+
+Módulo independiente para preparación de oposiciones, combinando preguntas reales de convocatorias anteriores con generación asistida por IA adaptada a cada examen.
+
+**Problema que resuelve:** las preguntas genéricas no reflejan el estilo, dificultad ni sistema de puntuación real de cada oposición. Este módulo genera preguntas que imitan el formato exacto del examen objetivo.
+
+**Arquitectura en dos capas:**
+
+**Capa 1 — Banco de preguntas reales (ingesta)**
+
+Nuevo esquema `oposiciones` con las siguientes tablas:
+- `oposiciones.convocatorias` — nombre, año, organismo convocante, nº de plazas
+- `oposiciones.reglas_puntuacion` — acierto, error, blanco (configurable por convocatoria)
+- `oposiciones.preguntas_historicas` — enunciado, opciones, respuesta correcta, tema, artículo de referencia, convocatoria
+
+**Capa 2 — Generación guiada por ejemplos reales**
+
+Pipeline de generación que combina tres fuentes de contexto para Claude:
+1. Artículo legislativo relevante (recuperado por búsqueda semántica con pgvector)
+2. 2-3 preguntas reales de esa misma oposición como ejemplos de estilo y dificultad (few-shot)
+3. Reglas de puntuación de la convocatoria objetivo
+
+**Scripts nuevos:**
+- `scripts/ingest_oposicion.py` — carga preguntas históricas desde CSV
+- `scripts/gentest_oposicion.py` — genera preguntas adaptadas a una convocatoria concreta
+
+**Requisito mínimo:** corpus de al menos 20-30 preguntas reales por oposición para que el estilo generado sea fiel al examen. Sin corpus, la generación es válida pero genérica.
+
+**Dependencia:** requiere Hito 4 (expansión a otras leyes) para oposiciones que no sean sobre la CE.
+
 ## Expansiones futuras (sin prioridad asignada)
 
 - Caché de embeddings de consultas frecuentes en tabla `qa_cache`

@@ -118,6 +118,8 @@ El proyecto está completamente operativo en su MVP, con ambos pipelines evaluad
 
 ## Immediate next steps
 
-- Implementar exportación de tests a CSV / Moodle XML (Hito 3 — siguiente)
-- Añadir interfaz de usuario sobre el pipeline (Streamlit o FastAPI) (Hito 2)
-- Considerar extensión a otras leyes (ET, LOPD, LCSP) (Hito 4)
+- Añadir interfaz web con Streamlit sobre los dos pipelines (Hito 2 — **siguiente**)
+- Exportar banco de tests a CSV / Moodle XML (Hito 3)
+- Extender el módulo legislativo a otras leyes (ET, LOPD, LCSP) (Hito 4)
+- Sincronización automática con el BOE para detectar reformas legislativas (Hito 5)
+- Módulo de oposiciones: banco de preguntas reales + generación guiada por convocatoria (Hito 6)

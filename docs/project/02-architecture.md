@@ -171,11 +171,13 @@ Claude se apoya en archivos de contexto concretos:
 El stack base está consolidado y los pipelines han sido evaluados. Los objetivos a corto plazo son:
 
 - ~~evaluar la calidad de los pipelines Q&A y generación de tests~~ ✅ completado (2026-06-18)
-- implementar exportación de tests a CSV / Moodle XML (siguiente)
-- añadir una interfaz de usuario (Streamlit o FastAPI) sobre los dos modos existentes
-- replicar el módulo legislativo para otras leyes (ET, LOPD, LCSP)
+- añadir interfaz web con Streamlit sobre los dos pipelines (Hito 2 — siguiente)
+- implementar exportación de tests a CSV / Moodle XML (Hito 3)
+- replicar el módulo legislativo para otras leyes (ET, LOPD, LCSP) (Hito 4)
+- sincronización automática con el BOE para detectar reformas legislativas (Hito 5)
+- módulo de oposiciones: banco de preguntas reales + generación guiada por convocatoria (Hito 6)
 
-En esta fase, el foco está en la usabilidad y la extensión del contenido legislativo.
+En esta fase, el foco está en la usabilidad, la extensión del contenido legislativo y la integración con fuentes externas.
 
 ## Medium-term evolution path
 
@@ -258,9 +260,10 @@ Estos límites son importantes para no confundir capacidad potencial con capacid
 
 Las principales preguntas abiertas son:
 
-- qué interfaz de usuario se construirá sobre el pipeline (Streamlit / FastAPI / n8n)
+- ~~qué interfaz de usuario se construirá sobre el pipeline~~ → **Streamlit** (decidido, Hito 2)
 - si el proyecto se apoyará en embeddings de OpenAI o migrará a modelos locales
 - cómo se modelará la expansión a múltiples leyes (esquema único `legislacion` vs. esquemas separados por ley)
+- cómo se integrará el módulo de oposiciones con el esquema `legislacion` existente (esquema propio `oposiciones` vs. extensión del actual)
 - si el proyecto evolucionará hacia un laboratorio de automatización con `n8n` o se mantendrá como stack Python puro
 
 Mientras estas preguntas no estén cerradas, la arquitectura debe seguir tratándose como una base viva y evolutiva.
