@@ -16,6 +16,7 @@ help:
 	@echo "  make psql    Abre una sesión psql interactiva"
 	@echo "  make status  Muestra el estado del contenedor"
 	@echo "  make ui      Lanza la interfaz web Streamlit"
+	@echo "  make dev     Lanza Streamlit con recarga automática al guardar"
 	@echo ""
 
 setup:
@@ -41,4 +42,11 @@ status:
 ui:
 	streamlit run app/streamlit_app.py
 
-.PHONY: help setup start stop reset psql status ui
+dev:
+	watchmedo auto-restart \
+		--patterns="*.py" \
+		--recursive \
+		--directory="app/" \
+		-- streamlit run app/streamlit_app.py
+
+.PHONY: help setup start stop reset psql status ui dev
