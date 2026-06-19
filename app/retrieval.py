@@ -17,6 +17,39 @@ def embed_query(text: str) -> list[float]:
     return response.data[0].embedding
 
 
+def get_titulos_db() -> list[dict]:
+    """Devuelve la lista de títulos con su id, número y denominación."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT titulo_id, numero, denominacion
+                FROM legislacion.titulos
+                ORDER BY orden
+            """)
+            return [{"titulo_id": r[0], "numero": r[1], "denominacion": r[2]}
+                    for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def get_articulos_por_titulo(titulo_id: int) -> list[dict]:
+    """Recupera todos los artículos de un título ordenados por posición."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT numero, tipo, contenido
+                FROM legislacion.articulos
+                WHERE titulo_id = %s AND tipo = 'articulo'
+                ORDER BY orden_global
+            """, (titulo_id,))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
 def get_estructura_db() -> dict:
     """
     Extrae metadatos estructurales de la Constitución directamente desde la BD.
