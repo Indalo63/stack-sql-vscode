@@ -15,6 +15,7 @@ help:
 	@echo "  make reset   Destruye el entorno y lo reconstruye desde cero"
 	@echo "  make psql    Abre una sesión psql interactiva"
 	@echo "  make status  Muestra el estado del contenedor"
+	@echo "  make ui      Lanza la interfaz web Streamlit"
 	@echo ""
 
 setup:
@@ -37,4 +38,7 @@ psql:
 status:
 	docker compose -f $(COMPOSE_FILE) ps
 
-.PHONY: help setup start stop reset psql status
+ui:
+	streamlit run app/streamlit_app.py
+
+.PHONY: help setup start stop reset psql status ui
