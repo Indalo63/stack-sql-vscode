@@ -25,12 +25,15 @@ def _clasificar_pregunta(pregunta: str, client: anthropic.Anthropic) -> str:
             "role": "user",
             "content": (
                 "Clasifica la siguiente pregunta sobre la Constitución Española.\n"
-                "Responde ÚNICAMENTE con una de estas dos palabras, sin explicación:\n"
-                "- ESTRUCTURAL: si pregunta por la organización del documento "
-                "(número de títulos, artículos, capítulos, secciones, disposiciones, "
-                "cómo está estructurada, cuántos elementos tiene, etc.)\n"
-                "- CONTENIDO: si pregunta por el fondo jurídico, los derechos, "
-                "las instituciones, lo que dice un artículo concreto, etc.\n\n"
+                "Responde ÚNICAMENTE con una de estas dos palabras, sin explicación:\n\n"
+                "- ESTRUCTURAL: pregunta SOLO por cantidades o nombres de elementos del documento. "
+                "Ejemplos: '¿Cuántos títulos tiene?', '¿Cuántos artículos hay?', "
+                "'¿Qué títulos existen?', '¿Cuántos capítulos tiene el Título I?'\n\n"
+                "- CONTENIDO: pregunta por lo que dice, explica, regula o contiene la Constitución, "
+                "incluso si menciona un título, capítulo o artículo concreto. "
+                "Ejemplos: 'Resume el Título I', '¿Qué regula el Título VIII?', "
+                "'¿Qué derechos reconoce el Capítulo II?', '¿Qué dice el artículo 14?', "
+                "'¿Cómo se reforma la Constitución?', '¿Qué es el Tribunal Constitucional?'\n\n"
                 f"Pregunta: {pregunta}"
             ),
         }],
@@ -69,7 +72,8 @@ def _responder_estructural(pregunta: str, client: anthropic.Anthropic) -> str:
             "content": (
                 "Eres un asistente jurídico especializado en la Constitución Española.\n"
                 "Responde la pregunta usando ÚNICAMENTE los datos proporcionados a continuación. "
-                "Son datos exactos extraídos de la base de datos oficial.\n\n"
+                "Son datos exactos extraídos de la base de datos oficial.\n"
+                "IMPORTANTE: responde solo lo que se pregunta, sin añadir datos no solicitados.\n\n"
                 f"{contexto}\n"
                 f"PREGUNTA: {pregunta}"
             ),
