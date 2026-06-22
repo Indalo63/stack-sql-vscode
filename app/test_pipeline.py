@@ -4,6 +4,7 @@ Pipeline de generación de preguntas tipo test:
 """
 
 import os
+import re
 import json
 import anthropic
 from app.config import CLAUDE_MODEL
@@ -17,8 +18,7 @@ def fetch_articles(titulo_id: int | None = None,
     Recupera artículos reales de la Constitución para generar tests.
     Sin filtro → selección aleatoria entre todos los artículos.
     """
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         with conn.cursor() as cur:
             if titulo_id:
                 cur.execute("""
@@ -46,8 +46,6 @@ def fetch_articles(titulo_id: int | None = None,
                 """, (n,))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
-    finally:
-        conn.close()
 
 
 def _build_test_prompt(articulo: dict) -> list[dict]:
@@ -89,14 +87,11 @@ def run_gentest(titulo_id: int | None = None,
             messages=messages,
         )
         try:
-            raw = response.content[0].text.strip()
-            # Claude a veces envuelve la respuesta en ```json ... ```
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.strip()
-            parsed = json.loads(raw)
+            raw = response.content[0].text
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if not match:
+                raise json.JSONDecodeError("no JSON object found", raw, 0)
+            parsed = json.loads(match.group())
             results.append(parsed)
         except json.JSONDecodeError:
             results.append({"articulo": art["numero"], "error": "respuesta no parseable", "raw": response.content[0].text[:200]})
