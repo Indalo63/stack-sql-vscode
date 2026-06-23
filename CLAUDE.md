@@ -41,17 +41,31 @@ La guía debe ser reutilizable para alumnos en prácticas y para mí mismo.
 - Usar Markdown para cualquier guía o checklist.
 - Cuando se propongan nuevos archivos, ubicarlos dentro de este repo respetando la estructura existente.
 
+## Normas obligatorias para la generación de preguntas tipo test
+
+Estas reglas se aplican SIEMPRE en `app/test_pipeline.py` y en cualquier futuro generador de preguntas. Son innegociables y derivan del análisis del examen oficial GACE 2025.
+
+1. **Sin símbolos matemáticos**: Las preguntas, opciones y explicaciones nunca deben contener símbolos matemáticos (=, >, <, %, +, ×, ÷, →, fracciones, etc.). Escribir siempre en texto: "igual a", "mayor que", "porcentaje", etc.
+
+2. **El enunciado cita la norma completa**: El enunciado debe comenzar siempre con "Según el artículo [N] de [nombre completo de la ley]," o "De acuerdo con el artículo [N] de [nombre completo de la ley],". Nunca omitir el nombre completo de la norma.
+
+3. **Opciones en minúsculas a/b/c/d**: Las cuatro opciones se etiquetan siempre como a), b), c), d) — nunca en mayúsculas.
+
+4. **Distractores de alta precisión**: Las opciones incorrectas deben diferir de la correcta únicamente en datos exactos: un plazo distinto, un porcentaje diferente, un órgano incorrecto, una palabra clave cambiada. Prohibido usar distractores conceptualmente muy distintos; el error debe ser sutil y técnico (estilo examen oficial GACE).
+
+5. **Nivel de dificultad alto**: Preguntar por datos exactos del artículo (plazos, porcentajes, órganos competentes, requisitos concretos), no por conceptos generales.
+
 ## Estado actual del proyecto
-El MVP está completo, operativo y evaluado:
 - Stack Docker levantado: PostgreSQL + pgvector + pgAdmin
-- Esquema `legislacion` con 185 artículos de la CE y embeddings generados
-- Pipeline Q&A operativo y evaluado: 13/13 preguntas de referencia correctas (`docs/project/eval-qa-referencia.md`)
-- Pipeline de generación de tests operativo y evaluado: 8/8 preguntas correctas, sin símbolos matemáticos (`docs/project/eval-gentest-referencia.md`)
-- Restricción activa en `app/test_pipeline.py`: las preguntas, opciones y explicaciones nunca deben contener símbolos matemáticos
+- Schema `normas.*` multi-ley operativo (CE1978 + LPAC 39/2015 cargadas con embeddings)
+- Pipeline Q&A multi-ley operativo con enrutamiento ESTRUCTURAL/RESUMEN/CONTENIDO
+- Generador de preguntas tipo test alineado con estilo oficial GACE 2025
+- Parser del BOE (HTML → JSON) validado y operativo
+- Scripts: `load_ley.py` (carga genérica), `parse_boe.py` (parser BOE), `generate_embeddings.py`
 
 ## Próximos pasos
-- Añadir interfaz web con Streamlit (Hito 2) — **siguiente**
+- Parsear y cargar leyes prioritarias GACE: LRJSP (Ley 40/2015), TREBEP (RDL 5/2015), LGP (Ley 47/2003), LCSP (Ley 9/2017)
+- Interfaz web Streamlit multi-ley (Hito 2)
 - Exportar banco de tests a CSV / Moodle XML (Hito 3)
-- Extender el módulo legislativo a otras leyes (ET, LOPD, LCSP) (Hito 4)
-- Sincronización automática con el BOE para detectar reformas legislativas (Hito 5)
-- Módulo de oposiciones: banco de preguntas reales + generación guiada por convocatoria (Hito 6)
+- Simulacro: 100 preguntas, temporizador, puntuación con penalización A-(E/3) (Hito 4)
+- Sincronización automática con el BOE (Hito 5)

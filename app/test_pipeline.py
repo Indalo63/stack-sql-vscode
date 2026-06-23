@@ -54,19 +54,32 @@ def _build_test_prompt(articulo: dict, ley_nombre: str) -> list[dict]:
         {
             "role": "user",
             "content": (
-                f"Eres un experto en Derecho español y creador de exámenes.\n"
-                f"A partir del siguiente artículo de {ley_nombre}, genera UNA pregunta "
-                f"tipo test con exactamente 4 opciones (A, B, C, D).\n\n"
-                f"REGLA OBLIGATORIA: No uses ningún símbolo matemático en la pregunta, las opciones "
-                f"ni la explicación (quedan prohibidos: =, >, <, ≥, ≤, +, ×, ÷, %, °, →, ←, /, \\, "
-                f"fracciones y cualquier otro símbolo matemático o lógico). "
-                f"Escribe siempre en texto: 'igual a', 'mayor que', 'más', 'porcentaje', etc.\n\n"
+                f"Eres un experto en Derecho español y creador de exámenes de oposición al "
+                f"Cuerpo de Gestión de la Administración Civil del Estado (GACE).\n\n"
+                f"A partir del siguiente artículo de {ley_nombre}, genera UNA pregunta tipo "
+                f"test con exactamente 4 opciones (a, b, c, d), siguiendo el estilo oficial "
+                f"del examen GACE.\n\n"
+                f"REGLAS DE ESTILO OBLIGATORIAS:\n"
+                f"1. El enunciado DEBE comenzar con 'Según el artículo [número] de {ley_nombre},' "
+                f"o 'De acuerdo con el artículo [número] de {ley_nombre},' — cita siempre la "
+                f"norma completa.\n"
+                f"2. Las opciones deben ser a), b), c), d) en minúsculas.\n"
+                f"3. Los distractores (opciones incorrectas) deben diferir de la correcta SOLO "
+                f"en datos precisos: un plazo distinto, un porcentaje diferente, un órgano "
+                f"incorrecto, una palabra clave cambiada. Evita distractores conceptualmente "
+                f"muy distintos; el error debe ser sutil y técnico.\n"
+                f"4. Nivel de dificultad alto: pregunta por datos exactos del artículo (plazos, "
+                f"porcentajes, órganos competentes, requisitos concretos), no por conceptos "
+                f"generales.\n"
+                f"5. No uses ningún símbolo matemático en la pregunta, las opciones ni la "
+                f"explicación (prohibidos: =, >, <, más, por ciento escríbelo en texto, etc.). "
+                f"Escribe siempre en texto: 'igual a', 'mayor que', 'porcentaje', etc.\n\n"
                 f"ARTÍCULO {articulo['numero']}:\n{articulo['contenido']}\n\n"
                 f"Responde SOLO con JSON válido con esta estructura exacta:\n"
                 f'{{"articulo": "{articulo["numero"]}", '
                 f'"pregunta": "...", '
-                f'"opciones": {{"A": "...", "B": "...", "C": "...", "D": "..."}}, '
-                f'"correcta": "A|B|C|D", '
+                f'"opciones": {{"a": "...", "b": "...", "c": "...", "d": "..."}}, '
+                f'"correcta": "a|b|c|d", '
                 f'"explicacion": "..."}}'
             ),
         }

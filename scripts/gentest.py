@@ -52,7 +52,7 @@ def main():
         print(f"    {p['pregunta']}")
         for letra, texto in p["opciones"].items():
             marca = " ✓" if letra == p["correcta"] else ""
-            print(f"    {letra}) {texto}{marca}")
+            print(f"    {letra.lower()}) {texto}{marca}")
         print(f"    → {p['explicacion']}\n")
 
 
