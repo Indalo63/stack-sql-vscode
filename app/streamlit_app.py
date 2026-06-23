@@ -8,15 +8,33 @@ load_dotenv()
 import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
+from app.retrieval import get_leyes_disponibles
 
 st.set_page_config(
-    page_title="Q&A Jurídico — Constitución Española",
+    page_title="Asistente Jurídico",
     page_icon="⚖️",
     layout="centered",
 )
 
 st.title("⚖️ Asistente Jurídico")
-st.caption("Constitución Española · Búsqueda semántica + Claude")
+st.caption("Búsqueda semántica + Claude")
+
+# ── Selector de ley ────────────────────────────────────────────────────────────
+@st.cache_data(ttl=300)
+def _cargar_leyes():
+    return get_leyes_disponibles()
+
+try:
+    leyes = _cargar_leyes()
+except Exception as e:
+    st.error(f"No se puede conectar a la base de datos: {e}")
+    st.stop()
+
+opciones = {f"{l['nombre_corto'] or l['codigo']} — {l['nombre']}": l for l in leyes}
+seleccion = st.sidebar.selectbox("Ley", list(opciones.keys()))
+ley_seleccionada = opciones[seleccion]
+ley_id     = ley_seleccionada["ley_id"]
+ley_nombre = ley_seleccionada["nombre"]
 
 modo = st.sidebar.radio("Modo", ["Q&A", "Generar test"])
 
@@ -24,14 +42,14 @@ modo = st.sidebar.radio("Modo", ["Q&A", "Generar test"])
 if modo == "Q&A":
     st.header("Consulta jurídica")
     pregunta = st.text_area(
-        "Escribe tu pregunta sobre la Constitución Española:",
-        placeholder="¿Qué derechos fundamentales reconoce la Constitución?",
+        f"Escribe tu pregunta sobre {ley_nombre}:",
+        placeholder="¿Qué derechos fundamentales reconoce?",
         height=100,
     )
     if st.button("Consultar", type="primary", disabled=not pregunta.strip()):
         with st.spinner("Buscando artículos relevantes y generando respuesta…"):
             try:
-                respuesta = run_qa(pregunta.strip())
+                respuesta = run_qa(pregunta.strip(), ley_id=ley_id)
                 st.markdown("### Respuesta")
                 st.markdown(respuesta)
             except Exception as e:
@@ -45,7 +63,7 @@ else:
     if st.button("Generar preguntas", type="primary"):
         with st.spinner(f"Generando {n} pregunta{'s' if n > 1 else ''}…"):
             try:
-                preguntas = run_gentest(n=n)
+                preguntas = run_gentest(ley_id=ley_id, ley_nombre=ley_nombre, n=n)
                 for i, p in enumerate(preguntas, 1):
                     if "error" in p:
                         st.warning(f"Pregunta {i} — Art. {p.get('articulo', '?')}: {p['error']}")

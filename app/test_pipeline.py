@@ -11,50 +11,51 @@ from app.config import CLAUDE_MODEL
 from app.db import get_connection
 
 
-def fetch_articles(titulo_id: int | None = None,
+def fetch_articles(ley_id: int,
+                   titulo_id: int | None = None,
                    capitulo_id: int | None = None,
                    n: int = 5) -> list[dict]:
     """
-    Recupera artículos reales de la Constitución para generar tests.
-    Sin filtro → selección aleatoria entre todos los artículos.
+    Recupera artículos de una ley para generar tests.
+    Sin filtro de título/capítulo → selección aleatoria dentro de la ley.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
             if titulo_id:
                 cur.execute("""
                     SELECT numero, tipo, contenido
-                    FROM legislacion.articulos
-                    WHERE titulo_id = %s AND tipo = 'articulo'
+                    FROM normas.articulos
+                    WHERE ley_id = %s AND titulo_id = %s AND tipo = 'articulo'
                     ORDER BY orden_global
                     LIMIT %s
-                """, (titulo_id, n))
+                """, (ley_id, titulo_id, n))
             elif capitulo_id:
                 cur.execute("""
                     SELECT numero, tipo, contenido
-                    FROM legislacion.articulos
-                    WHERE capitulo_id = %s AND tipo = 'articulo'
+                    FROM normas.articulos
+                    WHERE ley_id = %s AND capitulo_id = %s AND tipo = 'articulo'
                     ORDER BY orden_global
                     LIMIT %s
-                """, (capitulo_id, n))
+                """, (ley_id, capitulo_id, n))
             else:
                 cur.execute("""
                     SELECT numero, tipo, contenido
-                    FROM legislacion.articulos
-                    WHERE tipo = 'articulo'
+                    FROM normas.articulos
+                    WHERE ley_id = %s AND tipo = 'articulo'
                     ORDER BY RANDOM()
                     LIMIT %s
-                """, (n,))
+                """, (ley_id, n))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def _build_test_prompt(articulo: dict) -> list[dict]:
+def _build_test_prompt(articulo: dict, ley_nombre: str) -> list[dict]:
     return [
         {
             "role": "user",
             "content": (
-                f"Eres un experto en Derecho Constitucional español y creador de exámenes.\n"
-                f"A partir del siguiente artículo de la Constitución Española, genera UNA pregunta "
+                f"Eres un experto en Derecho español y creador de exámenes.\n"
+                f"A partir del siguiente artículo de {ley_nombre}, genera UNA pregunta "
                 f"tipo test con exactamente 4 opciones (A, B, C, D).\n\n"
                 f"REGLA OBLIGATORIA: No uses ningún símbolo matemático en la pregunta, las opciones "
                 f"ni la explicación (quedan prohibidos: =, >, <, ≥, ≤, +, ×, ÷, %, °, →, ←, /, \\, "
@@ -72,15 +73,18 @@ def _build_test_prompt(articulo: dict) -> list[dict]:
     ]
 
 
-def run_gentest(titulo_id: int | None = None,
+def run_gentest(ley_id: int,
+                ley_nombre: str,
+                titulo_id: int | None = None,
                 capitulo_id: int | None = None,
                 n: int = 5) -> list[dict]:
-    articulos = fetch_articles(titulo_id=titulo_id, capitulo_id=capitulo_id, n=n)
+    articulos = fetch_articles(ley_id=ley_id, titulo_id=titulo_id,
+                               capitulo_id=capitulo_id, n=n)
     client    = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     results   = []
 
     for art in articulos:
-        messages = _build_test_prompt(art)
+        messages = _build_test_prompt(art, ley_nombre)
         response = client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=512,
@@ -94,6 +98,10 @@ def run_gentest(titulo_id: int | None = None,
             parsed = json.loads(match.group())
             results.append(parsed)
         except json.JSONDecodeError:
-            results.append({"articulo": art["numero"], "error": "respuesta no parseable", "raw": response.content[0].text[:200]})
+            results.append({
+                "articulo": art["numero"],
+                "error": "respuesta no parseable",
+                "raw": response.content[0].text[:200],
+            })
 
     return results

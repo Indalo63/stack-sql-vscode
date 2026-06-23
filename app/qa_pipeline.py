@@ -2,7 +2,7 @@
 Pipeline Q&A con enrutamiento inteligente de tres vías:
   - Clasificador Claude → ESTRUCTURAL | RESUMEN | CONTENIDO
   - ESTRUCTURAL: metadatos de la BD (conteos, listados de títulos)
-  - RESUMEN:     todos los artículos de un título/capítulo desde la BD → Claude
+  - RESUMEN:     todos los artículos de un título desde la BD → Claude
   - CONTENIDO:   embedding → búsqueda semántica → Claude
 """
 
@@ -12,17 +12,12 @@ import anthropic
 from app.config import CLAUDE_MODEL
 from app.retrieval import (
     embed_query, search_articles,
-    get_estructura_db, get_titulos_db, get_articulos_por_titulo,
+    get_estructura_db, get_titulos_db, get_articulos_por_titulo, get_ley_info,
 )
 
-_TITULOS_ROMANOS = {
-    "PRELIMINAR": "PRELIMINAR",
-    "I": "I", "II": "II", "III": "III", "IV": "IV", "V": "V",
-    "VI": "VI", "VII": "VII", "VIII": "VIII", "IX": "IX", "X": "X",
-}
 
-
-def _clasificar_pregunta(pregunta: str, client: anthropic.Anthropic) -> str:
+def _clasificar_pregunta(pregunta: str, ley_nombre: str,
+                          client: anthropic.Anthropic) -> str:
     """
     Clasifica la pregunta en uno de tres tipos:
     - ESTRUCTURAL: cantidades o nombres de elementos del documento
@@ -35,7 +30,7 @@ def _clasificar_pregunta(pregunta: str, client: anthropic.Anthropic) -> str:
         messages=[{
             "role": "user",
             "content": (
-                "Clasifica la siguiente pregunta sobre la Constitución Española.\n"
+                f"Clasifica la siguiente pregunta sobre {ley_nombre}.\n"
                 "Responde ÚNICAMENTE con una de estas tres palabras, sin explicación:\n\n"
                 "- ESTRUCTURAL: pregunta solo por cantidades o nombres de elementos. "
                 "Ejemplos: '¿Cuántos títulos tiene?', '¿Cuántos artículos hay?', "
@@ -46,8 +41,8 @@ def _clasificar_pregunta(pregunta: str, client: anthropic.Anthropic) -> str:
                 "'Explica el contenido del Título II', '¿De qué trata el Título X?'\n\n"
                 "- CONTENIDO: pregunta jurídica concreta sobre derechos, instituciones, "
                 "procedimientos o lo que dice un artículo específico. "
-                "Ejemplos: '¿Qué dice el artículo 14?', '¿Cómo se reforma la Constitución?', "
-                "'¿Qué derechos reconoce la CE?', '¿Qué es el Tribunal Constitucional?'\n\n"
+                "Ejemplos: '¿Qué dice el artículo 14?', '¿Cómo se aprueba una ley?', "
+                "'¿Qué derechos reconoce?', '¿Qué es el Tribunal Constitucional?'\n\n"
                 f"Pregunta: {pregunta}"
             ),
         }],
@@ -60,12 +55,13 @@ def _clasificar_pregunta(pregunta: str, client: anthropic.Anthropic) -> str:
     return "CONTENIDO"
 
 
-def _extraer_titulo_id(pregunta: str, client: anthropic.Anthropic) -> int | None:
+def _extraer_titulo_id(pregunta: str, ley_id: int, ley_nombre: str,
+                        client: anthropic.Anthropic) -> int | None:
     """
     Extrae el titulo_id de la BD a partir de la mención en la pregunta.
-    Usa la lista real de títulos de la BD para el mapeo.
+    Usa la lista real de títulos de la ley para el mapeo.
     """
-    titulos = get_titulos_db()
+    titulos = get_titulos_db(ley_id)
     lista   = "\n".join(
         f"  titulo_id={t['titulo_id']} → Título {t['numero']}: {t['denominacion']}"
         for t in titulos
@@ -76,7 +72,7 @@ def _extraer_titulo_id(pregunta: str, client: anthropic.Anthropic) -> int | None
         messages=[{
             "role": "user",
             "content": (
-                "Dada la siguiente lista de títulos de la Constitución Española:\n"
+                f"Dada la siguiente lista de títulos de {ley_nombre}:\n"
                 f"{lista}\n\n"
                 "¿Qué titulo_id corresponde al título mencionado en esta pregunta?\n"
                 "Responde ÚNICAMENTE con el número entero del titulo_id, sin texto adicional.\n"
@@ -89,19 +85,20 @@ def _extraer_titulo_id(pregunta: str, client: anthropic.Anthropic) -> int | None
     return int(match.group()) if match else None
 
 
-def _responder_resumen(pregunta: str, client: anthropic.Anthropic) -> str:
+def _responder_resumen(pregunta: str, ley_id: int, ley_nombre: str,
+                        client: anthropic.Anthropic) -> str:
     """
     Recupera TODOS los artículos del título mencionado y genera un resumen completo.
     """
-    titulo_id = _extraer_titulo_id(pregunta, client)
+    titulo_id = _extraer_titulo_id(pregunta, ley_id, ley_nombre, client)
     if titulo_id is None:
-        return _responder_contenido(pregunta, client)
+        return _responder_contenido(pregunta, ley_id, ley_nombre, client)
 
-    titulos   = {t["titulo_id"]: t for t in get_titulos_db()}
+    titulos   = {t["titulo_id"]: t for t in get_titulos_db(ley_id)}
     articulos = get_articulos_por_titulo(titulo_id)
 
     if not articulos:
-        return _responder_contenido(pregunta, client)
+        return _responder_contenido(pregunta, ley_id, ley_nombre, client)
 
     titulo_info = titulos.get(titulo_id, {})
     contexto = "\n\n".join(
@@ -115,7 +112,7 @@ def _responder_resumen(pregunta: str, client: anthropic.Anthropic) -> str:
         messages=[{
             "role": "user",
             "content": (
-                "Eres un asistente jurídico especializado en la Constitución Española.\n"
+                f"Eres un asistente jurídico especializado en {ley_nombre}.\n"
                 f"A continuación tienes el texto íntegro del "
                 f"Título {titulo_info.get('numero', '')} — "
                 f"{titulo_info.get('denominacion', '')} "
@@ -131,14 +128,15 @@ def _responder_resumen(pregunta: str, client: anthropic.Anthropic) -> str:
     return response.content[0].text
 
 
-def _responder_estructural(pregunta: str, client: anthropic.Anthropic) -> str:
+def _responder_estructural(pregunta: str, ley_id: int, ley_nombre: str,
+                            client: anthropic.Anthropic) -> str:
     """Responde preguntas de cantidad/estructura con datos exactos de la BD."""
-    estructura  = get_estructura_db()
+    estructura  = get_estructura_db(ley_id)
     titulos_txt = "\n".join(
         f"  - Título {t['numero']}: {t['nombre']}" for t in estructura["titulos"]
     )
     contexto = (
-        f"DATOS REALES DE LA CONSTITUCIÓN ESPAÑOLA (extraídos de la base de datos):\n\n"
+        f"DATOS REALES DE {ley_nombre.upper()} (extraídos de la base de datos):\n\n"
         f"Número de títulos: {estructura['n_titulos']}\n"
         f"Títulos:\n{titulos_txt}\n\n"
         f"Número de capítulos: {estructura['n_capitulos']}\n"
@@ -153,7 +151,7 @@ def _responder_estructural(pregunta: str, client: anthropic.Anthropic) -> str:
         messages=[{
             "role": "user",
             "content": (
-                "Eres un asistente jurídico especializado en la Constitución Española.\n"
+                f"Eres un asistente jurídico especializado en {ley_nombre}.\n"
                 "Responde la pregunta usando ÚNICAMENTE los datos proporcionados. "
                 "Son datos exactos extraídos de la base de datos oficial.\n"
                 "IMPORTANTE: responde solo lo que se pregunta, sin añadir datos no solicitados.\n\n"
@@ -165,10 +163,11 @@ def _responder_estructural(pregunta: str, client: anthropic.Anthropic) -> str:
     return response.content[0].text
 
 
-def _responder_contenido(pregunta: str, client: anthropic.Anthropic) -> str:
+def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
+                          client: anthropic.Anthropic) -> str:
     """Responde preguntas jurídicas concretas mediante RAG semántico."""
     vector    = embed_query(pregunta)
-    articulos = search_articles(vector)
+    articulos = search_articles(vector, ley_id)
     contexto  = "\n\n".join(
         f"[{a['tipo'].capitalize()} {a['numero']}]\n{a['contenido']}"
         for a in articulos
@@ -179,7 +178,7 @@ def _responder_contenido(pregunta: str, client: anthropic.Anthropic) -> str:
         messages=[{
             "role": "user",
             "content": (
-                "Eres un asistente jurídico especializado en la Constitución Española.\n"
+                f"Eres un asistente jurídico especializado en {ley_nombre}.\n"
                 "Responde a la pregunta basándote únicamente en los artículos proporcionados.\n"
                 "Cita siempre el número de artículo que respalda cada afirmación.\n\n"
                 f"ARTÍCULOS RELEVANTES:\n{contexto}\n\n"
@@ -190,12 +189,14 @@ def _responder_contenido(pregunta: str, client: anthropic.Anthropic) -> str:
     return response.content[0].text
 
 
-def run_qa(pregunta: str) -> str:
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    tipo   = _clasificar_pregunta(pregunta, client)
+def run_qa(pregunta: str, ley_id: int) -> str:
+    ley      = get_ley_info(ley_id)
+    nombre   = ley["nombre"]
+    client   = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    tipo     = _clasificar_pregunta(pregunta, nombre, client)
 
     if tipo == "ESTRUCTURAL":
-        return _responder_estructural(pregunta, client)
+        return _responder_estructural(pregunta, ley_id, nombre, client)
     if tipo == "RESUMEN":
-        return _responder_resumen(pregunta, client)
-    return _responder_contenido(pregunta, client)
+        return _responder_resumen(pregunta, ley_id, nombre, client)
+    return _responder_contenido(pregunta, ley_id, nombre, client)
