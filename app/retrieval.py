@@ -8,7 +8,7 @@ Capa de recuperación semántica sobre normas.*:
 
 import os
 from openai import OpenAI
-from app.config import OPENAI_EMBEDDING_MODEL, TOP_K_ARTICLES
+from app.config import OPENAI_EMBEDDING_MODEL, TOP_K_ARTICLES, SIMILARITY_THRESHOLD
 from app.db import get_connection
 
 _embedding_cache: dict[str, list[float]] = {}
@@ -37,11 +37,11 @@ def get_leyes_disponibles() -> list[dict]:
 
 
 def get_ley_info(ley_id: int) -> dict:
-    """Devuelve metadatos de una ley (nombre, tipo, etc.)."""
+    """Devuelve metadatos de una ley (nombre, tipo, token_count, etc.)."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT ley_id, codigo, nombre, nombre_corto, tipo
+                SELECT ley_id, codigo, nombre, nombre_corto, tipo, token_count
                 FROM normas.leyes
                 WHERE ley_id = %s AND activa = true
             """, (ley_id,))
@@ -145,10 +145,11 @@ def get_estructura_db(ley_id: int) -> dict:
 
 
 def search_articles(vector: list[float], ley_id: int,
-                    k: int = TOP_K_ARTICLES) -> list[dict]:
+                    k: int = TOP_K_ARTICLES,
+                    min_similarity: float = 0.0) -> list[dict]:
     """
     Devuelve los k artículos más cercanos al vector dado (similitud coseno),
-    filtrados por ley.
+    filtrados por ley y umbral mínimo de similitud.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -161,8 +162,63 @@ def search_articles(vector: list[float], ley_id: int,
                 FROM normas.articulos a
                 WHERE a.ley_id = %s
                   AND a.embedding IS NOT NULL
+                  AND 1 - (a.embedding <=> %s::vector) >= %s
                 ORDER BY a.embedding <=> %s::vector
                 LIMIT %s
-            """, (vector, ley_id, vector, k))
+            """, (vector, ley_id, vector, min_similarity, vector, k))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def search_articles_hierarchical(vector: list[float], ley_id: int,
+                                  k: int = TOP_K_ARTICLES,
+                                  top_titulos: int = 3,
+                                  min_similarity: float = 0.0) -> list[dict]:
+    """
+    Búsqueda en dos niveles para leyes grandes:
+    1. Encuentra los `top_titulos` títulos más relevantes usando sus embeddings.
+    2. Busca los k artículos más similares dentro de esos títulos.
+    Fallback a búsqueda plana si los títulos no tienen embeddings.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Paso 1: títulos más relevantes
+            cur.execute("""
+                SELECT titulo_id
+                FROM normas.titulos
+                WHERE ley_id = %s AND embedding IS NOT NULL
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+            """, (ley_id, vector, top_titulos))
+            titulo_ids = [r[0] for r in cur.fetchall()]
+
+            if not titulo_ids:
+                return search_articles(vector, ley_id, k, min_similarity)
+
+            # Paso 2: artículos dentro de los títulos seleccionados
+            cur.execute("""
+                SELECT
+                    a.numero,
+                    a.tipo,
+                    a.contenido,
+                    1 - (a.embedding <=> %s::vector) AS similitud
+                FROM normas.articulos a
+                WHERE a.titulo_id = ANY(%s)
+                  AND a.embedding IS NOT NULL
+                  AND 1 - (a.embedding <=> %s::vector) >= %s
+                ORDER BY a.embedding <=> %s::vector
+                LIMIT %s
+            """, (vector, titulo_ids, vector, min_similarity, vector, k))
+            cols = [d[0] for d in cur.description]
+            resultados = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+            # Si el filtro por título devuelve poco, complementar con búsqueda plana
+            if len(resultados) < k // 2:
+                extra = search_articles(vector, ley_id, k, min_similarity)
+                vistos = {r["numero"] for r in resultados}
+                for e in extra:
+                    if e["numero"] not in vistos:
+                        resultados.append(e)
+                resultados = sorted(resultados, key=lambda x: -x["similitud"])[:k]
+
+            return resultados

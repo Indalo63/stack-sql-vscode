@@ -10,8 +10,9 @@ import os
 import re
 import anthropic
 from app.config import CLAUDE_MODEL
+from app.config import SIMILARITY_THRESHOLD, TOKEN_THRESHOLD_HIERARCHICAL
 from app.retrieval import (
-    embed_query, search_articles,
+    embed_query, search_articles, search_articles_hierarchical,
     get_estructura_db, get_titulos_db, get_articulos_por_titulo, get_ley_info,
 )
 
@@ -164,12 +165,23 @@ def _responder_estructural(pregunta: str, ley_id: int, ley_nombre: str,
 
 
 def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
-                          client: anthropic.Anthropic) -> str:
+                          client: anthropic.Anthropic,
+                          usar_jerarquico: bool = False) -> str:
     """Responde preguntas jurídicas concretas mediante RAG semántico."""
-    vector    = embed_query(pregunta)
-    articulos = search_articles(vector, ley_id)
-    contexto  = "\n\n".join(
-        f"[{a['tipo'].capitalize()} {a['numero']}]\n{a['contenido']}"
+    vector = embed_query(pregunta)
+
+    if usar_jerarquico:
+        articulos = search_articles_hierarchical(
+            vector, ley_id, min_similarity=SIMILARITY_THRESHOLD)
+    else:
+        articulos = search_articles(
+            vector, ley_id, min_similarity=SIMILARITY_THRESHOLD)
+
+    if not articulos:
+        return "No se han encontrado artículos relevantes para esta pregunta en la ley seleccionada."
+
+    contexto = "\n\n".join(
+        f"[{a['tipo'].capitalize()} {a['numero']}] (similitud: {a['similitud']:.2f})\n{a['contenido']}"
         for a in articulos
     )
     response = client.messages.create(
@@ -179,8 +191,9 @@ def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
             "role": "user",
             "content": (
                 f"Eres un asistente jurídico especializado en {ley_nombre}.\n"
-                "Responde a la pregunta basándote únicamente en los artículos proporcionados.\n"
-                "Cita siempre el número de artículo que respalda cada afirmación.\n\n"
+                "Responde a la pregunta basándote ÚNICAMENTE en los artículos proporcionados.\n"
+                "Cita siempre el número de artículo (art. X) que respalda cada afirmación.\n"
+                "Si la información necesaria no está en los artículos, indícalo explícitamente.\n\n"
                 f"ARTÍCULOS RELEVANTES:\n{contexto}\n\n"
                 f"PREGUNTA: {pregunta}"
             ),
@@ -190,13 +203,16 @@ def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
 
 
 def run_qa(pregunta: str, ley_id: int) -> str:
-    ley      = get_ley_info(ley_id)
-    nombre   = ley["nombre"]
-    client   = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    tipo     = _clasificar_pregunta(pregunta, nombre, client)
+    ley    = get_ley_info(ley_id)
+    nombre = ley["nombre"]
+    tokens = ley.get("token_count") or 0
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    tipo   = _clasificar_pregunta(pregunta, nombre, client)
+
+    usar_jerarquico = tokens >= TOKEN_THRESHOLD_HIERARCHICAL
 
     if tipo == "ESTRUCTURAL":
         return _responder_estructural(pregunta, ley_id, nombre, client)
     if tipo == "RESUMEN":
         return _responder_resumen(pregunta, ley_id, nombre, client)
-    return _responder_contenido(pregunta, ley_id, nombre, client)
+    return _responder_contenido(pregunta, ley_id, nombre, client, usar_jerarquico)

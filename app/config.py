@@ -15,4 +15,6 @@ DB_CONFIG = {
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 CLAUDE_MODEL           = "claude-sonnet-4-6"
 
-TOP_K_ARTICLES = 5   # artículos a recuperar en búsqueda semántica
+TOP_K_ARTICLES              = 8      # artículos a recuperar en búsqueda semántica
+SIMILARITY_THRESHOLD        = 0.20   # similitud coseno mínima para incluir un artículo
+TOKEN_THRESHOLD_HIERARCHICAL = 60_000 # leyes con más tokens usan RAG jerárquico

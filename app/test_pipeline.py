@@ -11,38 +11,54 @@ from app.config import CLAUDE_MODEL
 from app.db import get_connection
 
 
+MIN_CONTENT_LENGTH = 200  # artículos con menos caracteres no generan buenas preguntas
+
+# Patrones que indican artículos vacíos o derogados
+_PATRON_VACIO = re.compile(
+    r'^\s*\(?(derogado|sin contenido|suprimido|véase|ver artículo)\)?\.?\s*$',
+    re.IGNORECASE
+)
+
+
 def fetch_articles(ley_id: int,
                    titulo_id: int | None = None,
                    capitulo_id: int | None = None,
                    n: int = 5) -> list[dict]:
     """
-    Recupera artículos de una ley para generar tests.
-    Sin filtro de título/capítulo → selección aleatoria dentro de la ley.
+    Recupera artículos testables de una ley:
+    - Excluye artículos con menos de MIN_CONTENT_LENGTH caracteres.
+    - Excluye artículos derogados o vacíos.
+    Sin filtro de título/capítulo → selección aleatoria ponderada por longitud.
     """
+    filtro_contenido = f"AND length(contenido) >= {MIN_CONTENT_LENGTH} AND contenido !~* '\\\\(derogado|sin contenido|suprimido\\\\)'"
     with get_connection() as conn:
         with conn.cursor() as cur:
             if titulo_id:
-                cur.execute("""
+                cur.execute(f"""
                     SELECT numero, tipo, contenido
                     FROM normas.articulos
                     WHERE ley_id = %s AND titulo_id = %s AND tipo = 'articulo'
+                    {filtro_contenido}
                     ORDER BY orden_global
                     LIMIT %s
                 """, (ley_id, titulo_id, n))
             elif capitulo_id:
-                cur.execute("""
+                cur.execute(f"""
                     SELECT numero, tipo, contenido
                     FROM normas.articulos
                     WHERE ley_id = %s AND capitulo_id = %s AND tipo = 'articulo'
+                    {filtro_contenido}
                     ORDER BY orden_global
                     LIMIT %s
                 """, (ley_id, capitulo_id, n))
             else:
-                cur.execute("""
+                # Selección aleatoria ponderada: artículos más largos tienen más probabilidad
+                cur.execute(f"""
                     SELECT numero, tipo, contenido
                     FROM normas.articulos
                     WHERE ley_id = %s AND tipo = 'articulo'
-                    ORDER BY RANDOM()
+                    {filtro_contenido}
+                    ORDER BY RANDOM() * log(length(contenido)) DESC
                     LIMIT %s
                 """, (ley_id, n))
             cols = [d[0] for d in cur.description]
