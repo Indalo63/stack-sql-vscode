@@ -18,8 +18,9 @@ import time
 import psycopg2
 from openai import OpenAI
 
-EMBEDDING_MODEL = "text-embedding-3-small"
-BATCH_SIZE      = 50
+EMBEDDING_MODEL  = "text-embedding-3-small"
+BATCH_SIZE       = 50
+MAX_CHARS        = 30000  # ~7500 tokens, por debajo del límite de 8192
 
 DB_CONFIG = {
     "host":     os.getenv("DB_HOST",     "localhost"),
@@ -44,7 +45,8 @@ def build_text(row: dict) -> str:
     else:
         parts.append(f"{row['numero']}.")
     parts.append(row["contenido"])
-    return " ".join(parts)
+    texto = " ".join(parts)
+    return texto[:MAX_CHARS] if len(texto) > MAX_CHARS else texto
 
 
 def main():

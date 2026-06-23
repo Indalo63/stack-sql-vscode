@@ -35,16 +35,43 @@ from bs4 import BeautifulSoup, Tag
 # ── Mapas de normalización ────────────────────────────────────────────────────
 
 ORDINALES = {
-    "primero": "I",   "primera": "I",
-    "segundo": "II",  "segunda": "II",
-    "tercero": "III", "tercera": "III",
-    "cuarto":  "IV",  "cuarta":  "IV",
-    "quinto":  "V",   "quinta":  "V",
-    "sexto":   "VI",  "sexta":   "VI",
-    "séptimo": "VII", "séptima": "VII",
-    "octavo":  "VIII","octava":  "VIII",
-    "noveno":  "IX",  "novena":  "IX",
-    "décimo":  "X",   "décima":  "X",
+    "primero": "I",       "primera": "I",
+    "segundo": "II",      "segunda": "II",
+    "tercero": "III",     "tercera": "III",
+    "cuarto":  "IV",      "cuarta":  "IV",
+    "quinto":  "V",       "quinta":  "V",
+    "sexto":   "VI",      "sexta":   "VI",
+    "séptimo": "VII",     "séptima": "VII",
+    "octavo":  "VIII",    "octava":  "VIII",
+    "noveno":  "IX",      "novena":  "IX",
+    "décimo":  "X",       "décima":  "X",
+    # 11-19
+    "undécimo":     "XI",   "undécima":     "XI",
+    "duodécimo":    "XII",  "duodécima":    "XII",
+    "decimotercero":"XIII", "decimotercera":"XIII",
+    "décimo tercero":"XIII","décimo tercera":"XIII",
+    "decimocuarto": "XIV",  "decimocuarta": "XIV",
+    "décimo cuarto":"XIV",  "décimo cuarta":"XIV",
+    "decimoquinto": "XV",   "decimoquinta": "XV",
+    "décimo quinto":"XV",   "décimo quinta":"XV",
+    "decimosexto":  "XVI",  "decimosexta":  "XVI",
+    "décimo sexto": "XVI",  "décimo sexta": "XVI",
+    "decimoséptimo":"XVII", "decimoséptima":"XVII",
+    "decimoctavo":  "XVIII","decimoctava":  "XVIII",
+    "decimooctavo": "XVIII","decimooctava": "XVIII",
+    "decimonoveno": "XIX",  "decimonovena": "XIX",
+    # 20-30
+    "vigésimo":   "XX",   "vigésima":   "XX",
+    "vigésimo primero": "XXI",  "vigésimo primera": "XXI",
+    "vigésimo segundo": "XXII", "vigésimo segunda": "XXII",
+    "vigésimo tercero": "XXIII","vigésimo tercera": "XXIII",
+    "vigésimo cuarto":  "XXIV", "vigésimo cuarta":  "XXIV",
+    "vigésimo quinto":  "XXV",  "vigésimo quinta":  "XXV",
+    "vigésimo sexto":   "XXVI", "vigésimo sexta":   "XXVI",
+    "vigésimo séptimo": "XXVII","vigésimo séptima": "XXVII",
+    "vigésimo octavo":  "XXVIII","vigésimo octava": "XXVIII",
+    "vigésimo noveno":  "XXIX", "vigésimo novena":  "XXIX",
+    "trigésimo":  "XXX",  "trigésima":  "XXX",
 }
 
 TIPO_LEY_MAP = {
@@ -124,8 +151,9 @@ def _norm_seccion(texto: str) -> tuple[str, str]:
 
 
 def _norm_articulo(texto: str) -> str:
-    """'Artículo 14' → '14', 'Artículo 1 bis' → '1 bis'"""
-    m = re.search(r'Art[ií]culo\s+([\d]+(?:\s+(?:bis|ter|quáter|quinquies))?)', texto, re.IGNORECASE)
+    """'Artículo 14' → '14', 'Artículo 108 quáter' → '108 quáter'"""
+    sufijos = r'(?:bis|ter|qu[aá]ter|quinquies|sexies|septies|octies|nonies|decies)'
+    m = re.search(r'Art[ií]culo\s+([\d]+(?:\s+' + sufijos + r')?)', texto, re.IGNORECASE)
     if m:
         return m.group(1).strip()
     return texto.strip()
@@ -140,23 +168,27 @@ def _tipo_disposicion(texto: str) -> tuple[str, str]:
     texto_l = texto.lower()
     for clave, tipo in TIPO_DISP.items():
         if clave in texto_l:
-            # Extraer ordinal: "primera", "segunda", "única", número
-            m_ord = re.search(r'\b(única|primer[ao]|segund[ao]|tercer[ao]|cuart[ao]|'
-                              r'quint[ao]|sext[ao]|séptim[ao]|octav[ao]|noven[ao]|'
-                              r'décim[ao]|[\d]+)\b', texto_l)
-            if m_ord:
-                ord_raw = m_ord.group(1)
-                if ord_raw in ("única", "único"):
-                    num = "1"
-                elif ord_raw.isdigit():
-                    num = ord_raw
+            # Buscar primero en el diccionario completo de ordinales (más largo primero)
+            num = None
+            for ord_str in sorted(ORDINALES.keys(), key=len, reverse=True):
+                if ord_str in texto_l:
+                    num_romano = ORDINALES[ord_str]
+                    rom = {
+                        "I":1,"II":2,"III":3,"IV":4,"V":5,"VI":6,"VII":7,"VIII":8,"IX":9,"X":10,
+                        "XI":11,"XII":12,"XIII":13,"XIV":14,"XV":15,"XVI":16,"XVII":17,
+                        "XVIII":18,"XIX":19,"XX":20,"XXI":21,"XXII":22,"XXIII":23,
+                        "XXIV":24,"XXV":25,"XXVI":26,"XXVII":27,"XXVIII":28,"XXIX":29,"XXX":30,
+                    }
+                    num = str(rom.get(num_romano, num_romano))
+                    break
+            if num is None:
+                # Fallback: buscar "única" o dígito
+                m_ord = re.search(r'\b(única|único|[\d]+)\b', texto_l)
+                if m_ord:
+                    ord_raw = m_ord.group(1)
+                    num = "1" if ord_raw in ("única", "único") else ord_raw
                 else:
-                    num_romano = ORDINALES.get(ord_raw, ord_raw)
-                    # Convertir romano a arábigo simple para el código
-                    rom = {"I":1,"II":2,"III":3,"IV":4,"V":5,"VI":6,"VII":7,"VIII":8,"IX":9,"X":10}
-                    num = str(rom.get(num_romano, ord_raw))
-            else:
-                num = "1"
+                    num = "1"
 
             prefijos = {
                 "disposicion_adicional":   "DA",
@@ -239,6 +271,9 @@ def parsear(html: str, codigo: str, url: str = "", debug: bool = False) -> dict:
     capitulos: list[dict] = []
     secciones: list[dict] = []
     articulos: list[dict] = []
+
+    # Rastreo de números ya usados para deduplicar disposiciones
+    _numeros_vistos: dict[tuple, int] = {}
 
     # Estado del parser (contexto jerárquico actual)
     ctx_titulo:   str | None = None
@@ -356,6 +391,14 @@ def parsear(html: str, codigo: str, url: str = "", debug: bool = False) -> dict:
 
             if es_disp:
                 tipo, numero = _tipo_disposicion(h5_texto)
+                # Deduplicar: si (tipo, numero) ya existe, añadir sufijo -b, -c...
+                clave = (tipo, numero)
+                if clave in _numeros_vistos:
+                    _numeros_vistos[clave] += 1
+                    sufijo = chr(ord('b') + _numeros_vistos[clave] - 1)
+                    numero = f"{numero}-{sufijo}"
+                else:
+                    _numeros_vistos[clave] = 0
                 articulos.append({
                     "numero":          numero,
                     "tipo":            tipo,
