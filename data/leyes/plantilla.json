@@ -1,0 +1,68 @@
+{
+  "ley": {
+    "codigo": "LPAC",
+    "nombre": "Ley del Procedimiento Administrativo Común de las Administraciones Públicas",
+    "nombre_corto": "Ley 39/2015",
+    "tipo": "ley_ordinaria",
+    "numero_oficial": "Ley 39/2015, de 1 de octubre",
+    "fecha_pub": "2015-10-02",
+    "url_boe": "https://www.boe.es/buscar/act.php?id=BOE-A-2015-10565",
+    "url_eli": "https://www.boe.es/eli/es/l/2015/10/01/39/con"
+  },
+  "titulos": [
+    {
+      "numero": "PRELIMINAR",
+      "denominacion": "Disposiciones generales",
+      "orden": 1
+    },
+    {
+      "numero": "I",
+      "denominacion": "De los interesados en el procedimiento",
+      "orden": 2
+    }
+  ],
+  "capitulos": [
+    {
+      "titulo_numero": "PRELIMINAR",
+      "numero": "I",
+      "denominacion": "Objeto, ámbito de aplicación y principios generales",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "I",
+      "numero": "I",
+      "denominacion": "De la capacidad de obrar y el concepto de interesado",
+      "orden": 1
+    }
+  ],
+  "secciones": [],
+  "articulos": [
+    {
+      "numero": "1",
+      "tipo": "articulo",
+      "contenido": "Esta Ley tiene por objeto regular los requisitos de validez y eficacia de los actos administrativos...",
+      "titulo_numero": "PRELIMINAR",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 1
+    },
+    {
+      "numero": "2",
+      "tipo": "articulo",
+      "contenido": "Las Administraciones Públicas que integran el Sector Público son...",
+      "titulo_numero": "PRELIMINAR",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 2
+    },
+    {
+      "numero": "DA-1",
+      "tipo": "disposicion_adicional",
+      "contenido": "Las referencias hechas en los textos normativos...",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 999
+    }
+  ]
+}
