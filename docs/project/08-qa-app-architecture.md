@@ -1,77 +1,83 @@
 # Q&A App — Arquitectura
 
-## Propósito de este documento
-
-Define la arquitectura de la aplicación de Q&A jurídico sobre la Constitución Española.
-Sirve como referencia de diseño antes de implementar el código.
-
----
+_Última actualización: 2026-06-23_
 
 ## Decisiones de diseño
 
 | Decisión | Elección | Motivo |
 |---|---|---|
-| Modelo de embeddings | `text-embedding-3-small` (OpenAI, 1536 dims) | Ya usado para los 185 embeddings existentes. Cambiar requeriría re-generar todo. |
-| Modelo de generación | Claude (`claude-sonnet-4-6`) vía Anthropic SDK | Proyecto ya centrado en Claude; SDK Python sencillo. |
-| Interfaz MVP | Scripts CLI Python | Coherente con `scripts/generate_embeddings.py`; sin infraestructura extra. |
-| Interfaz futura | FastAPI REST | Permite exponer los dos modos como endpoints si el proyecto crece. |
+| Modelo de embeddings | `text-embedding-3-small` (OpenAI, 1536 dims) | Consistencia con corpus existente |
+| Modelo de generación | `claude-sonnet-4-6` vía Anthropic SDK | Calidad, velocidad y coste equilibrados |
+| Esquema BD | `normas.*` unificado multi-ley | Una sola BD, leyes identificadas por `ley_id` |
+| Estrategia RAG | full-text (<60K tokens) / jerárquico (≥60K) | Equilibrio calidad-coste según tamaño de ley |
+| Interfaz actual | CLI Python | Verificable, sin infraestructura extra |
+| Interfaz próxima | Streamlit (Hito 2) | Accesible, sin servidor separado |
 
 ---
 
-## Dos modos de operación
-
-### Modo Q&A
-
-El usuario hace una pregunta en lenguaje natural. El sistema recupera los artículos más
-relevantes y Claude genera una respuesta fundamentada en el texto constitucional.
+## Pipeline Q&A
 
 ```
-PREGUNTA (str)
-     │
-     ▼
-[1] embed_query(pregunta)
-     │  OpenAI API → vector[1536]
-     ▼
-[2] search_articles(vector, k=5)
-     │  PostgreSQL + pgvector (cosine similarity, índice HNSW)
-     │  → list[Articulo]  (numero, contenido, similitud)
-     ▼
-[3] build_qa_prompt(pregunta, articulos)
-     │  system: rol jurídico + instrucción de citar artículos
-     │  user:   pregunta + bloques de contexto
-     ▼
-[4] claude_client.messages.create(...)
-     │  Anthropic API → respuesta en texto
-     ▼
-RESPUESTA (str)
+PREGUNTA + ley_id
+      │
+      ▼
+[0] get_ley_info(ley_id)
+      │  → nombre, token_count
+      ▼
+[1] _clasificar_pregunta(pregunta, ley_nombre)   [Claude, max_tokens=15]
+      │
+      ├── ESTRUCTURAL ──→ get_estructura_db(ley_id) → respuesta directa de BD
+      │
+      ├── RESUMEN ──────→ _extraer_titulo_id()
+      │                   get_articulos_por_titulo(titulo_id)
+      │                   → Claude con texto completo del título
+      │
+      └── CONTENIDO ────→ embed_query(pregunta)   [OpenAI]
+                          │
+                          ├─ token_count < 60K → search_articles(vector, ley_id, k=8)
+                          │                       búsqueda plana pgvector
+                          │
+                          └─ token_count ≥ 60K → search_articles_hierarchical(vector, ley_id)
+                                                  1. top-3 títulos por embedding de título
+                                                  2. top-8 artículos dentro de esos títulos
+                                                  fallback a búsqueda plana si escaso
+                          │
+                          └─ Claude con artículos recuperados → RESPUESTA
 ```
 
-### Modo generación de tests
+**Parámetros clave** (`app/config.py`):
 
-El sistema selecciona artículos según un filtro (título, capítulo o todos) y Claude
-genera una pregunta tipo test por cada artículo.
+| Constante | Valor | Propósito |
+|---|---|---|
+| `TOP_K_ARTICLES` | 8 | Artículos recuperados por consulta |
+| `SIMILARITY_THRESHOLD` | 0.20 | Similitud coseno mínima para incluir un artículo |
+| `TOKEN_THRESHOLD_HIERARCHICAL` | 60 000 | Umbral para activar RAG jerárquico |
+
+---
+
+## Pipeline generación de tests
 
 ```
-FILTRO (titulo_id | capitulo_id | aleatorio, n)
-     │
-     ▼
-[1] fetch_articles(filtro, n)
-     │  PostgreSQL SELECT sin embeddings
-     │  → list[Articulo]
-     ▼
-[2] Para cada artículo:
-     │
-     ├─ build_test_prompt(articulo)
-     │   system: rol de creador de exámenes jurídicos
-     │   user:   texto del artículo + instrucción JSON
-     │
-     └─ claude_client.messages.create(...)
-          │  Respuesta JSON: pregunta + 4 opciones + respuesta correcta + explicación
-          ▼
-[3] Parsear y acumular list[PreguntaTest]
-     │
-     ▼
-SALIDA (stdout / JSON / CSV)
+ley_id + [titulo_id | capitulo_id] + n
+      │
+      ▼
+fetch_articles(ley_id, filtro, n)
+      │  WHERE tipo='articulo'
+      │    AND length(contenido) >= 200
+      │    AND contenido !~* '(derogado|sin contenido|suprimido)'
+      │  ORDER BY RANDOM() * log(length(contenido)) DESC
+      ▼
+Para cada artículo:
+      │
+      ├─ _build_test_prompt(articulo, ley_nombre)
+      │   5 reglas GACE 2025 obligatorias:
+      │   1. Enunciado cita la norma completa
+      │   2. Opciones en minúsculas a/b/c/d
+      │   3. Distractores de alta precisión (plazo, porcentaje, órgano)
+      │   4. Nivel de dificultad alto (datos exactos, no conceptos)
+      │   5. Sin símbolos matemáticos
+      │
+      └─ Claude → JSON {articulo, pregunta, opciones:{a,b,c,d}, correcta, explicacion}
 ```
 
 ---
@@ -79,41 +85,59 @@ SALIDA (stdout / JSON / CSV)
 ## Estructura de módulos
 
 ```
-stack-sql-vscode/
-├── app/
-│   ├── config.py          # DB_CONFIG, nombres de modelos, constantes
-│   ├── db.py              # get_connection() → psycopg2.connection
-│   ├── retrieval.py       # embed_query() + search_articles()
-│   ├── qa_pipeline.py     # run_qa(pregunta) → str
-│   └── test_pipeline.py   # run_gentest(filtro, n) → list[dict]
-│
-├── scripts/
-│   ├── generate_embeddings.py   (existente)
-│   ├── qa.py                    (nuevo CLI — modo Q&A)
-│   └── gentest.py               (nuevo CLI — modo test)
-│
-└── requirements.txt             (nuevo)
+app/
+├── config.py          # DB_CONFIG, constantes RAG, modelos
+├── db.py              # ThreadedConnectionPool, get_connection()
+├── retrieval.py       # embed_query(), search_articles(), search_articles_hierarchical()
+│                      # get_ley_info(), get_leyes_disponibles(), get_estructura_db()
+│                      # get_titulos_db(), get_articulos_por_titulo()
+├── qa_pipeline.py     # run_qa(pregunta, ley_id) → str
+│                      # _clasificar_pregunta(), _responder_estructural()
+│                      # _responder_resumen(), _responder_contenido()
+└── test_pipeline.py   # run_gentest(ley_id, ...) → list[dict]
+                       # fetch_articles(), _build_test_prompt()
+
+scripts/
+├── parse_boe.py             # descarga + parsea BOE → JSON
+├── load_ley.py              # carga JSON en normas.* + embeddings
+├── generate_embeddings.py   # regenera embeddings de artículos (batch)
+├── generate_title_embeddings.py  # genera embeddings de títulos
+├── sync_boe.py              # sincronización incremental con BOE
+├── cron_sync_boe.sh         # wrapper cron
+├── qa.py                    # CLI: python scripts/qa.py --ley-id N "pregunta"
+└── gentest.py               # CLI: python scripts/gentest.py --ley-id N --n 5
 ```
 
-### Responsabilidades por módulo
+---
 
-| Módulo | Responsabilidad |
-|---|---|
-| `app/config.py` | Lee variables de entorno; expone `DB_CONFIG`, `OPENAI_MODEL`, `CLAUDE_MODEL` |
-| `app/db.py` | Abre y cierra conexión psycopg2; función `get_connection()` |
-| `app/retrieval.py` | Genera embedding de una consulta; ejecuta búsqueda semántica en pgvector |
-| `app/qa_pipeline.py` | Orquesta el flujo Q&A: retrieval → prompt → llamada Claude → respuesta |
-| `app/test_pipeline.py` | Orquesta el flujo test: fetch artículos → prompt → llamada Claude → JSON |
-| `scripts/qa.py` | Entry point CLI: recibe pregunta como argumento, imprime respuesta |
-| `scripts/gentest.py` | Entry point CLI: recibe filtros, imprime o exporta preguntas test |
+## Esquema `normas.*`
+
+```sql
+normas.leyes        (ley_id, codigo, nombre, nombre_corto, tipo, fecha_pub,
+                     url_eli, token_count, content_hash, fecha_actualizacion, activa)
+
+normas.titulos      (titulo_id, ley_id, numero, denominacion, orden,
+                     embedding vector(1536))          ← para RAG jerárquico
+
+normas.capitulos    (capitulo_id, titulo_id, numero, denominacion, orden)
+
+normas.secciones    (seccion_id, capitulo_id, titulo_id, numero, denominacion, orden)
+
+normas.articulos    (articulo_id, ley_id, titulo_id, capitulo_id, seccion_id,
+                     numero, tipo, contenido, orden_global,
+                     embedding vector(1536))          ← para búsqueda semántica
+```
+
+**Tipos de artículo** (`tipo`): `preambulo`, `articulo`, `disposicion_adicional`,
+`disposicion_transitoria`, `disposicion_derogatoria`, `disposicion_final`.
 
 ---
 
 ## Variables de entorno requeridas
 
 ```bash
-OPENAI_API_KEY      # para generar el embedding de la pregunta (modo Q&A)
-ANTHROPIC_API_KEY   # para llamar a Claude (ambos modos)
+OPENAI_API_KEY      # embeddings (query + generación batch)
+ANTHROPIC_API_KEY   # generación Q&A y tests
 DB_HOST             # default: localhost
 DB_PORT             # default: 5432
 DB_NAME             # default: stack_db
@@ -121,55 +145,13 @@ DB_USER             # default: postgres
 DB_PASSWORD         # default: postgres
 ```
 
----
-
-## Dependencias Python
-
-```
-anthropic           # SDK oficial Anthropic (generación)
-openai              # SDK OpenAI (embeddings)
-psycopg2-binary     # conexión PostgreSQL
-```
+Cargar en shell: `set -a && source .env && set +a`
 
 ---
 
-## Formato de salida del modo test
+## Evolución futura prevista
 
-Claude devolverá JSON estructurado para facilitar el parseo y la exportación:
-
-```json
-{
-  "articulo": "20.1",
-  "pregunta": "¿Cuál de las siguientes libertades reconoce el artículo 20.1 de la Constitución?",
-  "opciones": {
-    "A": "Libertad de expresión e información",
-    "B": "Libertad de reunión",
-    "C": "Derecho al sufragio activo",
-    "D": "Libertad de circulación"
-  },
-  "correcta": "A",
-  "explicacion": "El artículo 20.1 reconoce y protege los derechos a expresar y difundir libremente pensamientos, ideas y opiniones."
-}
-```
-
----
-
-## Flujo de implementación (orden de trabajo)
-
-1. `requirements.txt` — instalar dependencias
-2. `app/config.py` — configuración centralizada
-3. `app/db.py` — conexión reutilizable
-4. `app/retrieval.py` — embedding + búsqueda pgvector
-5. `app/qa_pipeline.py` — pipeline Q&A completo
-6. `scripts/qa.py` — CLI Q&A funcional y verificado
-7. `app/test_pipeline.py` — pipeline generación test
-8. `scripts/gentest.py` — CLI test funcional y verificado
-
----
-
-## Posible evolución futura
-
-- `app/api.py` (FastAPI) — exponer ambos modos como endpoints REST
-- `scripts/export_test.py` — exportar banco de preguntas a CSV / Moodle XML
-- Modo batch en `gentest.py` — generar preguntas para un título entero en un solo comando
-- Caché de embeddings de consultas frecuentes en una tabla `qa_cache`
+- `app/streamlit_app.py` — interfaz web multi-ley (Hito 2)
+- `scripts/export_test.py` — exportar banco de tests a CSV / Moodle XML (Hito 3)
+- Motor de simulacro GACE: 100 preguntas, temporizador, A−(E/3) (Hito 6)
+- `app/api.py` (FastAPI) — endpoints REST para Q&A y gentest

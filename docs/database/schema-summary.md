@@ -1,4 +1,6 @@
-# Schema Summary – Stack SQL + VS Code + PostgreSQL
+# Schema Summary – stack_db
+
+_Última actualización: 2026-06-23_
 
 Resumen de los esquemas activos en la base de datos `stack_db`.
 
@@ -8,70 +10,86 @@ Resumen de los esquemas activos en la base de datos `stack_db`.
 
 Modelo mínimo de clientes y pedidos para practicar SQL relacional.
 
-**Tablas:**
+| Tabla | Propósito |
+|---|---|
+| `sales.customers` | Clientes (`customer_id`, `name`, `email`, `created_at`) |
+| `sales.orders` | Pedidos (`order_id`, `customer_id`, `order_date`, `amount`, `status`) |
 
-### sales.customers
-
-- Finalidad: almacenar clientes.
-- Columnas:
-  - `customer_id` (serial, PK)
-  - `name` (text, NOT NULL)
-  - `email` (text, UNIQUE, opcional)
-  - `created_at` (timestamptz, NOT NULL, por defecto NOW())
-
-### sales.orders
-
-- Finalidad: almacenar pedidos de clientes.
-- Columnas:
-  - `order_id` (serial, PK)
-  - `customer_id` (int, NOT NULL, FK → sales.customers)
-  - `order_date` (date, NOT NULL, por defecto CURRENT_DATE)
-  - `amount` (numeric(12,2), NOT NULL)
-  - `status` (text, NOT NULL, por defecto 'pending')
-
-**Relaciones:** 1 cliente → N pedidos
-
-**Scripts:** `sql/ddl/001_init_schema.sql`, `sql/dml/001_seed_sales.sql`
+Scripts: `sql/ddl/001_init_schema.sql`, `sql/dml/001_seed_sales.sql`
 
 ---
 
-## Esquema `legislacion` — Base de datos legislativa CE
+## Esquema `normas` — Base de datos legislativa multi-ley
 
-Base de datos de la Constitución Española (1978) con búsqueda semántica.
+Esquema unificado para múltiples leyes con búsqueda semántica mediante pgvector.
+Fuente: textos consolidados del BOE (URLs ELI).
 
-**Fuente:** texto oficial BOE — `https://www.boe.es/eli/es/c/1978/12/27/(1)/con`
+### normas.leyes
 
-**Tablas:**
+Metadatos de cada ley cargada.
 
-### legislacion.leyes
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `ley_id` | serial PK | Identificador interno |
+| `codigo` | text UNIQUE | Código corto (CE, LPAC, LRJSP…) |
+| `nombre` | text | Nombre completo oficial |
+| `nombre_corto` | text | Nombre abreviado (Ley 39/2015…) |
+| `tipo` | text | constitucion, ley_ordinaria, real_decreto_legislativo… |
+| `fecha_pub` | date | Fecha de publicación en BOE |
+| `url_eli` | text | Permalink ELI al texto consolidado |
+| `token_count` | int | Estimación de tokens (chars/4) |
+| `content_hash` | varchar(64) | SHA-256 del HTML; detecta modificaciones |
+| `fecha_actualizacion` | timestamptz | Última sincronización con BOE |
+| `activa` | boolean | False para leyes retiradas |
 
-- Finalidad: metadatos de la ley fuente.
-- 1 fila: Constitución Española (CE1978)
+**Leyes activas:**
 
-### legislacion.titulos
+| ley_id | codigo | Ley | Artículos | RAG |
+|--------|--------|-----|-----------|-----|
+| 1 | CE | Constitución Española (1978) | 185 | full-text |
+| 4 | Ley 39/2015 | LPAC | 156 | full-text |
+| 7 | Ley 40/2015 | LRJSP | 219 | jerárquico |
+| 8 | RDL 5/2015 | TREBEP | 137 | full-text |
+| 9 | Ley 47/2003 | LGP | 225 | jerárquico |
+| 12 | Ley 9/2017 | LCSP | 428 | jerárquico |
 
-- Finalidad: 11 títulos jerárquicos (Preliminar + I al X).
+### normas.titulos
 
-### legislacion.capitulos
+Títulos jerárquicos de cada ley.
 
-- Finalidad: 11 capítulos (solo en Títulos I, III y VIII).
+- `titulo_id`, `ley_id` (FK), `numero`, `denominacion`, `orden`
+- `embedding vector(1536)` — embedding semántico del título (para RAG jerárquico)
+- **50 títulos** con embeddings generados
 
-### legislacion.secciones
+### normas.capitulos
 
-- Finalidad: 2 secciones (solo en Título I, Capítulo Segundo).
+- `capitulo_id`, `titulo_id` (FK), `numero`, `denominacion`, `orden`
 
-### legislacion.articulos
+### normas.secciones
 
-- Finalidad: unidad mínima de contenido — preámbulo, artículos y disposiciones.
-- 185 filas: 1 preámbulo + 169 artículos + 15 disposiciones
-- Columna `embedding vector(1536)`: vectores semánticos generados con `text-embedding-3-small` (OpenAI)
-- Índice HNSW con similitud coseno para búsqueda semántica
+- `seccion_id`, `capitulo_id` (FK), `titulo_id` (FK), `numero`, `denominacion`, `orden`
+- Incluye subsecciones (prefijo `Sub-N.ª`)
+
+### normas.articulos
+
+Unidad mínima de contenido. Incluye artículos ordinarios y disposiciones.
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `articulo_id` | serial PK | |
+| `ley_id` | int FK | Referencia a normas.leyes |
+| `titulo_id` | int FK nullable | |
+| `capitulo_id` | int FK nullable | |
+| `seccion_id` | int FK nullable | |
+| `numero` | text | "14", "108 bis", "DA-1", "DF-3"… |
+| `tipo` | text | articulo, preambulo, disposicion_adicional, transitoria, derogatoria, final |
+| `contenido` | text | Texto completo del artículo |
+| `orden_global` | int | Posición en la ley |
+| `embedding` | vector(1536) | Vector semántico (`text-embedding-3-small`) |
+
+**Totales:** ~1.350 artículos/disposiciones · ~1.350 embeddings
 
 **Jerarquía:** leyes → titulos → capitulos → secciones → articulos
-
-**Scripts:** `sql/ddl/002_constitucion_schema.sql`, `sql/dml/002_constitucion_seed.sql`
-
-**Documentación completa:** `docs/database/constitucion/`
 
 ---
 
@@ -81,3 +99,15 @@ Base de datos de la Constitución Española (1978) con búsqueda semántica.
 |---|---|---|
 | `plpgsql` | 1.0 | Lenguaje procedural PostgreSQL |
 | `vector` | 0.8.2 | Tipos vectoriales y búsqueda semántica (pgvector) |
+
+---
+
+## Índices vectoriales
+
+```sql
+-- Artículos: similitud coseno con HNSW
+CREATE INDEX ON normas.articulos USING hnsw (embedding vector_cosine_ops);
+
+-- Títulos: similitud coseno con HNSW
+CREATE INDEX ON normas.titulos USING hnsw (embedding vector_cosine_ops);
+```

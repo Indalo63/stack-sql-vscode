@@ -1,5 +1,7 @@
 # Architecture
 
+_Última actualización: 2026-06-23_
+
 ## Purpose of this document
 
 Este documento describe la arquitectura del proyecto `stack-sql-vscode` en tres niveles:
@@ -93,12 +95,12 @@ Su finalidad no es representar un sistema productivo, sino ofrecer una base clar
 
 ### 6. Vector and semantic layer
 
-La arquitectura incluye soporte vectorial completo con `pgvector`, ya operativo:
+La arquitectura incluye soporte vectorial completo con `pgvector`, operativo en dos niveles:
 
-- embeddings generados con `text-embedding-3-small` (OpenAI, 1536 dims)
-- 185 artículos de la Constitución Española almacenados con sus vectores
-- índice HNSW para búsqueda por similitud coseno
-- pipeline de recuperación semántica verificado en producción
+- Embeddings de artículo: `text-embedding-3-small` (1536 dims) — ~1.350 vectores en `normas.articulos`
+- Embeddings de título: mismo modelo — 50 vectores en `normas.titulos` (para RAG jerárquico)
+- Índices HNSW con similitud coseno en ambas tablas
+- Estrategia RAG automática: full-text (<60K tokens) o jerárquico (≥60K tokens)
 
 ### 7. Documentation layer
 
@@ -168,14 +170,14 @@ Claude se apoya en archivos de contexto concretos:
 
 ## Short-term target architecture
 
-El stack base está consolidado y los pipelines han sido evaluados. Los objetivos a corto plazo son:
-
-- ~~evaluar la calidad de los pipelines Q&A y generación de tests~~ ✅ completado (2026-06-18)
-- añadir interfaz web con Streamlit sobre los dos pipelines (Hito 2 — siguiente)
-- implementar exportación de tests a CSV / Moodle XML (Hito 3)
-- replicar el módulo legislativo para otras leyes (ET, LOPD, LCSP) (Hito 4)
-- sincronización automática con el BOE para detectar reformas legislativas (Hito 5)
-- módulo de oposiciones: banco de preguntas reales + generación guiada por convocatoria (Hito 6)
+- ~~evaluar la calidad de los pipelines Q&A y generación de tests~~ ✅ (2026-06-18)
+- ~~expansión a leyes prioritarias GACE (LPAC, LRJSP, TREBEP, LGP, LCSP)~~ ✅ (2026-06-23)
+- ~~sincronización automática con el BOE~~ ✅ (2026-06-23)
+- ~~RAG jerárquico + mejoras de calidad Q&A + filtrado generador~~ ✅ (2026-06-23)
+- **añadir interfaz web Streamlit multi-ley** (Hito 2 — siguiente)
+- exportar banco de tests a CSV / Moodle XML (Hito 3)
+- simulacro de examen GACE completo (Hito 6)
+- módulo de oposiciones con banco histórico + few-shot (Hito 7)
 
 En esta fase, el foco está en la usabilidad, la extensión del contenido legislativo y la integración con fuentes externas.
 
@@ -251,8 +253,8 @@ La arquitectura actual tiene límites claros:
 
 - es un entorno local, no un despliegue productivo
 - no existe todavía una capa de automatización operativa con `n8n`
-- la interfaz de usuario es CLI; aún no hay capa web ni API REST
-- el contenido legislativo se limita actualmente a la Constitución Española
+- la interfaz de usuario es CLI; la interfaz web Streamlit está pendiente (Hito 2)
+- el contenido legislativo cubre 6 leyes GACE; otras leyes pueden añadirse con `parse_boe.py`
 
 Estos límites son importantes para no confundir capacidad potencial con capacidad ya verificada.
 
@@ -268,29 +270,20 @@ Las principales preguntas abiertas son:
 
 ## Architectural decisions
 
-### Modelo de datos para múltiples leyes y dominios
+### Modelo de datos para múltiples leyes
 
-**Decisión:** una sola base de datos (`stack_db`) con schemas separados por área temática. No se crearán proyectos ni bases de datos independientes por cada ley.
+**Decisión:** un único esquema `normas.*` en `stack_db` con todas las leyes identificadas por `ley_id`. No hay schemas separados por ley ni por área temática.
 
-**Estructura objetivo:**
+**Estructura actual:**
 ```
 stack_db
-├── legislacion      ← Constitución Española (activo)
-├── laboral          ← ET, LOPD, convenios colectivos  (Hito 4)
-├── fiscal           ← LGT, IRPF, IVA, IS              (Hito 4)
-├── administrativo   ← LCSP, LRJSP, PAC                (Hito 4)
-└── oposiciones      ← banco de preguntas reales        (Hito 6)
+├── normas.*     ← todas las leyes GACE (CE, LPAC, LRJSP, TREBEP, LGP, LCSP) ✅
+├── oposiciones.*  ← banco de preguntas reales (Hito 7, pendiente)
+└── sales.*      ← práctica SQL básica
 ```
 
-**Campo `area_juridica` en `legislacion.leyes`:** cada ley registrada incluye su área temática para permitir filtrado previo en la búsqueda semántica.
+**Motivo:** el diseño multi-ley en `normas.*` (leyes + titulos + articulos con ley_id FK) resulta más limpio que crear un schema por ley. Añadir una nueva ley es `parse_boe.py` + `load_ley.py` + `generate_title_embeddings.py`.
 
-```sql
-ALTER TABLE legislacion.leyes ADD COLUMN area_juridica TEXT;
--- Valores: 'constitucional', 'laboral', 'fiscal', 'administrativo', 'penal', etc.
-```
-
-**Motivo:** el esquema `legislacion` ya está diseñado para múltiples leyes (`leyes` es un registro, `articulos` referencia a la ley). Solo se extiende con metadatos, no se rediseña.
-
-**Para dominios completamente distintos** (no jurídicos, clientes independientes, formación): ver `docs/project/10-replication-and-domains.md`.
+**Para dominios completamente distintos** (formación, clientes independientes): ver `docs/project/10-replication-and-domains.md`.
 
 Mientras estas preguntas no estén cerradas, la arquitectura debe seguir tratándose como una base viva y evolutiva.

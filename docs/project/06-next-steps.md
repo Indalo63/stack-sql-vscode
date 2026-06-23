@@ -1,124 +1,98 @@
 # Next Steps
 
-## Purpose of this document
-
-Este documento define los próximos pasos operativos del proyecto `stack-sql-vscode`.
+_Última actualización: 2026-06-23_
 
 ## Estado actual (punto de partida)
 
-El MVP de la aplicación de Q&A jurídico está completo y operativo:
+Pipeline Q&A y generador de tests operativos sobre 6 leyes prioritarias GACE:
+CE, LPAC, LRJSP, TREBEP, LGP, LCSP — 1.350 artículos con embeddings de artículo y de título.
+RAG jerárquico activo para leyes >60K tokens. Sincronización automática semanal con el BOE.
 
-- Constitución Española (1978) cargada desde el BOE (texto oficial)
-- 185 elementos con embeddings generados (`text-embedding-3-small`, vector 1536)
-- Búsqueda semántica por similitud coseno funcionando con pgvector (índice HNSW)
-- Pipeline Q&A operativo: `python scripts/qa.py "pregunta..."`
-- Pipeline de generación de tests operativo: `python scripts/gentest.py --n 5`
+---
+
+## Hitos completados
+
+### ~~Hito 1 — Evaluación de calidad~~ ✅ (2026-06-18)
+Pipeline Q&A: 13/13 preguntas de referencia. Generador: 8/8 preguntas correctas.
+
+### ~~Hito 4 — Expansión a leyes prioritarias GACE~~ ✅ (2026-06-23)
+Cargadas: LPAC (ley 39/2015), LRJSP (40/2015), TREBEP (RDL 5/2015), LGP (47/2003), LCSP (9/2017).
+Parser del BOE genérico y robusto: soporta Libros, Subsecciones, sufijos bis/ter/quáter/sexies, ordinales hasta trigésimo, deduplicación automática.
+
+### ~~Hito 5 — Sincronización automática con el BOE~~ ✅ (2026-06-23)
+`scripts/sync_boe.py` + cron semanal (domingos 04:00). Hash SHA-256, diff incremental, log en `logs/sync_boe.log`.
+
+### ~~Refinamiento del sistema~~ ✅ (2026-06-23)
+RAG jerárquico (embeddings de título), TOP_K 5→8, umbral de similitud 0.20, filtrado de artículos no testables, prompt GACE 2025 alineado con examen oficial.
+
+---
 
 ## Próximos hitos
 
-### ~~Hito 1 — Evaluación de calidad~~ ✅ Completado (2026-06-18)
+### Hito 2 — Interfaz web Streamlit multi-ley ⬅ siguiente
 
-**Pipeline Q&A:** 13/13 preguntas de referencia respondidas correctamente. Precisión de recuperación y calidad de respuesta: alta.
-Ver resultados en `docs/project/eval-qa-referencia.md`.
+Interfaz web que reemplaza el CLI para Q&A y generación de tests.
 
-**Generador de tests:** 8/8 preguntas evaluadas sobre Arts. 14, 33, 34, 55, 87, 145, 155, 169.
-Opciones correctas verificadas contra el texto literal de la CE. Distractores de calidad. 0 errores de fondo.
-Ver resultados en `docs/project/eval-gentest-referencia.md`.
+**Requisitos mínimos:**
+- Selector de ley (cargado desde `normas.leyes`)
+- Pestaña Q&A: campo de pregunta + respuesta formateada en Markdown
+- Pestaña Tests: parámetros (n, título/capítulo) + visualización de preguntas con corrección
+- Indicador de qué ley está activa y número de artículos
 
-### Hito 2 — Interfaz de usuario
-
-Elegir e implementar una interfaz más accesible que el CLI.
-
-| Opción | Complejidad | Descripción |
-|---|---|---|
-| Streamlit | Baja | Interfaz web local en Python, sin servidor separado |
-| FastAPI REST | Media | Endpoint HTTP que expone los dos modos como API |
-| Integración n8n | Media | Flujo visual sin código adicional en Docker |
-
-**Recomendación:** Streamlit para una demo rápida; FastAPI si el objetivo es exponerlo como servicio.
+**Archivo:** `app/streamlit_app.py` (existe esqueleto, actualizar a multi-ley)
 
 ### Hito 3 — Exportación de tests
 
-Añadir la capacidad de exportar el banco de preguntas generadas a formatos reutilizables.
+Exportar el banco de preguntas generadas a formatos reutilizables.
 
 **Pasos:**
 1. Crear `scripts/export_test.py`
-2. Soportar salida a CSV y, opcionalmente, a formato Moodle XML
-3. Añadir opción `--export csv` a `scripts/gentest.py`
+2. Salida a CSV (columnas: ley, articulo, pregunta, a, b, c, d, correcta, explicacion)
+3. Salida a Moodle XML (formato GIFT o XML nativo)
+4. Opción `--export csv|moodle` en `scripts/gentest.py`
 
-### Hito 4 — Expansión a otras leyes
+### Hito 6 — Simulacro de examen GACE
 
-Replicar el módulo legislativo para otras leyes relevantes.
+Motor de simulacro completo que replica el examen oficial.
 
-**Candidatos:**
-- Estatuto de los Trabajadores (ET)
-- Ley Orgánica de Protección de Datos (LOPD)
-- Ley de Contratos del Sector Público (LCSP)
+**Especificaciones del examen GACE 2025:**
+- 100 preguntas, 90 minutos
+- Penalización: A − (E/3) donde A = aciertos, E = errores
+- Escala final: 0–50 puntos, mínimo 25 para aprobar
 
-El proceso está documentado y es repetible: DDL → seed → embeddings → pipeline.
+**Componentes:**
+- Selección automática de 100 preguntas distribuidas por ley según el programa oficial
+- Temporizador con cuenta regresiva
+- Marcado de respuestas (puede dejarse en blanco)
+- Puntuación final con fórmula A−(E/3) y conversión a escala 0–50
+- Revisión de respuestas con explicación al finalizar
 
-### Hito 5 — Sincronización automática con el BOE
+**Dependencia:** requiere banco de preguntas suficiente (Hito 3 facilita la acumulación).
 
-Detectar reformas legislativas publicadas en el BOE y mantener la base de datos actualizada sin intervención manual.
+### Hito 7 — Módulo de oposiciones (banco histórico + few-shot)
 
-**Problema que resuelve:** una ley cargada en `legislacion.articulos` puede quedar desactualizada si el BOE publica una disposición que la modifica o deroga. Los embeddings existentes reflejarían texto obsoleto.
+Ingesta de preguntas reales de convocatorias anteriores y generación guiada por ejemplos.
 
-**Enfoque propuesto:**
+**Esquema nuevo:** `oposiciones.*`
+- `oposiciones.convocatorias` — año, organismo, nº plazas, fórmula de puntuación
+- `oposiciones.preguntas_historicas` — enunciado, opciones, correcta, tema, artículo, convocatoria
 
-1. Crear `scripts/sync_boe.py` que consulte la API pública del BOE (`api.boe.es`) buscando disposiciones que referencien las leyes cargadas en la base de datos.
-2. Comparar el texto recuperado con el almacenado en `legislacion.articulos`.
-3. Marcar los artículos afectados con un campo `desactualizado = true`.
-4. Regenerar embeddings únicamente de los artículos modificados.
-5. Registrar cada sincronización en una tabla de auditoría (`legislacion.sync_log`).
+**Pipeline mejorado:** artículo + 2-3 preguntas reales de la misma oposición → Claude → pregunta alineada con el estilo oficial real (no solo por reglas).
 
-**Opciones de activación:**
+**Requisito mínimo:** 20-30 preguntas reales por oposición.
 
-| Mecanismo | Descripción |
-|---|---|
-| Cron / scheduler | Ejecución periódica automática (semanal o mensual) |
-| RSS/Atom del BOE | Suscripción a feeds por sección; dispara revisión manual antes de ingestar |
+---
 
-**Prioridad por ley:** la CE es muy difícil de reformar (Arts. 167-169), por lo que este hito tiene mayor impacto práctico sobre las leyes del Hito 4 (ET, LOPD, LCSP), donde las modificaciones son frecuentes.
+## Expansiones futuras
 
-**Dependencia:** se recomienda implementar después del Hito 4.
+- Caché de consultas Q&A frecuentes en tabla `normas.qa_cache`
+- Modo batch en `gentest.py`: generar preguntas para un título completo en un comando
+- Comparativa de embeddings: OpenAI `text-embedding-3-small` vs. modelos locales (sentence-transformers)
+- API REST (FastAPI) para exponer Q&A y gentest como endpoints
+- Siembra del programa oficial GACE en esquema `programa.*` (6 bloques, 58 temas)
 
-### Hito 6 — Módulo de oposiciones
+---
 
-Módulo independiente para preparación de oposiciones, combinando preguntas reales de convocatorias anteriores con generación asistida por IA adaptada a cada examen.
+## Regla de revisión
 
-**Problema que resuelve:** las preguntas genéricas no reflejan el estilo, dificultad ni sistema de puntuación real de cada oposición. Este módulo genera preguntas que imitan el formato exacto del examen objetivo.
-
-**Arquitectura en dos capas:**
-
-**Capa 1 — Banco de preguntas reales (ingesta)**
-
-Nuevo esquema `oposiciones` con las siguientes tablas:
-- `oposiciones.convocatorias` — nombre, año, organismo convocante, nº de plazas
-- `oposiciones.reglas_puntuacion` — acierto, error, blanco (configurable por convocatoria)
-- `oposiciones.preguntas_historicas` — enunciado, opciones, respuesta correcta, tema, artículo de referencia, convocatoria
-
-**Capa 2 — Generación guiada por ejemplos reales**
-
-Pipeline de generación que combina tres fuentes de contexto para Claude:
-1. Artículo legislativo relevante (recuperado por búsqueda semántica con pgvector)
-2. 2-3 preguntas reales de esa misma oposición como ejemplos de estilo y dificultad (few-shot)
-3. Reglas de puntuación de la convocatoria objetivo
-
-**Scripts nuevos:**
-- `scripts/ingest_oposicion.py` — carga preguntas históricas desde CSV
-- `scripts/gentest_oposicion.py` — genera preguntas adaptadas a una convocatoria concreta
-
-**Requisito mínimo:** corpus de al menos 20-30 preguntas reales por oposición para que el estilo generado sea fiel al examen. Sin corpus, la generación es válida pero genérica.
-
-**Dependencia:** requiere Hito 4 (expansión a otras leyes) para oposiciones que no sean sobre la CE.
-
-## Expansiones futuras (sin prioridad asignada)
-
-- Caché de embeddings de consultas frecuentes en tabla `qa_cache`
-- Histórico de preguntas y respuestas en base de datos
-- Modo batch en `gentest.py` para generar preguntas por título entero
-- Comparativa de calidad entre embeddings de OpenAI y modelos locales (HuggingFace)
-
-## Review rule
-
-Este archivo debe actualizarse cada vez que se complete un hito o cambie la prioridad.
+Actualizar este archivo cada vez que se complete un hito o cambie la prioridad.

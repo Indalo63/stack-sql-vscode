@@ -1,25 +1,26 @@
 # Current State
 
-## Purpose of this document
+_Última actualización: 2026-06-23_
+
+## Propósito
 
 Este documento describe el estado actual real del proyecto `stack-sql-vscode`.
+Permite retomar el trabajo técnico sin depender de la memoria de sesiones anteriores.
 
-Su función es permitir retomar el trabajo técnico sin depender de la memoria de sesiones anteriores, dejando claro qué existe, qué está verificado y cuál es el siguiente paso.
+---
 
-## Project identity
+## Entorno de trabajo
 
-`stack-sql-vscode` es un proyecto técnico personal orientado a SQL con PostgreSQL, VS Code, Docker y Claude Code. Su objetivo ha evolucionado desde la práctica SQL básica hacia la construcción de una base de datos legislativa con búsqueda semántica, como base para una aplicación de Q&A jurídico.
+| Componente | Detalle |
+|---|---|
+| Sistema anfitrión | Windows con WSL2 (Ubuntu 24.04 LTS) |
+| Editor | VS Code + extensión Claude Code |
+| Control de versiones | Git (rama `master`) |
+| Contenedores | Docker Desktop con integración WSL2 |
+| Base de datos | PostgreSQL 16 + pgvector en Docker |
+| Ruta base | `~/dev/stack-sql-vscode` |
 
-## Working environment
-
-- Sistema anfitrión: Windows con WSL2 (Ubuntu 24.04 LTS)
-- Editor: VS Code con Claude Code
-- Control de versiones: Git
-- Contenedores: Docker Desktop con integración WSL2
-- Base de datos: PostgreSQL 16 con pgvector
-- Ruta base: `~/dev/stack-sql-vscode`
-
-## Docker stack
+### Docker stack
 
 | Servicio | Imagen | Puerto | Contenedor |
 |---|---|---|---|
@@ -27,99 +28,110 @@ Su función es permitir retomar el trabajo técnico sin depender de la memoria d
 | pgAdmin 4 | `dpage/pgadmin4:latest` | 5050 | `stack-sql-pgadmin` |
 
 - Base de datos: `stack_db` / usuario: `postgres` / contraseña: `postgres`
-- pgAdmin: `indaleciopf@gmail.com` / contraseña: `postgres`
-- Levantar stack: `docker compose -f docker/docker-compose.yml up -d`
+- Levantar: `docker compose -f docker/docker-compose.yml up -d`
+
+---
 
 ## Esquemas activos en stack_db
 
-### Esquema `sales` (práctica SQL básica)
+### `sales` — Práctica SQL básica
 
-Modelo mínimo de clientes y pedidos para practicar SQL relacional.
+Modelo mínimo de clientes y pedidos. Scripts: `sql/ddl/001_init_schema.sql`, `sql/dml/001_seed_sales.sql`.
 
-- `sales.customers` — clientes
-- `sales.orders` — pedidos
+### `normas` — Base de datos legislativa multi-ley ⬅ núcleo del proyecto
 
-Scripts: `sql/ddl/001_init_schema.sql`, `sql/dml/001_seed_sales.sql`
-
-### Esquema `legislacion` (base de datos legislativa CE)
-
-Base de datos de la Constitución Española (1978) con búsqueda semántica mediante pgvector.
+Esquema unificado para múltiples leyes con búsqueda semántica mediante pgvector.
 
 **Tablas:**
-- `legislacion.leyes` — metadatos de la ley
-- `legislacion.titulos` — 11 títulos (Preliminar + I al X)
-- `legislacion.capitulos` — 11 capítulos (Títulos I, III y VIII)
-- `legislacion.secciones` — 2 secciones (Título I, Capítulo Segundo)
-- `legislacion.articulos` — 185 elementos: preámbulo, 169 artículos, 15 disposiciones
 
-**Estado:**
-- Texto oficial extraído del BOE (permalink ELI)
-- 185/185 embeddings generados con `text-embedding-3-small` (OpenAI, vector 1536)
-- Índice HNSW operativo para búsqueda semántica por similitud coseno
-- Búsqueda semántica verificada y funcionando
-
-Scripts: `sql/ddl/002_constitucion_schema.sql`, `sql/dml/002_constitucion_seed.sql`
-Documentación: `docs/database/constitucion/`
-
-## Extensión pgvector
-
-- Versión: `0.8.2`
-- Esquema: `public`
-- Verificada con `\dx` en `stack_db`
-
-## Documentación existente
-
-| Archivo | Contenido |
+| Tabla | Contenido |
 |---|---|
-| `docs/database/schema-summary.md` | Resumen de ambos esquemas (sales + legislacion) |
-| `docs/database/constitucion/` | Documentación completa del módulo legislativo (4 archivos) |
-| `docs/sql/style-guide.md` | Guía de estilo SQL del proyecto |
-| `docs/sql/prompt-recipes.md` | Recetas de prompts para Claude Code |
-| `docs/project/` | Contexto, arquitectura, bitácora, decisiones y próximos pasos |
+| `normas.leyes` | Metadatos de cada ley: nombre, tipo, url_eli, token_count, content_hash, fecha_actualizacion |
+| `normas.titulos` | Títulos de cada ley + `embedding vector(1536)` para RAG jerárquico |
+| `normas.capitulos` | Capítulos |
+| `normas.secciones` | Secciones y subsecciones |
+| `normas.articulos` | Artículos y disposiciones + `embedding vector(1536)` |
+
+**Leyes cargadas:**
+
+| ley_id | Código | Ley | Artículos | Embeddings | RAG | Tokens est. |
+|--------|--------|-----|-----------|-----------|-----|-------------|
+| 1 | CE | Constitución Española (1978) | 185 | ✓ | full-text | 27K |
+| 4 | Ley 39/2015 | LPAC — Ley del Procedimiento Administrativo Común | 156 | ✓ | full-text | 56K |
+| 7 | Ley 40/2015 | LRJSP — Ley de Régimen Jurídico del Sector Público | 219 | ✓ | jerárquico | 84K |
+| 8 | RDL 5/2015 | TREBEP — Estatuto Básico del Empleado Público | 137 | ✓ | full-text | 46K |
+| 9 | Ley 47/2003 | LGP — Ley General Presupuestaria | 225 | ✓ | jerárquico | 87K |
+| 12 | Ley 9/2017 | LCSP — Ley de Contratos del Sector Público | 428 | ✓ | jerárquico | 231K |
+
+**Totales:** 1.350 artículos/disposiciones · 1.350 embeddings de artículo · 50 embeddings de título
+
+---
 
 ## Scripts disponibles
 
 | Script | Propósito |
 |---|---|
-| `scripts/generate_embeddings.py` | Genera embeddings con OpenAI (requiere `OPENAI_API_KEY`) |
-| `scripts/qa.py` | CLI modo Q&A: `python scripts/qa.py "pregunta..."` |
-| `scripts/gentest.py` | CLI generación de tests: `python scripts/gentest.py --n 5` |
-| `scripts/menu.sh` | Menú interactivo de gestión del stack |
-| `scripts/setup.sh` | Setup inicial del entorno |
-| `scripts/launcher.bat` | Lanzador desde Windows |
+| `scripts/parse_boe.py` | Descarga y parsea texto consolidado del BOE → JSON |
+| `scripts/load_ley.py` | Carga JSON en `normas.*` + genera embeddings |
+| `scripts/generate_embeddings.py` | Regenera embeddings de artículos pendientes |
+| `scripts/generate_title_embeddings.py` | Genera embeddings de títulos (RAG jerárquico) |
+| `scripts/sync_boe.py` | Sincronización incremental con BOE (hash diff) |
+| `scripts/cron_sync_boe.sh` | Wrapper cron — ejecuta sync_boe.py con .env cargado |
+| `scripts/qa.py` | CLI Q&A: `python scripts/qa.py --ley-id 4 "pregunta"` |
+| `scripts/gentest.py` | CLI tests: `python scripts/gentest.py --ley-id 4 --n 5` |
 
-## App structure (implementada y operativa)
+**Carga de nueva ley:**
+```bash
+python3 scripts/parse_boe.py <url_eli> <CODIGO> --nombre "..." --nombre-corto "..." --output data/leyes/<ley>.json
+python3 scripts/load_ley.py data/leyes/<ley>.json --embeddings
+python3 scripts/generate_title_embeddings.py
+```
+
+**Sincronización BOE (manual):**
+```bash
+python3 scripts/sync_boe.py                  # todas las leyes
+python3 scripts/sync_boe.py --ley-id 4       # solo LPAC
+python3 scripts/sync_boe.py --forzar         # ignorar hash, reprocesar
+```
+Log: `logs/sync_boe.log` · Cron: domingos a las 04:00
+
+---
+
+## App Python
 
 ```
 app/
-├── config.py          # variables de entorno y constantes
-├── db.py              # conexión psycopg2 reutilizable
-├── retrieval.py       # embed_query() + search_articles()
-├── qa_pipeline.py     # pipeline Q&A completo
-└── test_pipeline.py   # pipeline generación de tests
-scripts/
-├── qa.py              # CLI: python scripts/qa.py "pregunta..."
-└── gentest.py         # CLI: python scripts/gentest.py --n 5
-requirements.txt       # anthropic + openai + psycopg2-binary
+├── config.py         # DB_CONFIG, modelos, TOP_K=8, SIMILARITY_THRESHOLD=0.20
+├── db.py             # ThreadedConnectionPool (psycopg2)
+├── retrieval.py      # embed_query(), search_articles(), search_articles_hierarchical()
+├── qa_pipeline.py    # run_qa(pregunta, ley_id) — enrutamiento 3 vías
+└── test_pipeline.py  # run_gentest(ley_id, ...) — estilo GACE 2025
 ```
 
-Arquitectura detallada: `docs/project/08-qa-app-architecture.md`
+---
 
-## Current state summary
+## Estado de los pipelines
 
-El proyecto está completamente operativo en su MVP, con ambos pipelines evaluados y listos para el siguiente hito:
+### Q&A (`scripts/qa.py`)
 
-- Stack Docker levantado y verificado (PostgreSQL + pgvector + pgAdmin)
-- Esquema `legislacion` con 185 artículos y embeddings generados
-- Búsqueda semántica funcionando con índice HNSW
-- Pipeline Q&A operativo y evaluado: 13/13 preguntas de referencia ✅ (`docs/project/eval-qa-referencia.md`)
-- Pipeline de generación de tests operativo y evaluado: 8/8 preguntas correctas ✅ (`docs/project/eval-gentest-referencia.md`)
-- Restricción activa en el generador: ningún símbolo matemático en preguntas, opciones ni explicaciones
+- Clasificador de 3 vías: ESTRUCTURAL → metadatos BD | RESUMEN → artículos del título | CONTENIDO → RAG semántico
+- Leyes <60K tokens: búsqueda plana (`search_articles`, TOP_K=8)
+- Leyes >60K tokens: RAG jerárquico (`search_articles_hierarchical`, top-3 títulos → top-8 artículos)
+- Umbral de similitud coseno: 0.20 (descarta artículos poco relevantes)
 
-## Immediate next steps
+### Generador de tests (`scripts/gentest.py`)
 
-- Añadir interfaz web con Streamlit sobre los dos pipelines (Hito 2 — **siguiente**)
-- Exportar banco de tests a CSV / Moodle XML (Hito 3)
-- Extender el módulo legislativo a otras leyes (ET, LOPD, LCSP) (Hito 4)
-- Sincronización automática con el BOE para detectar reformas legislativas (Hito 5)
-- Módulo de oposiciones: banco de preguntas reales + generación guiada por convocatoria (Hito 6)
+- Estilo GACE 2025: 5 reglas obligatorias (ver CLAUDE.md)
+- Selección ponderada por `log(longitud)`: artículos más ricos tienen más probabilidad
+- Filtra artículos <200 chars y derogados
+- Salida JSON: `{articulo, pregunta, opciones: {a,b,c,d}, correcta, explicacion}`
+
+---
+
+## Sincronización automática con el BOE
+
+- Mecanismo: SHA-256 del HTML consolidado comparado con `normas.leyes.content_hash`
+- Sin cambio de hash: ~2s por ley, sin coste de API
+- Con cambio: diff artículo a artículo, actualización selectiva, regeneración de embeddings
+- Cron: `0 4 * * 0` (domingos, 04:00)
+- Log: `logs/sync_boe.log`
