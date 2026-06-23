@@ -139,9 +139,16 @@ def _norm_capitulo(texto: str) -> str:
 
 def _norm_seccion(texto: str) -> tuple[str, str]:
     """
-    'Sección 1.ª De los derechos fundamentales...'
-    → numero='1.ª', denominacion='De los derechos fundamentales...'
+    'Sección 1.ª De los derechos fundamentales...' → numero='1.ª', denom='De los...'
+    'Subsección 2.ª Prohibiciones de contratar'    → numero='Sub-2.ª', denom='Prohibiciones...'
     """
+    # Subsección
+    m = re.match(r'Subsecci[oó]n\s+(\d+\.?[aªa]?\.?|[A-Z]+)\s*[.–-]?\s*(.*)', texto, re.IGNORECASE)
+    if m:
+        num   = "Sub-" + m.group(1).strip().rstrip(".")
+        denom = m.group(2).strip()
+        return num, denom
+    # Sección normal
     m = re.match(r'Secci[oó]n\s+(\d+\.?[aªa]?\.?|[A-Z]+)\s*[.–-]?\s*(.*)', texto, re.IGNORECASE)
     if m:
         num   = m.group(1).strip().rstrip(".")
@@ -272,13 +279,16 @@ def parsear(html: str, codigo: str, url: str = "", debug: bool = False) -> dict:
     secciones: list[dict] = []
     articulos: list[dict] = []
 
-    # Rastreo de números ya usados para deduplicar disposiciones
+    # Rastreo de números ya usados para deduplicar disposiciones y secciones
     _numeros_vistos: dict[tuple, int] = {}
+    _secciones_vistas: dict[tuple, int] = {}  # (capitulo_numero, seccion_numero)
 
     # Estado del parser (contexto jerárquico actual)
+    ctx_libro:    str | None = None  # "LI", "LII"... cuando la ley tiene Libros
     ctx_titulo:   str | None = None
     ctx_capitulo: str | None = None
     ctx_seccion:  str | None = None
+    orden_libro    = 0
     orden_titulo   = 0
     orden_capitulo = 0
     orden_seccion  = 0
@@ -314,6 +324,28 @@ def parsear(html: str, codigo: str, url: str = "", debug: bool = False) -> dict:
         clases_h4 = " ".join(h4.get("class", [])) if h4 else ""
         clases_h5 = " ".join(h5.get("class", [])) if h5 else ""
 
+        # — Libro (nivel sobre Título en leyes grandes como LCSP) ——
+        if "libro" in clases_h4:
+            libro_tag = bloque.find("h4", class_=re.compile(r"libro"))
+            libro_txt = libro_tag.get_text(" ", strip=True) if libro_tag else ""
+            # Extraer número romano del libro: "LIBRO PRIMERO" → "I", "LIBRO II" → "II"
+            m_lib = re.search(r'(?:LIBRO\s+)?([IVXLC]+|\w+)$', libro_txt.strip(), re.IGNORECASE)
+            if m_lib:
+                raw = m_lib.group(1).upper()
+                rom = {"PRIMERO":"I","SEGUNDO":"II","TERCERO":"III","CUARTO":"IV",
+                       "QUINTO":"V","SEXTO":"VI","SÉPTIMO":"VII","OCTAVO":"VIII"}
+                ctx_libro = f"L{rom.get(raw, raw)}"
+            else:
+                orden_libro += 1
+                ctx_libro = f"L{orden_libro}"
+            ctx_titulo   = None
+            ctx_capitulo = None
+            ctx_seccion  = None
+            orden_titulo   = 0
+            orden_capitulo = 0
+            orden_seccion  = 0
+            continue
+
         # — Título ————————————————————————————————————————————————
         if "titulo" in clases_h4:
             # Puede ser h4.titulo (TÍTULO PRELIMINAR) o h4.titulo_num + h4.titulo_tit
@@ -323,7 +355,9 @@ def parsear(html: str, codigo: str, url: str = "", debug: bool = False) -> dict:
             num_texto  = num_tag.get_text(" ", strip=True) if num_tag else ""
             tit_texto  = tit_tag.get_text(" ", strip=True) if tit_tag else ""
 
-            ctx_titulo   = _norm_titulo(num_texto)
+            num_tit      = _norm_titulo(num_texto)
+            # Prefijo de Libro cuando existen varios libros con títulos homónimos
+            ctx_titulo   = f"{ctx_libro}-{num_tit}" if ctx_libro else num_tit
             ctx_capitulo = None
             ctx_seccion  = None
             orden_titulo   += 1
@@ -362,6 +396,15 @@ def parsear(html: str, codigo: str, url: str = "", debug: bool = False) -> dict:
         if "seccion" in clases_h4:
             sec_texto    = h4.get_text(" ", strip=True)
             num_s, den_s = _norm_seccion(sec_texto)
+
+            # Deduplicar secciones con mismo número dentro del mismo capítulo
+            clave_s = (ctx_capitulo, num_s)
+            if clave_s in _secciones_vistas:
+                _secciones_vistas[clave_s] += 1
+                sufijo_s = chr(ord('b') + _secciones_vistas[clave_s] - 1)
+                num_s = f"{num_s}-{sufijo_s}"
+            else:
+                _secciones_vistas[clave_s] = 0
 
             ctx_seccion    = num_s
             orden_seccion += 1
