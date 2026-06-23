@@ -1,5 +1,7 @@
 # Base de datos legislativa – Constitución Española (1978)
 
+> **Nota histórica (2026-06-23):** Este módulo documenta la construcción inicial de la base de datos legislativa sobre el schema `legislacion.*`. En la fase de expansión multi-ley (Step 15), ese schema fue reemplazado por `normas.*`, que unifica todas las leyes con un campo `ley_id`. La CE sigue siendo `ley_id = 1` en `normas.*`. Los documentos de esta carpeta conservan su valor como registro del proceso de diseño original.
+
 ## Qué es este módulo
 
 Este módulo documenta el proceso completo de construcción de una base de datos legislativa sobre la Constitución Española (CE), desde el diseño del esquema hasta la carga de datos con el texto oficial íntegro.

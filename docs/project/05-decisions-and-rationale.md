@@ -1,5 +1,7 @@
 # Decisions and Principles
 
+_Última actualización: 2026-06-23_
+
 ## Purpose of this document
 
 Este documento recoge las decisiones relevantes ya tomadas en el proyecto `stack-sql-vscode` y los principios que deben guiar su evolución.
@@ -20,7 +22,7 @@ Hasta este momento, las decisiones confirmadas del proyecto son las siguientes:
 - la documentación del proyecto se almacena dentro del propio repositorio
 - la continuidad del proyecto debe quedar registrada en archivos persistentes, no solo en conversaciones
 - la interfaz de usuario será **Streamlit** (descartados FastAPI y n8n para esta fase)
-- el modelo de datos para múltiples leyes es **un schema por área jurídica en `stack_db`**, no proyectos ni bases de datos separadas; el campo `area_juridica` en `legislacion.leyes` permite filtrar la búsqueda semántica por dominio
+- el modelo de datos para múltiples leyes es **un único schema `normas.*` en `stack_db`**, con todas las leyes identificadas por `ley_id`; el planteamiento anterior de schemas separados por área jurídica fue descartado — resulta más complejo sin aportar ventajas reales para el caso de uso actual _(decisión revisada 2026-06-23)_
 - para dominios no jurídicos o instancias independientes se usará **fork del repositorio** o, a largo plazo, un **template parametrizado**; ver `docs/project/10-replication-and-domains.md`
 
 Estas decisiones deben tratarse como base vigente, salvo reemplazo explícito posterior.

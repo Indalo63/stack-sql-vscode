@@ -1,5 +1,7 @@
 # Process Log – Base de datos legislativa CE
 
+> **Nota histórica (2026-06-23):** Esta bitácora documenta la construcción original del módulo legislativo sobre el schema `legislacion.*`. Ese schema fue posteriormente reemplazado por `normas.*` (multi-ley, `ley_id` FK). Los pasos aquí registrados siguen siendo válidos como referencia del proceso de diseño; ver `docs/project/03-chronological-log.md` Steps 12-19 para la evolución posterior.
+
 ## Propósito de este documento
 
 Registra paso a paso la construcción de la base de datos legislativa sobre la Constitución Española, desde la definición del módulo hasta la activación de búsqueda semántica con pgvector.
@@ -156,11 +158,8 @@ Completado. 185/185 embeddings generados y verificados. Búsqueda semántica ope
 
 ---
 
-## Checkpoint actual
+## Checkpoint de este módulo
 
-Último paso completado: **Paso 6**
+Último paso de este módulo: **Paso 6** (completado con schema `legislacion.*`)
 
-La base de datos legislativa está completamente operativa:
-- 185 artículos con texto oficial del BOE
-- 185 embeddings generados con text-embedding-3-small (OpenAI)
-- Búsqueda semántica por similitud coseno verificada y funcionando
+**Estado posterior:** La CE fue migrada a `normas.articulos` con `ley_id = 1` durante el Step 15 del proyecto (expansión multi-ley). Los 185 artículos, los embeddings y la búsqueda semántica siguen operativos bajo el nuevo schema. Ver `docs/project/03-chronological-log.md` Steps 15-19 para la continuación.

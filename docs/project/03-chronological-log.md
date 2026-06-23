@@ -254,17 +254,241 @@ El proyecto pasó a tener una capa documental específica para contexto operativ
 
 En progreso, con base ya creada.
 
+## Step 12 – Base de datos legislativa CE y búsqueda semántica
+
+### Objetivo
+
+Construir el primer módulo legislativo con texto oficial, jerarquía relacional y embeddings vectoriales.
+
+### Acciones
+
+- Diseño del esquema `legislacion.*` (5 tablas: leyes, titulos, capitulos, secciones, articulos)
+- Extracción del texto oficial de la CE desde el BOE (permalink ELI, HTML consolidado)
+- Parser Python ad-hoc para extraer los 185 elementos jerárquicos
+- Carga en base de datos + generación de 185 embeddings con `text-embedding-3-small`
+- Activación de índice HNSW para búsqueda semántica por similitud coseno
+
+### Resultado
+
+Módulo `legislacion.*` operativo con 185 artículos, embeddings generados y búsqueda semántica verificada.
+Documentado en `docs/database/constitucion/`.
+
+### Estado
+
+Completado.
+
+---
+
+## Step 13 – Pipeline Q&A y generación de tests
+
+### Objetivo
+
+Construir los dos pipelines de IA sobre el corpus legislativo de la CE.
+
+### Acciones
+
+- Diseño de arquitectura modular: `app/config.py`, `db.py`, `retrieval.py`, `qa_pipeline.py`, `test_pipeline.py`
+- Pipeline Q&A: embed_query → search_articles (pgvector) → Claude
+- Pipeline de tests: fetch_articles → prompt → Claude → JSON estructurado
+- CLIs: `scripts/qa.py` y `scripts/gentest.py`
+- Evaluación de calidad: 13/13 preguntas Q&A correctas, 8/8 preguntas test correctas
+
+### Resultado
+
+Dos pipelines operativos y evaluados sobre la CE. Interfaz CLI funcional.
+
+### Estado
+
+Completado. Hito 1 cerrado (2026-06-18).
+
+---
+
+## Step 14 – Alineación con el estilo oficial GACE 2025
+
+### Objetivo
+
+Adaptar el generador de tests al formato exacto del examen de oposiciones GACE 2025.
+
+### Acciones
+
+- Análisis de 4 PDFs del examen oficial GACE 2025 (convocatoria, ejercicios, instrucciones)
+- Identificación de 5 brechas entre el generador original y el examen real:
+  1. enunciado no citaba la norma completa
+  2. opciones en mayúsculas A/B/C/D en lugar de a/b/c/d
+  3. distractores conceptualmente distintos en lugar de datos precisos (plazo, porcentaje, órgano)
+  4. preguntas de concepto general en lugar de datos exactos
+  5. símbolos matemáticos en opciones y explicaciones
+- Reescritura de `_build_test_prompt()` en `app/test_pipeline.py` con 5 reglas obligatorias
+- Codificación de las reglas en `CLAUDE.md` como normas permanentes del proyecto
+
+### Resultado
+
+Generador alineado con el estilo oficial GACE 2025. Reglas codificadas en CLAUDE.md y en memoria del proyecto.
+
+### Estado
+
+Completado. Las 5 reglas son normas obligatorias no negociables.
+
+---
+
+## Step 15 – Schema multi-ley `normas.*` y parser genérico del BOE
+
+### Objetivo
+
+Escalar el sistema de una ley (CE) a múltiples leyes sin rediseñar la BD.
+
+### Acciones
+
+- Decisión de consolidar todo en un único schema `normas.*` en `stack_db` (en lugar de schemas por área jurídica como estaba planificado)
+- Creación del schema `normas.*`: leyes, titulos, capitulos, secciones, articulos (equivalente a `legislacion.*` pero multi-ley con `ley_id` FK)
+- Migración de la CE al nuevo schema (`ley_id = 1`)
+- Desarrollo de `scripts/parse_boe.py`: parser genérico de textos consolidados BOE (HTML ELI → JSON)
+  - Soporta todos los tipos normativos: ley ordinaria, ley orgánica, RDL, constitución
+  - Reconoce estructura jerárquica: Libro → Título → Capítulo → Sección → Artículo
+  - Maneja sufijos de artículo: bis, ter, quáter, sexies, septies…
+  - Maneja ordinales hasta trigésimo para disposiciones adicionales
+  - Deduplicación automática con sufijos -b, -c cuando hay colisión
+- Desarrollo de `scripts/load_ley.py`: carga JSON en `normas.*`, calcula token_count, llama a embeddings
+- Carga de la LPAC (Ley 39/2015): 156 artículos, 156 embeddings
+
+### Resultado
+
+Schema `normas.*` operativo con CE + LPAC. Pipeline de ingesta genérico y repetible: `parse_boe.py` → `load_ley.py` → `generate_embeddings.py`.
+
+### Estado
+
+Completado.
+
+---
+
+## Step 16 – Carga de leyes prioritarias GACE
+
+### Objetivo
+
+Cargar las 4 leyes prioritarias del programa GACE 2025: LRJSP, TREBEP, LGP, LCSP.
+
+### Acciones
+
+- LRJSP (Ley 40/2015): 219 artículos — detectados duplicados por sufijos `quáter`/`sexies` no reconocidos → corrección del regex en `_norm_articulo`
+- TREBEP (RDL 5/2015): 137 artículos — carga sin incidencias
+- LGP (Ley 47/2003): 225 artículos — carga sin incidencias
+- LCSP (Ley 9/2017): 428 artículos — detectados duplicados de títulos por estructura Libro→Título → añadido soporte de nivel Libro en el parser con prefijo LI-, LII-…; detectadas subsecciones → añadido soporte de `Subsección N.ª` en `_norm_seccion`
+- Generación de embeddings para los 1.009 artículos de las 4 leyes nuevas
+- Corrección de `generate_embeddings.py`: truncado a 30.000 chars para evitar error 400 en artículos muy largos
+
+### Resultado
+
+6 leyes cargadas en `normas.*`. Total: 1.350 artículos con embeddings. Parser del BOE robusto para cualquier ley con estructura estándar.
+
+### Estado
+
+Completado. Hito 4 cerrado (2026-06-23).
+
+---
+
+## Step 17 – RAG jerárquico y mejoras de calidad
+
+### Objetivo
+
+Mejorar la precisión del Q&A en leyes grandes y la calidad general del sistema.
+
+### Acciones
+
+**RAG jerárquico:**
+- Columna `embedding vector(1536)` añadida a `normas.titulos`
+- Script `scripts/generate_title_embeddings.py`: genera embeddings de título (texto del título + resumen de artículos)
+- 50 embeddings de título generados
+- `search_articles_hierarchical()` en `retrieval.py`: top-3 títulos por embedding → top-8 artículos dentro de esos títulos → fallback a búsqueda plana si resultado escaso
+- `run_qa()` enruta automáticamente: full-text si token_count < 60K, jerárquico si ≥ 60K
+
+**Parámetros de calidad:**
+- TOP_K: 5 → 8
+- SIMILARITY_THRESHOLD: 0.20 (nuevo — descarta artículos poco relevantes)
+- Prompt de contenido reforzado: cita obligatoria, aviso explícito cuando la información no está
+
+**Generador de tests:**
+- Filtro de artículos <200 chars y derogados en `fetch_articles()`
+- Selección ponderada: `RANDOM() * log(length(contenido))` prioriza artículos más ricos
+
+### Resultado
+
+Q&A más preciso en LRJSP, LGP y LCSP. Generador produce preguntas sobre artículos con contenido suficiente para distractores de calidad.
+
+### Estado
+
+Completado (2026-06-23).
+
+---
+
+## Step 18 – Sincronización automática con el BOE
+
+### Objetivo
+
+Mantener la base de datos legislativa sincronizada con el BOE sin intervención manual.
+
+### Acciones
+
+- Añadidas columnas `content_hash VARCHAR(64)` y `fecha_actualizacion TIMESTAMPTZ` a `normas.leyes`
+- Script `scripts/sync_boe.py`:
+  - Descarga el texto consolidado de cada ley desde su `url_eli`
+  - Calcula SHA-256 del HTML y compara con `content_hash` almacenado
+  - Si hash idéntico → sin cambios (~2s por ley, sin coste de API)
+  - Si hash diferente → re-parsea, diff artículo a artículo, actualiza solo los modificados, limpia embeddings afectados, llama a `generate_embeddings.py`
+  - Actualiza `content_hash` y `fecha_actualizacion`
+  - Log con timestamp en `logs/sync_boe.log`
+- Script `scripts/cron_sync_boe.sh`: wrapper que carga `.env` antes de ejecutar
+- Cron instalado: `0 4 * * 0` (domingos, 04:00)
+- Inicialización de hashes de las 6 leyes activas
+
+### Resultado
+
+Sincronización automática operativa. Primera ejecución completa sin errores. La segunda ejecución detectó correctamente "sin cambios" en todas las leyes.
+
+### Estado
+
+Completado. Hito 5 cerrado (2026-06-23).
+
+---
+
+## Step 19 – Revisión y actualización de documentación
+
+### Objetivo
+
+Poner al día toda la documentación del proyecto tras la acumulación de cambios en sesiones anteriores.
+
+### Acciones
+
+- `docs/project/01-current-state.md`: reescrito para reflejar estado real (normas.*, 6 leyes, RAG jerárquico, cron)
+- `docs/project/02-architecture.md`: actualización de hitos, capa vectorial y decisiones de datos
+- `docs/project/06-next-steps.md`: hitos 4 y 5 marcados como completados; hitos 6 y 7 añadidos
+- `docs/project/08-qa-app-architecture.md`: reescrito con diagrama de 3 vías, RAG jerárquico, esquema normas.*, módulos actuales
+- `docs/database/schema-summary.md`: reescrito con esquema normas.* y las 6 leyes
+- `docs/project/03-chronological-log.md`: esta actualización (steps 12-19)
+- `docs/project/05-decisions-and-rationale.md`: corrección de decisión obsoleta sobre schema por área jurídica
+
+### Resultado
+
+Documentación del proyecto sincronizada con el estado real (2026-06-23).
+
+### Estado
+
+Completado (2026-06-23).
+
+---
+
 ## Current checkpoint
 
-En el momento actual, el proyecto dispone de:
+_2026-06-23_
 
-- un entorno local estable en WSL2 + VS Code
-- Git como base de control de cambios
-- PostgreSQL ejecutándose en Docker
-- soporte vectorial con `pgvector`
-- un esquema SQL didáctico y documentado
-- una guía de estilo SQL
-- recetas de prompts para Claude Code
-- una nueva capa `docs/project/` para capturar continuidad, arquitectura y contexto operativo
+El proyecto dispone de:
 
-El siguiente foco ya no es montar más piezas nuevas de inmediato, sino consolidar y completar la documentación del proyecto para que el stack quede correctamente descrito antes de avanzar hacia tablas vectoriales reales y automatización con `n8n`.
+- Stack Docker: PostgreSQL 16 + pgvector + pgAdmin
+- Schema `normas.*` multi-ley con 6 leyes prioritarias GACE (CE, LPAC, LRJSP, TREBEP, LGP, LCSP)
+- 1.350 artículos/disposiciones con embeddings de artículo + 50 embeddings de título
+- Pipeline Q&A con enrutamiento de 3 vías y RAG jerárquico automático
+- Generador de tests alineado con estilo oficial GACE 2025 (5 reglas obligatorias)
+- Sincronización automática con BOE: cron semanal (domingos 04:00), hash diff incremental
+- Parser del BOE genérico y robusto (`parse_boe.py` + `load_ley.py`)
+- Documentación completa y sincronizada con el estado real
+
+**Siguiente paso:** interfaz web Streamlit multi-ley (Hito 2).
