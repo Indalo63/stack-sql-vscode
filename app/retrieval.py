@@ -8,7 +8,7 @@ Capa de recuperación semántica sobre normas.*:
 
 import os
 from openai import OpenAI
-from app.config import OPENAI_EMBEDDING_MODEL, TOP_K_ARTICLES, SIMILARITY_THRESHOLD
+from app.config import OPENAI_EMBEDDING_MODEL, TOP_K_ARTICLES, SIMILARITY_THRESHOLD, OPENAI_API_KEY
 from app.db import get_connection
 
 _embedding_cache: dict[str, list[float]] = {}
@@ -16,7 +16,7 @@ _embedding_cache: dict[str, list[float]] = {}
 
 def embed_query(text: str) -> list[float]:
     if text not in _embedding_cache:
-        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        client = OpenAI(api_key=OPENAI_API_KEY)
         response = client.embeddings.create(model=OPENAI_EMBEDDING_MODEL, input=text)
         _embedding_cache[text] = response.data[0].embedding
     return _embedding_cache[text]

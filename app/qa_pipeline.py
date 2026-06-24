@@ -9,7 +9,7 @@ Pipeline Q&A con enrutamiento inteligente de tres vías:
 import os
 import re
 import anthropic
-from app.config import CLAUDE_MODEL
+from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
 from app.config import SIMILARITY_THRESHOLD, TOKEN_THRESHOLD_HIERARCHICAL
 from app.retrieval import (
     embed_query, search_articles, search_articles_hierarchical,
@@ -206,7 +206,7 @@ def run_qa(pregunta: str, ley_id: int) -> str:
     ley    = get_ley_info(ley_id)
     nombre = ley["nombre"]
     tokens = ley.get("token_count") or 0
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     tipo   = _clasificar_pregunta(pregunta, nombre, client)
 
     usar_jerarquico = tokens >= TOKEN_THRESHOLD_HIERARCHICAL

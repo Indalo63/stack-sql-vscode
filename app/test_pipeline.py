@@ -7,7 +7,7 @@ import os
 import re
 import json
 import anthropic
-from app.config import CLAUDE_MODEL
+from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
 from app.db import get_connection
 
 
@@ -109,7 +109,7 @@ def run_gentest(ley_id: int,
                 n: int = 5) -> list[dict]:
     articulos = fetch_articles(ley_id=ley_id, titulo_id=titulo_id,
                                capitulo_id=capitulo_id, n=n)
-    client    = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client    = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     results   = []
 
     for art in articulos:

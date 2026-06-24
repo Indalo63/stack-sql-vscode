@@ -5,6 +5,7 @@ docker/data/
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 
 # VS Code (configuración personal, no del proyecto)
 .vscode/settings.json
