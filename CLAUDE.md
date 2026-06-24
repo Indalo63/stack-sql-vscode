@@ -56,16 +56,36 @@ Estas reglas se aplican SIEMPRE en `app/test_pipeline.py` y en cualquier futuro 
 5. **Nivel de dificultad alto**: Preguntar por datos exactos del artículo (plazos, porcentajes, órganos competentes, requisitos concretos), no por conceptos generales.
 
 ## Estado actual del proyecto
-- Stack Docker levantado: PostgreSQL + pgvector + pgAdmin
-- Schema `normas.*` multi-ley operativo (CE1978 + LPAC 39/2015 cargadas con embeddings)
-- Pipeline Q&A multi-ley operativo con enrutamiento ESTRUCTURAL/RESUMEN/CONTENIDO
+
+### Stack local (Docker)
+- PostgreSQL 16 + pgvector + pgAdmin en Docker (docker/docker-compose.yml)
+- Schema `normas.*` multi-ley con 6 leyes cargadas con embeddings:
+  - CE 1978 (Constitución Española)
+  - LPAC 39/2015 (Ley de Procedimiento Administrativo Común)
+  - LRJSP 40/2015 (Régimen Jurídico del Sector Público)
+  - TREBEP RDL 5/2015 (Estatuto Básico del Empleado Público)
+  - LGP 47/2003 (Ley General Presupuestaria)
+  - LCSP 9/2017 (Ley de Contratos del Sector Público)
+- Pipeline Q&A multi-ley con enrutamiento ESTRUCTURAL/RESUMEN/CONTENIDO
 - Generador de preguntas tipo test alineado con estilo oficial GACE 2025
 - Parser del BOE (HTML → JSON) validado y operativo
-- Scripts: `load_ley.py` (carga genérica), `parse_boe.py` (parser BOE), `generate_embeddings.py`
+- Scripts: `load_ley.py`, `parse_boe.py`, `generate_embeddings.py`, `sync_boe.py`
+
+### Infraestructura cloud (en proceso de deploy — 2026-06-24)
+- **Supabase**: proyecto `asistente-juridico` creado (ref: `cbiwhcfkaarnhenkryza`, región Europe)
+  - Schema `normas.*` migrado (28 MB, 6 leyes con embeddings)
+  - Extensión `vector` instalada en schema `public`
+  - Credenciales en `.streamlit/secrets.toml` (excluido de Git)
+- **GitHub**: repositorio `Indalo63/stack-sql-vscode` (rama `master`) operativo
+- **Streamlit Cloud**: cuenta creada con `Indalo63`, pendiente de configurar app y secrets
+
+### Arquitectura de credenciales
+- `app/config.py` centraliza todas las credenciales: prueba `st.secrets` primero, luego `os.environ`
+- Local: `.streamlit/secrets.toml` (no se sube a Git)
+- Producción: secrets configurados en el dashboard de Streamlit Cloud
 
 ## Próximos pasos
-- Parsear y cargar leyes prioritarias GACE: LRJSP (Ley 40/2015), TREBEP (RDL 5/2015), LGP (Ley 47/2003), LCSP (Ley 9/2017)
-- Interfaz web Streamlit multi-ley (Hito 2)
+- [EN CURSO] Configurar app en Streamlit Cloud + añadir secrets → URL pública para alumnos
 - Exportar banco de tests a CSV / Moodle XML (Hito 3)
 - Simulacro: 100 preguntas, temporizador, puntuación con penalización A-(E/3) (Hito 4)
-- Sincronización automática con el BOE (Hito 5)
+- Sincronización automática con el BOE mediante GitHub Actions (Hito 5)

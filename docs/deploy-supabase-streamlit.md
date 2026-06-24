@@ -14,76 +14,79 @@ Supabase PostgreSQL + pgvector  (schema normas.*)
 
 ---
 
-## Fase 1 — Supabase (base de datos en la nube)
+## Fase 1 — Supabase (base de datos en la nube) ✅ COMPLETADA
 
-### 1.1 Crear el proyecto
+### 1.1 Crear el proyecto ✅
 
-1. Entra en [supabase.com](https://supabase.com) y crea una cuenta gratuita.
-2. **New project** → elige nombre (`asistente-juridico`), contraseña segura, región **West EU (Ireland)**.
-3. Espera ~2 minutos a que el proyecto arranque.
+1. Cuenta creada en [supabase.com](https://supabase.com) con GitHub (`Indalo63`).
+2. Proyecto creado: `asistente-juridico`, región **Europe (West EU)**.
+3. Referencia del proyecto: `cbiwhcfkaarnhenkryza`
 
-### 1.2 Anotar las credenciales
+### 1.2 Credenciales ✅
 
-Ve a **Project Settings → Database → Connection string → URI** y copia:
-
-```
-postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres
-```
-
-También anota los valores individuales (los necesitarás en `.streamlit/secrets.toml`):
-- `DB_HOST`: `db.<PROJECT_REF>.supabase.co`
+Guardadas en `.streamlit/secrets.toml` (excluido de Git):
+- `DB_HOST`: `db.cbiwhcfkaarnhenkryza.supabase.co`
 - `DB_PORT`: `5432`
 - `DB_NAME`: `postgres`
 - `DB_USER`: `postgres`
-- `DB_PASSWORD`: tu contraseña
+- `DB_PASSWORD`: (en secrets.toml local)
 
-### 1.3 Migrar el schema y los datos
+Para la conexión directa desde la app se usa el host de conexión directa (soporta IPv6, funciona en Streamlit Cloud).
 
-Desde WSL2, con Docker local en marcha:
+### 1.3 Migrar el schema y los datos ✅
+
+**Problema conocido — IPv6 en WSL2**: la conexión directa de Supabase usa IPv6 por defecto. WSL2 no lo soporta. Solución: usar el **Session pooler** para la migración y mover la extensión `vector` al schema `public`.
+
+Pasos realizados:
 
 ```bash
-# Instala el cliente PostgreSQL si no lo tienes
+# 1. Instalar cliente PostgreSQL
 sudo apt install postgresql-client -y
 
-# Ejecuta la migración
-export SUPABASE_URL="postgresql://postgres:<PASSWORD>@db.<REF>.supabase.co:5432/postgres"
+# 2. Habilitar extensión vector en Supabase (desde el dashboard)
+# Database → Extensions → vector → Enable (schema: extensions)
+
+# 3. Mover vector al schema public (necesario porque el dump referencia public.vector)
+psql "$SUPABASE_URL" -c "ALTER EXTENSION vector SET SCHEMA public;"
+
+# 4. Ejecutar migración usando Session pooler (IPv4)
+export SUPABASE_URL="postgresql://postgres.cbiwhcfkaarnhenkryza:<PASSWORD>@aws-1-eu-west-2.pooler.supabase.com:5432/postgres"
 bash scripts/migrate_to_supabase.sh
 ```
 
-El script:
-1. Hace `pg_dump` del schema `normas.*` en local
-2. Habilita la extensión `vector` en Supabase
-3. Carga el dump en Supabase
-4. Verifica el conteo de artículos por ley
+Dump resultante: 28 MB, 6 leyes con embeddings, migración exitosa.
 
-### 1.4 Verificar en Supabase
+### 1.4 Verificación ✅
 
-En el **Table Editor** de Supabase deberías ver las tablas `normas.leyes`, `normas.articulos`, etc. con todos los datos.
+Schema `normas.*` en Supabase con tablas: `leyes`, `articulos`, `capitulos`, `secciones`, `titulos`, `fragmentos_documento`, `documentos`, `versiones_ley`.
 
 ---
 
 ## Fase 2 — Streamlit Cloud (frontend)
 
-### 2.1 Subir el código a GitHub
+### 2.1 Subir el código a GitHub ✅
+
+Repositorio: `https://github.com/Indalo63/stack-sql-vscode` (rama `master`)
 
 ```bash
 git add app/config.py app/retrieval.py app/qa_pipeline.py app/test_pipeline.py
-git add requirements.txt .gitignore .streamlit/
-git add scripts/migrate_to_supabase.sh
-git commit -m "Prepara el proyecto para deploy en Streamlit Cloud + Supabase"
-git push origin main
+git add requirements.txt .gitignore
+git add scripts/migrate_to_supabase.sh docs/deploy-supabase-streamlit.md
+git commit -m "Prepara deploy en Streamlit Cloud + Supabase"
+git push -u origin master
 ```
 
 > El archivo `.streamlit/secrets.toml` está en `.gitignore` y NO se sube. Las credenciales van en el dashboard de Streamlit Cloud.
 
 ### 2.2 Crear la app en Streamlit Cloud
 
-1. Ve a [share.streamlit.io](https://share.streamlit.io) e inicia sesión con GitHub.
-2. **New app** → selecciona el repositorio `stack-sql-vscode`.
+1. Ve a [share.streamlit.io](https://share.streamlit.io) e inicia sesión con GitHub (`Indalo63`).
+2. **Create app** → **Deploy a public app from GitHub**.
 3. Configura:
+   - **Repository**: `Indalo63/stack-sql-vscode`
+   - **Branch**: `master`
    - **Main file path**: `app/streamlit_app.py`
-   - **Branch**: `main`
-4. Pulsa **Deploy** (fallará porque aún no hay secrets — es normal).
+4. Pulsa **Deploy** (puede fallar hasta configurar los secrets — es normal).
 
 ### 2.3 Configurar los secrets en Streamlit Cloud
 
@@ -93,12 +96,14 @@ En el dashboard de tu app: **Settings → Secrets** y pega:
 OPENAI_API_KEY    = "sk-..."
 ANTHROPIC_API_KEY = "sk-ant-..."
 
-DB_HOST     = "db.<PROJECT_REF>.supabase.co"
+DB_HOST     = "db.cbiwhcfkaarnhenkryza.supabase.co"
 DB_PORT     = "5432"
 DB_NAME     = "postgres"
 DB_USER     = "postgres"
 DB_PASSWORD = "<tu-password-supabase>"
 ```
+
+> Nota: para la **app en producción** se usa la conexión directa (no el session pooler), ya que Streamlit Cloud soporta IPv6 correctamente.
 
 Pulsa **Save** y la app se redesplegará automáticamente.
 
