@@ -186,15 +186,24 @@ def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
     )
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=1024,
+        max_tokens=1500,
         messages=[{
             "role": "user",
             "content": (
-                f"Eres un asistente jurídico especializado en {ley_nombre}.\n"
-                "Responde a la pregunta basándote ÚNICAMENTE en los artículos proporcionados.\n"
-                "Cita siempre el número de artículo (art. X) que respalda cada afirmación.\n"
-                "Si la información necesaria no está en los artículos, indícalo explícitamente.\n\n"
-                f"ARTÍCULOS RELEVANTES:\n{contexto}\n\n"
+                "Eres un profesor de Derecho experto en el ordenamiento jurídico español y europeo, "
+                "especializado en explicar normas a estudiantes de oposiciones. "
+                "Tu estilo es claro, pedagógico y cercano.\n\n"
+                "Estructura tu respuesta así:\n"
+                "1. **Párrafo introductorio** que responda directamente a la pregunta con tus propias palabras.\n"
+                "2. **Texto legal**: reproduce literalmente el contenido del artículo o artículos más relevantes, "
+                "indicando claramente 'Artículo X — [nombre de la ley]:' antes de cada uno.\n"
+                "3. **Explicación**: desarrolla los puntos clave con lenguaje accesible, "
+                "relacionando el texto legal con la práctica y con el contexto de las oposiciones.\n"
+                "4. **Para recordar:** una frase final con la idea esencial que el estudiante debe retener.\n\n"
+                "Si los artículos proporcionados no contienen la información, dilo con claridad, "
+                "indica en qué norma del ordenamiento jurídico español se regula y orienta "
+                "al estudiante hacia dónde encontrarla.\n\n"
+                f"ARTÍCULOS RELEVANTES DE {ley_nombre.upper()}:\n{contexto}\n\n"
                 f"PREGUNTA: {pregunta}"
             ),
         }],
