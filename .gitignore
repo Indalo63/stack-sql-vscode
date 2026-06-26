@@ -18,4 +18,5 @@ Thumbs.db
 
 # Logs
 *.log
-app/__pycache__/
+**/__pycache__/
+*.pyc
