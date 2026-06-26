@@ -82,7 +82,12 @@ VALUES
 ON CONFLICT (codigo) DO NOTHING;
 
 -- Distribución de preguntas por ley en el simulacro GACE
+-- Basada en el análisis real de los exámenes oficiales GACE 2024 y 2025.
 -- ley_id 1=CE, 4=LPAC, 7=LRJSP, 8=TREBEP, 9=LGP, 12=LCSP
+-- Total actual con 6 leyes: 51/100. Los 49 restantes proceden de leyes
+-- pendientes de cargar: TUE/TFUE (~14), LOs institucionales (~5),
+-- función pública complementaria (~10), otras leyes frecuentes (~13),
+-- bloque de actualidad anual (~7).
 INSERT INTO normas.oposicion_leyes
     (oposicion_id, ley_id, preguntas_simulacro, orden)
 SELECT
@@ -92,12 +97,12 @@ SELECT
     l.orden
 FROM normas.oposiciones o
 CROSS JOIN (VALUES
-    (1,  20, 1),   -- CE      → 20 preguntas
-    (4,  20, 2),   -- LPAC    → 20 preguntas
-    (7,  20, 3),   -- LRJSP   → 20 preguntas
-    (8,  15, 4),   -- TREBEP  → 15 preguntas
-    (9,  15, 5),   -- LGP     → 15 preguntas
-    (12, 10, 6)    -- LCSP    → 10 preguntas
+    (1,  12, 1),   -- CE      → 12 preguntas (real GACE 2024/2025)
+    (4,   6, 2),   -- LPAC    →  6 preguntas
+    (7,   3, 3),   -- LRJSP   →  3 preguntas
+    (8,  15, 4),   -- TREBEP  → 15 preguntas (TREBEP core + función pública ampliada)
+    (9,  12, 5),   -- LGP     → 12 preguntas
+    (12,  3, 6)    -- LCSP    →  3 preguntas
 ) AS l(ley_id, preguntas, orden)
 WHERE o.codigo = 'GACE'
 ON CONFLICT DO NOTHING;

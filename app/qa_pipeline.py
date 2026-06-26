@@ -186,7 +186,7 @@ def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
     )
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=1500,
+        max_tokens=2500,
         messages=[{
             "role": "user",
             "content": (

@@ -116,7 +116,7 @@ def run_gentest(ley_id: int,
         messages = _build_test_prompt(art, ley_nombre)
         response = client.messages.create(
             model=CLAUDE_MODEL,
-            max_tokens=512,
+            max_tokens=650,
             messages=messages,
         )
         try:
