@@ -9,12 +9,15 @@ import os
 
 
 def _get(key: str, default: str = "") -> str:
-    """Lee de st.secrets si está disponible, si no de os.environ."""
+    """Lee de os.environ primero (scripts/CLI), luego de st.secrets (Streamlit)."""
+    env_val = os.getenv(key)
+    if env_val is not None:
+        return env_val
     try:
         import streamlit as st
-        return st.secrets.get(key, os.getenv(key, default))
+        return st.secrets.get(key, default)
     except Exception:
-        return os.getenv(key, default)
+        return default
 
 
 DB_CONFIG = {

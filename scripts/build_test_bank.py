@@ -5,13 +5,12 @@ Genera preguntas tipo test en lote y las guarda en normas.preguntas_test.
 Las preguntas se guardan con revisada=FALSE hasta que el formador las apruebe.
 
 Uso:
-  # Contra el Docker local (usa credenciales de .env)
-  python scripts/build_test_bank.py --ley-id 1 --n 5 --dry-run   # prueba CE
-  python scripts/build_test_bank.py --ley-id 1 --n 50             # genera 50 preguntas CE
+  # Contra Docker local (usa credenciales de .env o defaults)
+  python3 scripts/build_test_bank.py --ley-id 1 --n 3 --dry-run
 
-  # Contra Supabase (usa credenciales de .streamlit/secrets.toml)
-  python scripts/build_test_bank.py --supabase --ley-id 1 --n 50
-  python scripts/build_test_bank.py --supabase --n 50             # todas las leyes
+  # Contra Supabase desde WSL2 (usa Session Pooler IPv4)
+  python3 scripts/build_test_bank.py --supabase --ley-id 1 --n 3 --dry-run
+  python3 scripts/build_test_bank.py --supabase --n 50   # todas las leyes
 
 Coste estimado: ~0,01 € por pregunta (Claude Sonnet 4.6)
   50 preguntas × 6 leyes = 300 preguntas ≈ 3 €
@@ -25,33 +24,53 @@ import time
 import argparse
 from pathlib import Path
 
+# Permite importar app.* desde cualquier directorio de trabajo
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+MIN_LENGTH = 200
+
+
+# ── Carga de credenciales ─────────────────────────────────────────────────────
 
 def _load_supabase_secrets():
-    """Carga .streamlit/secrets.toml en os.environ para conectar a Supabase."""
+    """
+    Carga .streamlit/secrets.toml en os.environ.
+    Sustituye el host directo (IPv6) por el Session Pooler (IPv4, compatible con WSL2).
+    Debe llamarse ANTES de importar app.config / app.db.
+    """
     secrets_path = Path(__file__).parent.parent / ".streamlit" / "secrets.toml"
     if not secrets_path.exists():
         print("ERROR: .streamlit/secrets.toml no encontrado.", file=sys.stderr)
         sys.exit(1)
+
+    secrets = {}
     for line in secrets_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or line.startswith("["):
             continue
         if "=" in line:
             k, _, v = line.partition("=")
-            os.environ[k.strip()] = v.strip().strip('"').strip("'")
-    print("Credenciales cargadas desde .streamlit/secrets.toml (Supabase)")
+            secrets[k.strip()] = v.strip().strip('"').strip("'")
+
+    for k, v in secrets.items():
+        os.environ[k] = v
+
+    # Extraer ref del proyecto (db.<REF>.supabase.co → <REF>)
+    direct_host = secrets.get("DB_HOST", "")
+    ref = direct_host.split(".")[1] if direct_host.startswith("db.") else ""
+
+    if ref:
+        # Session Pooler: IPv4, compatible con WSL2
+        os.environ["DB_HOST"] = "aws-1-eu-west-2.pooler.supabase.com"
+        os.environ["DB_USER"] = f"postgres.{ref}"
+
+    print(f"Supabase via Session Pooler: {os.environ['DB_HOST']} / {os.environ['DB_USER']}")
 
 
-import anthropic
-from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
-from app.db import get_connection
-
-MIN_LENGTH = 200
-
-
-# ── Consultas BD ──────────────────────────────────────────────────────────────
+# ── Consultas BD (imports de app.* diferidos para que env vars estén listos) ──
 
 def _get_leyes(ley_id=None):
+    from app.db import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
             sql = "SELECT ley_id, nombre FROM normas.leyes WHERE activa = TRUE"
@@ -65,6 +84,7 @@ def _get_leyes(ley_id=None):
 
 def _fetch_articles(ley_id, n):
     """Artículos no generados aún, ponderados por longitud de contenido."""
+    from app.db import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -86,6 +106,7 @@ def _fetch_articles(ley_id, n):
 
 
 def _save(ley_id, art, parsed):
+    from app.db import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -165,6 +186,10 @@ def _parse_and_validate(raw):
 # ── Runner principal ──────────────────────────────────────────────────────────
 
 def run(ley_id=None, n=50, dry_run=False, delay=0.5):
+    # Imports aquí (después de que env vars estén configurados)
+    import anthropic
+    from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
+
     leyes = _get_leyes(ley_id)
     if not leyes:
         print("No se encontraron leyes activas.")
@@ -221,7 +246,7 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Genera banco de preguntas GACE")
     p.add_argument("--supabase", action="store_true",
-                   help="Conectar a Supabase (lee .streamlit/secrets.toml)")
+                   help="Conectar a Supabase via Session Pooler (necesario desde WSL2)")
     p.add_argument("--ley-id", type=int, default=None,
                    help="ID de la ley a procesar (omitir = todas las activas)")
     p.add_argument("--n", type=int, default=50,
@@ -232,7 +257,16 @@ if __name__ == "__main__":
                    help="Segundos entre llamadas a la API (default: 0.5)")
     args = p.parse_args()
 
+    # IMPORTANTE: fijar credenciales en os.environ ANTES de importar app.config / app.db
+    # app/config.py prefiere os.environ sobre st.secrets (que carga .streamlit/secrets.toml)
     if args.supabase:
         _load_supabase_secrets()
+    else:
+        # Docker local: valores de .env (stack_db en localhost)
+        os.environ.setdefault("DB_HOST",     "localhost")
+        os.environ.setdefault("DB_PORT",     "5432")
+        os.environ.setdefault("DB_NAME",     "stack_db")
+        os.environ.setdefault("DB_USER",     "postgres")
+        os.environ.setdefault("DB_PASSWORD", "postgres")
 
     run(ley_id=args.ley_id, n=args.n, dry_run=args.dry_run, delay=args.delay)
