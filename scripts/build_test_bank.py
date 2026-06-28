@@ -4,16 +4,21 @@ scripts/build_test_bank.py
 Genera preguntas tipo test en lote y las guarda en normas.preguntas_test.
 Las preguntas se guardan con revisada=FALSE hasta que el formador las apruebe.
 
+Mejoras respecto a la versión original:
+  - Few-shot con preguntas oficiales verificadas (mismo estilo que el examen real)
+  - Detección de apartados numerados → cita el apartado concreto en el enunciado
+  - Instrucción para mezclar respuestas literales y reformuladas (como en GACE real)
+  - Prioriza artículos que ya han aparecido en exámenes oficiales
+
 Uso:
-  # Contra Docker local (usa credenciales de .env o defaults)
+  # Contra Docker local
   python3 scripts/build_test_bank.py --ley-id 1 --n 3 --dry-run
 
-  # Contra Supabase desde WSL2 (usa Session Pooler IPv4)
+  # Contra Supabase desde WSL2 (Session Pooler IPv4)
   python3 scripts/build_test_bank.py --supabase --ley-id 1 --n 3 --dry-run
   python3 scripts/build_test_bank.py --supabase --n 50   # todas las leyes
 
-Coste estimado: ~0,01 € por pregunta (Claude Sonnet 4.6)
-  50 preguntas × 6 leyes = 300 preguntas ≈ 3 €
+Coste estimado: ~0,012 € por pregunta (Claude Sonnet 4.6 con few-shot)
 """
 
 import os
@@ -24,7 +29,6 @@ import time
 import argparse
 from pathlib import Path
 
-# Permite importar app.* desde cualquier directorio de trabajo
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 MIN_LENGTH = 200
@@ -33,11 +37,6 @@ MIN_LENGTH = 200
 # ── Carga de credenciales ─────────────────────────────────────────────────────
 
 def _load_supabase_secrets():
-    """
-    Carga .streamlit/secrets.toml en os.environ.
-    Sustituye el host directo (IPv6) por el Session Pooler (IPv4, compatible con WSL2).
-    Debe llamarse ANTES de importar app.config / app.db.
-    """
     secrets_path = Path(__file__).parent.parent / ".streamlit" / "secrets.toml"
     if not secrets_path.exists():
         print("ERROR: .streamlit/secrets.toml no encontrado.", file=sys.stderr)
@@ -55,19 +54,17 @@ def _load_supabase_secrets():
     for k, v in secrets.items():
         os.environ[k] = v
 
-    # Extraer ref del proyecto (db.<REF>.supabase.co → <REF>)
     direct_host = secrets.get("DB_HOST", "")
     ref = direct_host.split(".")[1] if direct_host.startswith("db.") else ""
 
     if ref:
-        # Session Pooler: IPv4, compatible con WSL2
         os.environ["DB_HOST"] = "aws-1-eu-west-2.pooler.supabase.com"
         os.environ["DB_USER"] = f"postgres.{ref}"
 
     print(f"Supabase via Session Pooler: {os.environ['DB_HOST']} / {os.environ['DB_USER']}")
 
 
-# ── Consultas BD (imports de app.* diferidos para que env vars estén listos) ──
+# ── Consultas BD ──────────────────────────────────────────────────────────────
 
 def _get_leyes(ley_id=None):
     from app.db import get_connection
@@ -83,12 +80,23 @@ def _get_leyes(ley_id=None):
 
 
 def _fetch_articles(ley_id, n):
-    """Artículos no generados aún, ponderados por longitud de contenido."""
+    """
+    Artículos a generar. Prioriza:
+      1. Artículos que ya aparecieron en exámenes oficiales (alta probabilidad de repetir)
+      2. Artículos largos y ricos en contenido
+    Excluye artículos que ya tienen pregunta IA generada.
+    """
     from app.db import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT a.numero, a.titulo_id, a.contenido
+                SELECT a.numero, a.titulo_id, a.contenido,
+                       EXISTS (
+                           SELECT 1 FROM normas.preguntas_test p
+                           WHERE p.ley_id = a.ley_id
+                             AND p.articulo = a.numero
+                             AND p.fuente IN ('oficial_2024', 'oficial_2025')
+                       ) AS examinado
                 FROM normas.articulos a
                 WHERE a.ley_id = %s
                   AND a.tipo = 'articulo'
@@ -96,11 +104,44 @@ def _fetch_articles(ley_id, n):
                   AND a.contenido !~* '\\(derogado|sin contenido|suprimido\\)'
                   AND NOT EXISTS (
                       SELECT 1 FROM normas.preguntas_test p
-                      WHERE p.ley_id = a.ley_id AND p.articulo = a.numero
+                      WHERE p.ley_id = a.ley_id
+                        AND p.articulo = a.numero
+                        AND p.fuente = 'ia'
                   )
-                ORDER BY RANDOM() * log(length(a.contenido)) DESC
+                ORDER BY examinado DESC,
+                         RANDOM() * log(length(a.contenido)) DESC
                 LIMIT %s
             """, (ley_id, MIN_LENGTH, n))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def _fetch_few_shots(ley_id, n=2):
+    """
+    Carga n preguntas oficiales verificadas para usar como few-shot.
+    Prefiere ejemplos de la misma ley; si no hay suficientes, usa de cualquier ley.
+    Excluye preguntas con sub-artículos (11.3) y sin número (S/N).
+    """
+    from app.db import get_connection
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT p.pregunta, p.opcion_a, p.opcion_b, p.opcion_c, p.opcion_d,
+                       p.correcta, p.articulo, a.contenido, l.nombre
+                FROM normas.preguntas_test p
+                JOIN normas.leyes l ON l.ley_id = p.ley_id
+                JOIN normas.articulos a
+                  ON a.ley_id = p.ley_id
+                 AND a.numero = p.articulo
+                 AND a.tipo   = 'articulo'
+                WHERE p.revisada = TRUE
+                  AND p.fuente IN ('oficial_2024', 'oficial_2025')
+                  AND p.articulo IS NOT NULL
+                  AND p.articulo NOT IN ('S/N', 's/n')
+                  AND p.articulo NOT LIKE '%%.%%'
+                ORDER BY (p.ley_id = %s) DESC, RANDOM()
+                LIMIT %s
+            """, (ley_id, n))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
@@ -112,8 +153,9 @@ def _save(ley_id, art, parsed):
             cur.execute("""
                 INSERT INTO normas.preguntas_test
                     (ley_id, titulo_id, articulo, pregunta,
-                     opcion_a, opcion_b, opcion_c, opcion_d, correcta, explicacion)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     opcion_a, opcion_b, opcion_c, opcion_d,
+                     correcta, explicacion, fuente)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'ia')
             """, (
                 ley_id,
                 art.get("titulo_id"),
@@ -129,9 +171,62 @@ def _save(ley_id, art, parsed):
         conn.commit()
 
 
-# ── Generación ────────────────────────────────────────────────────────────────
+# ── Construcción del prompt ───────────────────────────────────────────────────
 
-def _build_prompt(art, ley_nombre):
+def _has_numbered_paragraphs(contenido):
+    """Detecta si el artículo tiene apartados numerados (1., 2. o 1) 2))."""
+    return bool(re.search(r'^\s*[1-9][.)]\s', contenido, re.MULTILINE))
+
+
+def _format_few_shot(fs):
+    """Formatea un ejemplo official para incluirlo en el prompt."""
+    opts = "\n".join(
+        f"  {k}) {fs[f'opcion_{k}']}"
+        for k in ("a", "b", "c", "d")
+    )
+    extracto = fs["contenido"][:350]
+    if len(fs["contenido"]) > 350:
+        extracto += "..."
+    return (
+        f"[Artículo {fs['articulo']} de {fs['nombre']}]\n"
+        f"{extracto}\n\n"
+        f"→ Pregunta oficial:\n"
+        f"{fs['pregunta']}\n"
+        f"{opts}\n"
+        f"Correcta: {fs['correcta']}"
+    )
+
+
+def _build_prompt(art, ley_nombre, few_shots=None):
+    tiene_apartados = _has_numbered_paragraphs(art["contenido"])
+
+    # Bloque de few-shot
+    few_shots_block = ""
+    if few_shots:
+        ejemplos = "\n\n---\n\n".join(_format_few_shot(fs) for fs in few_shots)
+        few_shots_block = (
+            "EJEMPLOS DE PREGUNTAS OFICIALES GACE "
+            "(úsalos como referencia exacta de estilo y dificultad):\n\n"
+            f"{ejemplos}\n\n"
+            "──────────────────────────────────────\n\n"
+        )
+
+    # Regla extra si hay apartados numerados
+    regla_apartado = ""
+    if tiene_apartados:
+        regla_apartado = (
+            f"6. El artículo tiene apartados numerados. Cita el apartado concreto "
+            f"en el enunciado: 'el apartado X del artículo {art['numero']}' "
+            f"o 'el artículo {art['numero']}.X'.\n"
+        )
+
+    num_regla_estilo = "7" if tiene_apartados else "6"
+    regla_estilo = (
+        f"{num_regla_estilo}. La opción correcta puede citar textualmente la norma "
+        f"O parafrasearla con otras palabras (ambos estilos aparecen en exámenes "
+        f"oficiales GACE). Lo importante es que sea inequívocamente correcta.\n"
+    )
+
     return [{
         "role": "user",
         "content": (
@@ -140,53 +235,32 @@ def _build_prompt(art, ley_nombre):
             f"A partir del siguiente artículo de {ley_nombre}, genera UNA pregunta tipo "
             f"test con exactamente 4 opciones (a, b, c, d), siguiendo el estilo oficial "
             f"del examen GACE.\n\n"
+            f"{few_shots_block}"
             f"REGLAS DE ESTILO OBLIGATORIAS:\n"
-            f"1. El enunciado DEBE comenzar con 'Según el artículo [número] de {ley_nombre},' "
-            f"o 'De acuerdo con el artículo [número] de {ley_nombre},'\n"
+            f"1. El enunciado DEBE comenzar con 'Según el artículo [número] de "
+            f"{ley_nombre},' o 'De acuerdo con el artículo [número] de {ley_nombre},'\n"
             f"2. Opciones en a), b), c), d) minúsculas.\n"
-            f"3. Distractores con error sutil y técnico: plazo distinto, porcentaje diferente, "
-            f"órgano incorrecto o palabra clave cambiada. Nunca distractores conceptualmente "
-            f"muy distintos.\n"
-            f"4. Nivel alto: datos exactos (plazos, porcentajes, órganos, requisitos), no "
-            f"conceptos generales.\n"
-            f"5. Sin símbolos matemáticos. En texto: 'igual a', 'mayor que', 'porcentaje', etc.\n\n"
-            f"ARTÍCULO {art['numero']}:\n{art['contenido']}\n\n"
+            f"3. Distractores con error sutil y técnico: plazo distinto, porcentaje "
+            f"diferente, órgano incorrecto o palabra clave cambiada. Nunca distractores "
+            f"conceptualmente muy distintos.\n"
+            f"4. Nivel alto: datos exactos (plazos, porcentajes, órganos, requisitos), "
+            f"no conceptos generales.\n"
+            f"5. Sin símbolos matemáticos. Escribir en texto: 'igual a', 'mayor que', "
+            f"'porcentaje', etc.\n"
+            f"{regla_apartado}"
+            f"{regla_estilo}"
+            f"\nARTÍCULO {art['numero']}:\n{art['contenido']}\n\n"
             f"Responde SOLO con JSON válido, sin texto adicional:\n"
-            f'{{"articulo":"{art["numero"]}","pregunta":"...","opciones":{{"a":"...","b":"...","c":"...","d":"..."}},"correcta":"a","explicacion":"..."}}'
+            f'{{"articulo":"{art["numero"]}","pregunta":"...","opciones":'
+            f'{{"a":"...","b":"...","c":"...","d":"..."}},'
+            f'"correcta":"a","explicacion":"..."}}'
         ),
     }]
-
-
-def _parse_and_validate(raw):
-    """Extrae el JSON de la respuesta y normaliza claves."""
-    m = re.search(r'\{.*\}', raw, re.DOTALL)
-    if not m:
-        raise ValueError("No se encontró JSON en la respuesta")
-    parsed = json.loads(m.group())
-
-    # Normalizar 'correcta': "a)" → "a", "A" → "a"
-    c = parsed.get("correcta", "").strip().lower().replace(")", "").replace(".", "")[:1]
-    if c not in "abcd":
-        raise ValueError(f"Valor de 'correcta' inválido: {parsed.get('correcta')!r}")
-    parsed["correcta"] = c
-
-    # Normalizar claves de opciones: "a)" → "a"
-    raw_opts = parsed.get("opciones", {})
-    opts = {k.strip().lower().replace(")", "")[:1]: v for k, v in raw_opts.items()}
-    if not all(k in opts for k in "abcd"):
-        raise ValueError(f"Opciones incompletas: {list(opts.keys())}")
-    parsed["opciones"] = opts
-
-    if not parsed.get("pregunta"):
-        raise ValueError("Campo 'pregunta' vacío")
-
-    return parsed
 
 
 # ── Runner principal ──────────────────────────────────────────────────────────
 
 def run(ley_id=None, n=50, dry_run=False, delay=0.5):
-    # Imports aquí (después de que env vars estén configurados)
     import anthropic
     from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
 
@@ -201,19 +275,25 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
     for ley in leyes:
         print(f"\n{'─' * 60}")
         print(f"Ley: {ley['nombre']}  (id={ley['ley_id']})")
+
         arts = _fetch_articles(ley["ley_id"], n)
         if not arts:
             print("  Sin artículos nuevos que procesar.")
             continue
-        print(f"  Artículos a generar: {len(arts)}")
+
+        few_shots = _fetch_few_shots(ley["ley_id"])
+        examinados = sum(1 for a in arts if a.get("examinado"))
+        print(f"  Artículos a generar : {len(arts)}  "
+              f"(examinados en GACE: {examinados})")
+        print(f"  Few-shot examples   : {len(few_shots)}")
 
         ok = err = 0
         for i, art in enumerate(arts, 1):
             try:
                 resp = client.messages.create(
                     model=CLAUDE_MODEL,
-                    max_tokens=650,
-                    messages=_build_prompt(art, ley["nombre"]),
+                    max_tokens=800,
+                    messages=_build_prompt(art, ley["nombre"], few_shots=few_shots),
                 )
                 parsed = _parse_and_validate(resp.content[0].text)
 
@@ -222,7 +302,9 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
 
                 ok += 1
                 tag = "[DRY]" if dry_run else "[OK] "
-                print(f"  {tag} [{i:>3}/{len(arts)}] Art. {art['numero']}")
+                examen_tag = " ★" if art.get("examinado") else ""
+                apart_tag  = " [apt]" if _has_numbered_paragraphs(art["contenido"]) else ""
+                print(f"  {tag} [{i:>3}/{len(arts)}] Art. {art['numero']}{examen_tag}{apart_tag}")
             except Exception as e:
                 err += 1
                 print(f"  [ERR] [{i:>3}/{len(arts)}] Art. {art['numero']} — {e}")
@@ -241,12 +323,37 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
         print(f"TOTAL guardadas en normas.preguntas_test: {total_ok} OK, {total_err} errores")
 
 
+# ── Validación del JSON generado ─────────────────────────────────────────────
+
+def _parse_and_validate(raw):
+    m = re.search(r'\{.*\}', raw, re.DOTALL)
+    if not m:
+        raise ValueError("No se encontró JSON en la respuesta")
+    parsed = json.loads(m.group())
+
+    c = parsed.get("correcta", "").strip().lower().replace(")", "").replace(".", "")[:1]
+    if c not in "abcd":
+        raise ValueError(f"Valor de 'correcta' inválido: {parsed.get('correcta')!r}")
+    parsed["correcta"] = c
+
+    raw_opts = parsed.get("opciones", {})
+    opts = {k.strip().lower().replace(")", "")[:1]: v for k, v in raw_opts.items()}
+    if not all(k in opts for k in "abcd"):
+        raise ValueError(f"Opciones incompletas: {list(opts.keys())}")
+    parsed["opciones"] = opts
+
+    if not parsed.get("pregunta"):
+        raise ValueError("Campo 'pregunta' vacío")
+
+    return parsed
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Genera banco de preguntas GACE")
     p.add_argument("--supabase", action="store_true",
-                   help="Conectar a Supabase via Session Pooler (necesario desde WSL2)")
+                   help="Conectar a Supabase via Session Pooler")
     p.add_argument("--ley-id", type=int, default=None,
                    help="ID de la ley a procesar (omitir = todas las activas)")
     p.add_argument("--n", type=int, default=50,
@@ -257,12 +364,9 @@ if __name__ == "__main__":
                    help="Segundos entre llamadas a la API (default: 0.5)")
     args = p.parse_args()
 
-    # IMPORTANTE: fijar credenciales en os.environ ANTES de importar app.config / app.db
-    # app/config.py prefiere os.environ sobre st.secrets (que carga .streamlit/secrets.toml)
     if args.supabase:
         _load_supabase_secrets()
     else:
-        # Docker local: valores de .env (stack_db en localhost)
         os.environ.setdefault("DB_HOST",     "localhost")
         os.environ.setdefault("DB_PORT",     "5432")
         os.environ.setdefault("DB_NAME",     "stack_db")
