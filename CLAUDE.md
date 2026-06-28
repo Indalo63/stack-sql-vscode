@@ -57,35 +57,76 @@ Estas reglas se aplican SIEMPRE en `app/test_pipeline.py` y en cualquier futuro 
 
 ## Estado actual del proyecto
 
-### Stack local (Docker)
-- PostgreSQL 16 + pgvector + pgAdmin en Docker (docker/docker-compose.yml)
-- Schema `normas.*` multi-ley con 6 leyes cargadas con embeddings:
-  - CE 1978 (Constitución Española)
-  - LPAC 39/2015 (Ley de Procedimiento Administrativo Común)
-  - LRJSP 40/2015 (Régimen Jurídico del Sector Público)
-  - TREBEP RDL 5/2015 (Estatuto Básico del Empleado Público)
-  - LGP 47/2003 (Ley General Presupuestaria)
-  - LCSP 9/2017 (Ley de Contratos del Sector Público)
-- Pipeline Q&A multi-ley con enrutamiento ESTRUCTURAL/RESUMEN/CONTENIDO
-- Generador de preguntas tipo test alineado con estilo oficial GACE 2025
-- Parser del BOE (HTML → JSON) validado y operativo
-- Scripts: `load_ley.py`, `parse_boe.py`, `generate_embeddings.py`, `sync_boe.py`
+### Schema Supabase `normas.*` — leyes cargadas con embeddings
+| ley_id | Código | Nombre | Estado |
+|--------|--------|--------|--------|
+| 1 | CE | Constitución Española 1978 | ✅ cargada |
+| 4 | LPAC | Ley 39/2015 Procedimiento Administrativo Común | ✅ cargada |
+| 7 | LRJSP | Ley 40/2015 Régimen Jurídico Sector Público | ✅ cargada |
+| 8 | TREBEP | RDL 5/2015 Estatuto Básico Empleado Público | ✅ cargada |
+| 9 | LGP | Ley 47/2003 General Presupuestaria | ✅ cargada |
+| 12 | LCSP | Ley 9/2017 Contratos Sector Público | ✅ cargada |
+| 13 | GACE_NORM | Normativa Oposición GACE (criterios + programa) | ✅ cargada |
 
-### Infraestructura cloud (en proceso de deploy — 2026-06-24)
-- **Supabase**: proyecto `asistente-juridico` creado (ref: `cbiwhcfkaarnhenkryza`, región Europe)
-  - Schema `normas.*` migrado (28 MB, 6 leyes con embeddings)
-  - Extensión `vector` instalada en schema `public`
+**Pendientes de carga** (48 leyes inventariadas, 42 pendientes — ver análisis BOE-443):
+- ALTA prioridad: LODP, LOTC, LGOB, LOPJ, LOCE, LBRL, LTBG, LOPD, LOEPSF, TUE, TFUE
+- Estrategia: ley por ley con `url_boe` individual (compatible con `sync_boe.py` y multi-oposición)
+- Fuente principal: `BOE-443_Normativa_para_ingreso...06_2026.pdf` (3.792 págs, actualizado 24/06/2026)
+- TUE/TFUE: desde EUR-Lex (no incluido en BOE-443)
+
+### Banco de preguntas (`normas.preguntas_test`)
+- **209 preguntas oficiales** cargadas: 104 de GACE 2024 + 105 de GACE 2025
+  - `revisada=TRUE`, `fuente='oficial_2024'/'oficial_2025'`
+  - 79 con `ley_id` identificada, 130 con `ley_id=NULL` (leyes aún no cargadas)
+- Análisis de cobertura BOE-443: cubre el **76.6%** del examen real
+  - TUE/TFUE: 9.6% fijo por convocatoria
+  - Actualidad/conocimiento general: 5.7% (impredecible)
+  - Leyes fuera del BOE-443: 6.7%
+
+### Tablas adicionales en Supabase
+- `normas.oposiciones` + `normas.oposicion_leyes`: distribución GACE (51/100 preguntas de nuestras 6 leyes)
+- `normas.convocatorias`: metadatos estructurados 2024 y 2025
+  - Fórmula: A-(E/3), 100 preguntas, 90 min, nota mínima 25/50 pts, escala 0-50
+- Migraciones ejecutadas: `020`, `021`, `022`
+
+### Scripts disponibles
+| Script | Función |
+|--------|---------|
+| `load_ley.py` | Carga una ley desde BOE (HTML→articulos+embeddings) |
+| `parse_boe.py` | Parsea HTML del BOE a JSON estructurado |
+| `generate_embeddings.py` | Genera embeddings para artículos sin vector |
+| `sync_boe.py` | Sincroniza actualizaciones del BOE |
+| `build_test_bank.py` | Genera preguntas IA en lote y las guarda en BD |
+| `parse_official_exams.py` | Parsea PDFs de exámenes oficiales GACE y los carga |
+| `load_convocatoria.py` | Carga criterios+programa GACE como ley para Q&A |
+
+### Infraestructura cloud
+- **Supabase**: proyecto `asistente-juridico` (ref: `cbiwhcfkaarnhenkryza`, región Europe West)
+  - Conexión: Session Pooler `aws-1-eu-west-2.pooler.supabase.com`, usuario `postgres.cbiwhcfkaarnhenkryza`
   - Credenciales en `.streamlit/secrets.toml` (excluido de Git)
-- **GitHub**: repositorio `Indalo63/stack-sql-vscode` (rama `master`) operativo
-- **Streamlit Cloud**: cuenta creada con `Indalo63`, pendiente de configurar app y secrets
+- **Streamlit Cloud**: app desplegada y operativa (cuenta `Indalo63`, repo `stack-sql-vscode`)
+  - Secrets configurados con Session Pooler (no IPv6 directo)
+- **GitHub**: repositorio `Indalo63/stack-sql-vscode` (rama `master`)
 
 ### Arquitectura de credenciales
-- `app/config.py` centraliza todas las credenciales: prueba `st.secrets` primero, luego `os.environ`
-- Local: `.streamlit/secrets.toml` (no se sube a Git)
-- Producción: secrets configurados en el dashboard de Streamlit Cloud
+- `app/config.py`: lee `os.environ` primero (scripts/CLI), luego `st.secrets` (Streamlit)
+- Local: `.env` + `.streamlit/secrets.toml` (ninguno se sube a Git)
+- Producción: secrets en dashboard de Streamlit Cloud
+- Scripts con `--supabase`: leen `.streamlit/secrets.toml` y convierten a Session Pooler automáticamente
 
 ## Próximos pasos
-- [EN CURSO] Configurar app en Streamlit Cloud + añadir secrets → URL pública para alumnos
-- Exportar banco de tests a CSV / Moodle XML (Hito 3)
-- Simulacro: 100 preguntas, temporizador, puntuación con penalización A-(E/3) (Hito 4)
-- Sincronización automática con el BOE mediante GitHub Actions (Hito 5)
+
+### En curso
+- [FASE 1] Cargar 8 leyes ALTA prioridad del BOE-443: LODP, LOTC, LGOB, LOCE, LBRL, LTBG, LOPD, LOEPSF
+- [FASE 2] Cargar LOPJ, LGSS, Ley Tasas, Ley Tributaria
+- [FASE 3] Cargar TUE + TFUE desde EUR-Lex (~10 preguntas fijas por examen)
+- [FASE 4] Completar leyes de prioridad MEDIA (LJCA, LEF, Mutualismo, Indemnizaciones…)
+
+### Hitos pendientes
+- Mejorar generador IA con few-shot examples de exámenes oficiales (mejor calidad)
+- Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3€)
+- Simulacro: 100 preguntas, temporizador, puntuación A-(E/3), escala 0-50 pts (Hito 4)
+- Interfaz de revisión: tab "Revisión" para aprobar/rechazar preguntas IA
+- Historial de conversación en Q&A (multi-turno con st.session_state)
+- Exportar banco a CSV / Moodle XML (Hito 3)
+- Sincronización automática BOE mediante GitHub Actions (Hito 5)
