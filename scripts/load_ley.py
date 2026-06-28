@@ -129,6 +129,7 @@ PLANTILLA = {
 TIPOS_VALIDOS = {
     "constitucion", "ley_organica", "ley_ordinaria",
     "real_decreto_legislativo", "real_decreto", "orden_ministerial",
+    "tratado_internacional",
 }
 
 TIPOS_ARTICULO_VALIDOS = {

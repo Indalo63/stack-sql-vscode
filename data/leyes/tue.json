@@ -1,0 +1,543 @@
+{
+  "ley": {
+    "codigo": "TUE",
+    "nombre": "Tratado de la Unión Europea (versión consolidada 2016)",
+    "nombre_corto": "TUE",
+    "tipo": "tratado_internacional",
+    "numero_oficial": "Tratado de la Unión Europea, firmado en Maastricht el 7 de febrero de 1992",
+    "fecha_pub": "2016-06-07",
+    "url_boe": null,
+    "url_eli": "https://eur-lex.europa.eu/legal-content/ES/TXT/HTML/?uri=CELEX:12016M/TXT"
+  },
+  "titulos": [
+    {
+      "numero": "I",
+      "denominacion": "DISPOSICIONES COMUNES",
+      "orden": 0
+    },
+    {
+      "numero": "II",
+      "denominacion": "DISPOSICIONES SOBRE LOS PRINCIPIOS DEMOCRÁTICOS",
+      "orden": 1
+    },
+    {
+      "numero": "III",
+      "denominacion": "DISPOSICIONES SOBRE LAS INSTITUCIONES",
+      "orden": 2
+    },
+    {
+      "numero": "IV",
+      "denominacion": "DISPOSICIONES SOBRE LAS COOPERACIONES REFORZADAS",
+      "orden": 3
+    },
+    {
+      "numero": "V",
+      "denominacion": "DISPOSICIONES GENERALES RELATIVAS A LA ACCIÓN EXTERIOR DE LA UNIÓN Y DISPOSICIONES ESPECÍFICAS RELATIVAS A LA POLÍTICA EXTERIOR Y DE SEGURIDAD COMÚN",
+      "orden": 4
+    },
+    {
+      "numero": "VI",
+      "denominacion": "DISPOSICIONES FINALES",
+      "orden": 5
+    }
+  ],
+  "capitulos": [],
+  "secciones": [],
+  "articulos": [
+    {
+      "numero": "1",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 1 TUE) (2)]\nPor el presente Tratado, las ALTAS PARTES CONTRATANTES constituyen entre sí una UNIÓN EUROPEA, en lo sucesivo denominada «Unión», a la que los Estados miembros atribuyen competencias para alcanzar sus objetivos comunes.\nEl presente Tratado constituye una nueva etapa en el proceso creador de una unión cada vez más estrecha entre los pueblos de Europa, en la cual las decisiones serán tomadas de la forma más abierta y próxima a los ciudadanos que sea posible.\nLa Unión se fundamenta en el presente Tratado y en el Tratado de Funcionamiento de la Unión Europea (en lo sucesivo denominados «los Tratados»). Ambos Tratados tienen el mismo valor jurídico. La Unión sustituirá y sucederá a la Comunidad Europea.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 1
+    },
+    {
+      "numero": "2",
+      "tipo": "articulo",
+      "contenido": "La Unión se fundamenta en los valores de respeto de la dignidad humana, libertad, democracia, igualdad, Estado de Derecho y respeto de los derechos humanos, incluidos los derechos de las personas pertenecientes a minorías. Estos valores son comunes a los Estados miembros en una sociedad caracterizada por el pluralismo, la no discriminación, la tolerancia, la justicia, la solidaridad y la igualdad entre mujeres y hombres.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 2
+    },
+    {
+      "numero": "3",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 2 TUE)]\n1. La Unión tiene como finalidad promover la paz, sus valores y el bienestar de sus pueblos.\n2. La Unión ofrecerá a sus ciudadanos un espacio de libertad, seguridad y justicia sin fronteras interiores, en el que esté garantizada la libre circulación de personas conjuntamente con medidas adecuadas en materia de control de las fronteras exteriores, asilo, inmigración y de prevención y lucha contra la delincuencia.\n3. La Unión establecerá un mercado interior. Obrará en pro del desarrollo sostenible de Europa basado en un crecimiento económico equilibrado y en la estabilidad de los precios, en una economía social de mercado altamente competitiva, tendente al pleno empleo y al progreso social, y en un nivel elevado de protección y mejora de la calidad del medio ambiente. Asimismo, promoverá el progreso científico y técnico.\nLa Unión combatirá la exclusión social y la discriminación y fomentará la justicia y la protección sociales, la igualdad entre mujeres y hombres, la solidaridad entre las generaciones y la protección de los derechos del niño.\nLa Unión fomentará la cohesión económica, social y territorial y la solidaridad entre los Estados miembros.\nLa Unión respetará la riqueza de su diversidad cultural y lingüística y velará por la conservación y el desarrollo del patrimonio cultural europeo.\n4. La Unión establecerá una unión económica y monetaria cuya moneda es el euro.\n5. En sus relaciones con el resto del mundo, la Unión afirmará y promoverá sus valores e intereses y contribuirá a la protección de sus ciudadanos. Contribuirá a la paz, la seguridad, el desarrollo sostenible del planeta, la solidaridad y el respeto mutuo entre los pueblos, el comercio libre y justo, la erradicación de la pobreza y la protección de los derechos humanos, especialmente los derechos del niño, así como al estricto respeto y al desarrollo del Derecho internacional, en particular el respeto de los principios de la Carta de las Naciones Unidas.\n6. La Unión perseguirá sus objetivos por los medios apropiados, de acuerdo con las competencias que se le atribuyen en los Tratados.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 3
+    },
+    {
+      "numero": "4",
+      "tipo": "articulo",
+      "contenido": "1. De conformidad con lo dispuesto en el artículo 5, toda competencia no atribuida a la Unión en los Tratados corresponde a los Estados miembros.\n2. La Unión respetará la igualdad de los Estados miembros ante los Tratados, así como su identidad nacional, inherente a las estructuras fundamentales políticas y constitucionales de éstos, también en lo referente a la autonomía local y regional. Respetará las funciones esenciales del Estado, especialmente las que tienen por objeto garantizar su integridad territorial, mantener el orden público y salvaguardar la seguridad nacional. En particular, la seguridad nacional seguirá siendo responsabilidad exclusiva de cada Estado miembro.\n3. Conforme al principio de cooperación leal, la Unión y los Estados miembros se respetarán y asistirán mutuamente en el cumplimiento de las misiones derivadas de los Tratados.\nLos Estados miembros adoptarán todas las medidas generales o particulares apropiadas para asegurar el cumplimiento de las obligaciones derivadas de los Tratados o resultantes de los actos de las instituciones de la Unión.\nLos Estados miembros ayudarán a la Unión en el cumplimiento de su misión y se abstendrán de toda medida que pueda poner en peligro la consecución de los objetivos de la Unión.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 4
+    },
+    {
+      "numero": "5",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 5 TCE)]\n1. La delimitación de las competencias de la Unión se rige por el principio de atribución. El ejercicio de las competencias de la Unión se rige por los principios de subsidiariedad y proporcionalidad.\n2. En virtud del principio de atribución, la Unión actúa dentro de los límites de las competencias que le atribuyen los Estados miembros en los Tratados para lograr los objetivos que éstos determinan. Toda competencia no atribuida a la Unión en los Tratados corresponde a los Estados miembros.\n3. En virtud del principio de subsidiariedad, en los ámbitos que no sean de su competencia exclusiva, la Unión intervendrá sólo en caso de que, y en la medida en que, los objetivos de la acción pretendida no puedan ser alcanzados de manera suficiente por los Estados miembros, ni a nivel central ni a nivel regional y local, sino que puedan alcanzarse mejor, debido a la dimensión o a los efectos de la acción pretendida, a escala de la Unión.\nLas instituciones de la Unión aplicarán el principio de subsidiariedad de conformidad con el Protocolo sobre la aplicación de los principios de subsidiariedad y proporcionalidad. Los Parlamentos nacionales velarán por el respeto del principio de subsidiariedad con arreglo al procedimiento establecido en el mencionado Protocolo.\n4. En virtud del principio de proporcionalidad, el contenido y la forma de la acción de la Unión no excederán de lo necesario para alcanzar los objetivos de los Tratados.\nLas instituciones de la Unión aplicarán el principio de proporcionalidad de conformidad con el Protocolo sobre la aplicación de los principios de subsidiariedad y proporcionalidad.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 5
+    },
+    {
+      "numero": "6",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 6 TUE)]\n1. La Unión reconoce los derechos, libertades y principios enunciados en la Carta de los Derechos Fundamentales de la Unión Europea de 7 de diciembre de 2000, tal como fue adaptada el 12 de diciembre de 2007 en Estrasburgo, la cual tendrá el mismo valor jurídico que los Tratados.\nLas disposiciones de la Carta no ampliarán en modo alguno las competencias de la Unión tal como se definen en los Tratados.\nLos derechos, libertades y principios enunciados en la Carta se interpretarán con arreglo a las disposiciones generales del título VII de la Carta por las que se rige su interpretación y aplicación y teniendo debidamente en cuenta las explicaciones a que se hace referencia en la Carta, que indican las fuentes de dichas disposiciones.\n2. La Unión se adherirá al Convenio Europeo para la Protección de los Derechos Humanos y de las Libertades Fundamentales. Esta adhesión no modificará las competencias de la Unión que se definen en los Tratados.\n3. Los derechos fundamentales que garantiza el Convenio Europeo para la Protección de los Derechos Humanos y de las Libertades Fundamentales y los que son fruto de las tradiciones constitucionales comunes a los Estados miembros formarán parte del Derecho de la Unión como principios generales.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 6
+    },
+    {
+      "numero": "7",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 7 TUE)]\n1. A propuesta motivada de un tercio de los Estados miembros, del Parlamento Europeo o de la Comisión, el Consejo, por mayoría de cuatro quintos de sus miembros y previa aprobación del Parlamento Europeo, podrá constatar la existencia de un riesgo claro de violación grave por parte de un Estado miembro de los valores contemplados en el artículo 2. Antes de proceder a esta constatación, el Consejo oirá al Estado miembro de que se trate y por el mismo procedimiento podrá dirigirle recomendaciones.\nEl Consejo comprobará de manera periódica si los motivos que han llevado a tal constatación siguen siendo válidos.\n2. El Consejo Europeo, por unanimidad y a propuesta de un tercio de los Estados miembros o de la Comisión y previa aprobación del Parlamento Europeo, podrá constatar la existencia de una violación grave y persistente por parte de un Estado miembro de los valores contemplados en el artículo 2 tras invitar al Estado miembro de que se trate a que presente sus observaciones.\n3. Cuando se haya efectuado la constatación contemplada en el apartado 2, el Consejo podrá decidir, por mayoría cualificada, que se suspendan determinados derechos derivados de la aplicación de los Tratados al Estado miembro de que se trate, incluidos los derechos de voto del representante del Gobierno de dicho Estado miembro en el Consejo. Al proceder a dicha suspensión, el Consejo tendrá en cuenta las posibles consecuencias de la misma para los derechos y obligaciones de las personas físicas y jurídicas.\nLas obligaciones del Estado miembro de que se trate derivadas de los Tratados continuarán, en cualquier caso, siendo vinculantes para dicho Estado.\n4. El Consejo podrá decidir posteriormente, por mayoría cualificada, la modificación o revocación de las medidas adoptadas de conformidad con el apartado 3 como respuesta a cambios en la situación que motivó su imposición.\n5. Las modalidades de voto que, a los efectos del presente artículo, serán de aplicación para el Parlamento Europeo, el Consejo Europeo y el Consejo se establecen en el artículo 354 del Tratado de Funcionamiento de la Unión Europea.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 7
+    },
+    {
+      "numero": "8",
+      "tipo": "articulo",
+      "contenido": "1. La Unión desarrollará con los países vecinos relaciones preferentes, con el objetivo de establecer un espacio de prosperidad y de buena vecindad basado en los valores de la Unión y caracterizado por unas relaciones estrechas y pacíficas fundadas en la cooperación.\n2. A efectos del apartado 1, la Unión podrá celebrar acuerdos específicos con dichos países. Estos acuerdos podrán incluir derechos y obligaciones recíprocos, así como la posibilidad de realizar acciones en común. Su aplicación será objeto de una concertación periódica.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 8
+    },
+    {
+      "numero": "9",
+      "tipo": "articulo",
+      "contenido": "La Unión respetará en todas sus actividades el principio de la igualdad de sus ciudadanos, que se beneficiarán por igual de la atención de sus instituciones, órganos y organismos. Será ciudadano de la Unión toda persona que tenga la nacionalidad de un Estado miembro. La ciudadanía de la Unión se añade a la ciudadanía nacional sin sustituirla.",
+      "titulo_numero": "II",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 9
+    },
+    {
+      "numero": "10",
+      "tipo": "articulo",
+      "contenido": "1. El funcionamiento de la Unión se basa en la democracia representativa.\n2. Los ciudadanos estarán directamente representados en la Unión a través del Parlamento Europeo.\nLos Estados miembros estarán representados en el Consejo Europeo por su Jefe de Estado o de Gobierno y en el Consejo por sus Gobiernos, que serán democráticamente responsables, bien ante sus Parlamentos nacionales, bien ante sus ciudadanos.\n3. Todo ciudadano tiene derecho a participar en la vida democrática de la Unión. Las decisiones serán tomadas de la forma más abierta y próxima posible a los ciudadanos.\n4. Los partidos políticos a escala europea contribuirán a formar la conciencia política europea y a expresar la voluntad de los ciudadanos de la Unión.",
+      "titulo_numero": "II",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 10
+    },
+    {
+      "numero": "11",
+      "tipo": "articulo",
+      "contenido": "1. Las instituciones darán a los ciudadanos y a las asociaciones representativas, por los cauces apropiados, la posibilidad de expresar e intercambiar públicamente sus opiniones en todos los ámbitos de actuación de la Unión.\n2. Las instituciones mantendrán un diálogo abierto, transparente y regular con las asociaciones representativas y la sociedad civil.\n3. Con objeto de garantizar la coherencia y la transparencia de las acciones de la Unión, la Comisión Europea mantendrá amplias consultas con las partes interesadas.\n4. Un grupo de al menos un millón de ciudadanos de la Unión, que sean nacionales de un número significativo de Estados miembros, podrá tomar la iniciativa de invitar a la Comisión Europea, en el marco de sus atribuciones, a que presente una propuesta adecuada sobre cuestiones que estos ciudadanos estimen que requieren un acto jurídico de la Unión para los fines de la aplicación de los Tratados.\nLos procedimientos y las condiciones preceptivos para la presentación de una iniciativa de este tipo se fijarán de conformidad con el párrafo primero del artículo 24 del Tratado de Funcionamiento de la Unión Europea.",
+      "titulo_numero": "II",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 11
+    },
+    {
+      "numero": "12",
+      "tipo": "articulo",
+      "contenido": "Los Parlamentos nacionales contribuirán activamente al buen funcionamiento de la Unión, para lo cual:\na)\nserán informados por las instituciones de la Unión y recibirán notificación de los proyectos de actos legislativos de la Unión de conformidad con el Protocolo sobre el cometido de los Parlamentos nacionales en la Unión Europea;\nb)\nvelarán por que se respete el principio de subsidiariedad de conformidad con los procedimientos establecidos en el Protocolo sobre la aplicación de los principios de subsidiariedad y proporcionalidad;\nc)\nparticiparán, en el marco del espacio de libertad, seguridad y justicia, en los mecanismos de evaluación de la aplicación de las políticas de la Unión en dicho espacio, de conformidad con el artículo 70 del Tratado de Funcionamiento de la Unión Europea, y estarán asociados al control político de Europol y a la evaluación de las actividades de Eurojust, de conformidad con los artículos 88 y 85 de dicho Tratado;\nd)\nparticiparán en los procedimientos de revisión de los Tratados, de conformidad con el artículo 48 del presente Tratado;\ne)\nserán informados de las solicitudes de adhesión a la Unión, de conformidad con el artículo 49 del presente Tratado;\nf)\nparticiparán en la cooperación interparlamentaria entre los Parlamentos nacionales y con el Parlamento Europeo, de conformidad con el Protocolo sobre el cometido de los Parlamentos nacionales en la Unión Europea.",
+      "titulo_numero": "II",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 12
+    },
+    {
+      "numero": "13",
+      "tipo": "articulo",
+      "contenido": "1. La Unión dispone de un marco institucional que tiene como finalidad promover sus valores, perseguir sus objetivos, defender sus intereses, los de sus ciudadanos y los de los Estados miembros, así como garantizar la coherencia, eficacia y continuidad de sus políticas y acciones.\nLas instituciones de la Unión son:\n—\nEl Parlamento Europeo,\n—\nEl Consejo Europeo,\n—\nEl Consejo,\n—\nLa Comisión Europea (denominada en lo sucesivo «Comisión»),\n—\nEl Tribunal de Justicia de la Unión Europea,\n—\nEl Banco Central Europeo,\n—\nEl Tribunal de Cuentas.\n2. Cada institución actuará dentro de los límites de las atribuciones que le confieren los Tratados, con arreglo a los procedimientos, condiciones y fines establecidos en los mismos. Las instituciones mantendrán entre sí una cooperación leal.\n3. Las disposiciones relativas al Banco Central Europeo y al Tribunal de Cuentas, así como las disposiciones detalladas sobre las demás instituciones, figuran en el Tratado de Funcionamiento de la Unión Europea.\n4. El Parlamento Europeo, el Consejo y la Comisión estarán asistidos por un Comité Económico y Social y por un Comité de las Regiones que ejercerán funciones consultivas.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 13
+    },
+    {
+      "numero": "14",
+      "tipo": "articulo",
+      "contenido": "1. El Parlamento Europeo ejercerá conjuntamente con el Consejo la función legislativa y la función presupuestaria. Ejercerá funciones de control político y consultivas, en las condiciones establecidas en los Tratados. Elegirá al Presidente de la Comisión.\n2. El Parlamento Europeo estará compuesto por representantes de los ciudadanos de la Unión. Su número no excederá de setecientos cincuenta, más el Presidente. La representación de los ciudadanos será decrecientemente proporcional, con un mínimo de seis diputados por Estado miembro. No se asignará a ningún Estado miembro más de noventa y seis escaños.\nEl Consejo Europeo adoptará por unanimidad, a iniciativa del Parlamento Europeo y con su aprobación, una decisión por la que se fije la composición del Parlamento Europeo conforme a los principios a que se refiere el párrafo primero.\n3. Los diputados al Parlamento Europeo serán elegidos por sufragio universal directo, libre y secreto, para un mandato de cinco años.\n4. El Parlamento Europeo elegirá a su Presidente y a la Mesa de entre sus diputados.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 14
+    },
+    {
+      "numero": "15",
+      "tipo": "articulo",
+      "contenido": "1. El Consejo Europeo dará a la Unión los impulsos necesarios para su desarrollo y definirá sus orientaciones y prioridades políticas generales. No ejercerá función legislativa alguna.\n2. El Consejo Europeo estará compuesto por los Jefes de Estado o de Gobierno de los Estados miembros, así como por su Presidente y por el Presidente de la Comisión. Participará en sus trabajos el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad.\n3. El Consejo Europeo se reunirá dos veces por semestre por convocatoria de su Presidente. Cuando el orden del día lo exija, los miembros del Consejo Europeo podrán decidir contar, cada uno de ellos, con la asistencia de un ministro y, en el caso del Presidente de la Comisión, con la de un miembro de la Comisión. Cuando la situación lo exija, el Presidente convocará una reunión extraordinaria del Consejo Europeo.\n4. El Consejo Europeo se pronunciará por consenso, excepto cuando los Tratados dispongan otra cosa.\n5. El Consejo Europeo elegirá a su Presidente por mayoría cualificada para un mandato de dos años y medio, que podrá renovarse una sola vez. En caso de impedimento o falta grave, el Consejo Europeo podrá poner fin a su mandato por el mismo procedimiento.\n6. El Presidente del Consejo Europeo:\na)\npresidirá e impulsará los trabajos del Consejo Europeo;\nb)\nvelará por la preparación y continuidad de los trabajos del Consejo Europeo, en cooperación con el Presidente de la Comisión y basándose en los trabajos del Consejo de Asuntos Generales;\nc)\nse esforzará por facilitar la cohesión y el consenso en el seno del Consejo Europeo;\nd)\nal término de cada reunión del Consejo Europeo, presentará un informe al Parlamento Europeo.\nEl Presidente del Consejo Europeo asumirá, en su rango y condición, la representación exterior de la Unión en los asuntos de política exterior y de seguridad común, sin perjuicio de las atribuciones del Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad.\nEl Presidente del Consejo Europeo no podrá ejercer mandato nacional alguno.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 15
+    },
+    {
+      "numero": "16",
+      "tipo": "articulo",
+      "contenido": "1. El Consejo ejercerá conjuntamente con el Parlamento Europeo la función legislativa y la función presupuestaria. Ejercerá funciones de definición de políticas y de coordinación, en las condiciones establecidas en los Tratados.\n2. El Consejo estará compuesto por un representante de cada Estado miembro, de rango ministerial, facultado para comprometer al Gobierno del Estado miembro al que represente y para ejercer el derecho de voto.\n3. El Consejo se pronunciará por mayoría cualificada, excepto cuando los Tratados dispongan otra cosa.\n4. A partir del 1 de noviembre de 2014, la mayoría cualificada se definirá como un mínimo del 55 % de los miembros del Consejo que incluya al menos a quince de ellos y represente a Estados miembros que reúnan como mínimo el 65 % de la población de la Unión.\nUna minoría de bloqueo estará compuesta por al menos cuatro miembros del Consejo, a falta de lo cual la mayoría cualificada se considerará alcanzada.\nLas demás modalidades reguladoras del voto por mayoría cualificada se establecen en el apartado 2 del artículo 238 del Tratado de Funcionamiento de la Unión Europea.\n5. Las disposiciones transitorias relativas a la definición de la mayoría cualificada que serán de aplicación hasta el 31 de octubre de 2014, así como las aplicables entre el 1 de noviembre de 2014 y el 31 de marzo de 2017, se establecerán en el Protocolo sobre las disposiciones transitorias.\n6. El Consejo se reunirá en diferentes formaciones, cuya lista se adoptará de conformidad con el artículo 236 del Tratado de Funcionamiento de la Unión Europea.\nEl Consejo de Asuntos Generales velará por la coherencia de los trabajos de las diferentes formaciones del Consejo. Preparará las reuniones del Consejo Europeo y garantizará su actuación subsiguiente, en contacto con el Presidente del Consejo Europeo y la Comisión.\nEl Consejo de Asuntos Exteriores elaborará la acción exterior de la Unión atendiendo a las líneas estratégicas definidas por el Consejo Europeo y velará por la coherencia de la acción de la Unión.\n7. Un Comité de Representantes Permanentes de los Gobiernos de los Estados miembros se encargará de preparar los trabajos del Consejo.\n8. El Consejo se reunirá en público cuando delibere y vote sobre un proyecto de acto legislativo. Con este fin, cada sesión del Consejo se dividirá en dos partes, dedicadas respectivamente a las deliberaciones sobre los actos legislativos de la Unión y a las actividades no legislativas.\n9. La presidencia de las formaciones del Consejo, con excepción de la de Asuntos Exteriores, será desempeñada por los representantes de los Estados miembros en el Consejo mediante un sistema de rotación igual, de conformidad con las condiciones establecidas en el artículo 236 del Tratado de Funcionamiento de la Unión Europea.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 16
+    },
+    {
+      "numero": "17",
+      "tipo": "articulo",
+      "contenido": "1. La Comisión promoverá el interés general de la Unión y tomará las iniciativas adecuadas con este fin. Velará por que se apliquen los Tratados y las medidas adoptadas por las instituciones en virtud de éstos. Supervisará la aplicación del Derecho de la Unión bajo el control del Tribunal de Justicia de la Unión Europea. Ejecutará el presupuesto y gestionará los programas. Ejercerá asimismo funciones de coordinación, ejecución y gestión, de conformidad con las condiciones establecidas en los Tratados. Con excepción de la política exterior y de seguridad común y de los demás casos previstos por los Tratados, asumirá la representación exterior de la Unión. Adoptará las iniciativas de la programación anual y plurianual de la Unión con el fin de alcanzar acuerdos interinstitucionales.\n2. Los actos legislativos de la Unión sólo podrán adoptarse a propuesta de la Comisión, excepto cuando los Tratados dispongan otra cosa. Los demás actos se adoptarán a propuesta de la Comisión cuando así lo establezcan los Tratados.\n3. El mandato de la Comisión será de cinco años.\nLos miembros de la Comisión serán elegidos en razón de su competencia general y de su compromiso europeo, de entre personalidades que ofrezcan plenas garantías de independencia.\nLa Comisión ejercerá sus responsabilidades con plena independencia. Sin perjuicio de lo dispuesto en el apartado 2 del artículo 18, los miembros de la Comisión no solicitarán ni aceptarán instrucciones de ningún gobierno, institución, órgano u organismo. Se abstendrán de todo acto incompatible con sus obligaciones o con el desempeño de sus funciones.\n4. La Comisión nombrada entre la fecha de entrada en vigor del Tratado de Lisboa y el 31 de octubre de 2014 estará compuesta por un nacional de cada Estado miembro, incluidos su Presidente y el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, que será uno de sus Vicepresidentes.\n5. A partir del 1 de noviembre de 2014, la Comisión estará compuesta por un número de miembros correspondiente a los dos tercios del número de Estados miembros, que incluirá a su Presidente y al Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, a menos que el Consejo Europeo decida por unanimidad modificar dicho número.\nLos miembros de la Comisión serán seleccionados de entre los nacionales de los Estados miembros mediante un sistema de rotación estrictamente igual entre los Estados miembros que permita tener en cuenta la diversidad demográfica y geográfica del conjunto de dichos Estados. Este sistema será establecido por unanimidad por el Consejo Europeo de conformidad con el artículo 244 del Tratado de Funcionamiento de la Unión Europea.\n6. El Presidente de la Comisión:\na)\ndefinirá las orientaciones con arreglo a las cuales la Comisión desempeñará sus funciones;\nb)\ndeterminará la organización interna de la Comisión velando por la coherencia, eficacia y colegialidad de su actuación;\nc)\nnombrará Vicepresidentes, distintos del Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, de entre los miembros de la Comisión.\nUn miembro de la Comisión presentará su dimisión si se lo pide el Presidente. El Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad presentará su dimisión, con arreglo al procedimiento establecido en el apartado 1 del artículo 18, si se lo pide el Presidente.\n7. Teniendo en cuenta el resultado de las elecciones al Parlamento Europeo y tras mantener las consultas apropiadas, el Consejo Europeo propondrá al Parlamento Europeo, por mayoría cualificada, un candidato al cargo de Presidente de la Comisión. El Parlamento Europeo elegirá al candidato por mayoría de los miembros que lo componen. Si el candidato no obtiene la mayoría necesaria, el Consejo Europeo propondrá en el plazo de un mes, por mayoría cualificada, un nuevo candidato, que será elegido por el Parlamento Europeo por el mismo procedimiento.\nEl Consejo, de común acuerdo con el Presidente electo, adoptará la lista de las demás personalidades que se proponga nombrar miembros de la Comisión. Éstas serán seleccionadas, a partir de las propuestas presentadas por los Estados miembros, de acuerdo con los criterios enunciados en el párrafo segundo del apartado 3 y en el párrafo segundo del apartado 5.\nEl Presidente, el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad y los demás miembros de la Comisión se someterán colegiadamente al voto de aprobación del Parlamento Europeo. Sobre la base de dicha aprobación, la Comisión será nombrada por el Consejo Europeo, por mayoría cualificada.\n8. La Comisión tendrá una responsabilidad colegiada ante el Parlamento Europeo. El Parlamento Europeo podrá votar una moción de censura contra la Comisión de conformidad con el artículo 234 del Tratado de Funcionamiento de la Unión Europea. Si se aprueba dicha moción, los miembros de la Comisión deberán dimitir colectivamente de sus cargos y el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad deberá dimitir del cargo que ejerce en la Comisión.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 17
+    },
+    {
+      "numero": "18",
+      "tipo": "articulo",
+      "contenido": "1. El Consejo Europeo nombrará por mayoría cualificada, con la aprobación del Presidente de la Comisión, al Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad. El Consejo Europeo podrá poner fin a su mandato por el mismo procedimiento.\n2. El Alto Representante estará al frente de la política exterior y de seguridad común de la Unión. Contribuirá con sus propuestas a elaborar dicha política y la ejecutará como mandatario del Consejo. Actuará del mismo modo en relación con la política común de seguridad y defensa.\n3. El Alto Representante presidirá el Consejo de Asuntos Exteriores.\n4. El Alto Representante será uno de los Vicepresidentes de la Comisión. Velará por la coherencia de la acción exterior de la Unión. Se encargará, dentro de la Comisión, de las responsabilidades que incumben a la misma en el ámbito de las relaciones exteriores y de la coordinación de los demás aspectos de la acción exterior de la Unión. En el ejercicio de estas responsabilidades dentro de la Comisión, y exclusivamente por lo que respecta a las mismas, el Alto Representante estará sujeto a los procedimientos por los que se rige el funcionamiento de la Comisión en la medida en que ello sea compatible con los apartados 2 y 3.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 18
+    },
+    {
+      "numero": "19",
+      "tipo": "articulo",
+      "contenido": "1. El Tribunal de Justicia de la Unión Europea comprenderá el Tribunal de Justicia, el Tribunal General y los tribunales especializados. Garantizará el respeto del Derecho en la interpretación y aplicación de los Tratados.\nLos Estados miembros establecerán las vías de recurso necesarias para garantizar la tutela judicial efectiva en los ámbitos cubiertos por el Derecho de la Unión.\n2. El Tribunal de Justicia estará compuesto por un juez por Estado miembro. Estará asistido por abogados generales.\nEl Tribunal General dispondrá al menos de un juez por Estado miembro.\nLos jueces y abogados generales del Tribunal de Justicia y los jueces del Tribunal General serán elegidos de entre personalidades que ofrezcan plenas garantías de independencia y que reúnan las condiciones contempladas en los artículos 253 y 254 del Tratado de Funcionamiento de la Unión Europea. Serán nombrados de común acuerdo por los Gobiernos de los Estados miembros para un período de seis años. Los jueces y abogados generales salientes podrán ser nombrados de nuevo.\n3. El Tribunal de Justicia de la Unión Europea se pronunciará, de conformidad con los Tratados:\na)\nsobre los recursos interpuestos por un Estado miembro, por una institución o por personas físicas o jurídicas;\nb)\ncon carácter prejudicial, a petición de los órganos jurisdiccionales nacionales, sobre la interpretación del Derecho de la Unión o sobre la validez de los actos adoptados por las instituciones;\nc)\nen los demás casos previstos por los Tratados.",
+      "titulo_numero": "III",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 19
+    },
+    {
+      "numero": "20",
+      "tipo": "articulo",
+      "contenido": "[(antiguos artículos 27 A a 27 E, 40 a 40 B y 43 a 45 TUE y antiguos artículos 11 y 11 A TCE)]\n1. Los Estados miembros que deseen instaurar entre sí una cooperación reforzada en el marco de las competencias no exclusivas de la Unión podrán hacer uso de las instituciones de ésta y ejercer dichas competencias aplicando las disposiciones pertinentes de los Tratados, dentro de los límites y con arreglo a las modalidades contempladas en el presente artículo y en los artículos 326 a 334 del Tratado de Funcionamiento de la Unión Europea.\nLa finalidad de las cooperaciones reforzadas será impulsar los objetivos de la Unión, proteger sus intereses y reforzar su proceso de integración. Las cooperaciones reforzadas estarán abiertas permanentemente a todos los Estados miembros, de conformidad con el artículo 328 del Tratado de Funcionamiento de la Unión Europea.\n2. La decisión de autorizar una cooperación reforzada será adoptada por el Consejo como último recurso, cuando haya llegado a la conclusión de que los objetivos perseguidos por dicha cooperación no pueden ser alcanzados en un plazo razonable por la Unión en su conjunto, y a condición de que participen en ella al menos nueve Estados miembros. El Consejo se pronunciará con arreglo al procedimiento establecido en el artículo 329 del Tratado de Funcionamiento de la Unión Europea.\n3. Todos los miembros del Consejo podrán participar en sus deliberaciones, pero únicamente participarán en la votación los miembros del Consejo que representen a los Estados miembros que participan en una cooperación reforzada. Las modalidades de la votación se establecen en el artículo 330 del Tratado de Funcionamiento de la Unión Europea.\n4. Los actos adoptados en el marco de una cooperación reforzada vincularán únicamente a los Estados miembros participantes. Dichos actos no se considerarán acervo que deban aceptar los Estados candidatos a la adhesión a la Unión.",
+      "titulo_numero": "IV",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 20
+    },
+    {
+      "numero": "21",
+      "tipo": "articulo",
+      "contenido": "1. La acción de la Unión en la escena internacional se basará en los principios que han inspirado su creación, desarrollo y ampliación y que pretende fomentar en el resto del mundo: la democracia, el Estado de Derecho, la universalidad e indivisibilidad de los derechos humanos y de las libertades fundamentales, el respeto de la dignidad humana, los principios de igualdad y solidaridad y el respeto de los principios de la Carta de las Naciones Unidas y del Derecho internacional.\nLa Unión procurará desarrollar relaciones y crear asociaciones con los terceros países y con las organizaciones internacionales, regionales o mundiales que compartan los principios mencionados en el párrafo primero. Propiciará soluciones multilaterales a los problemas comunes, en particular en el marco de las Naciones Unidas.\n2. La Unión definirá y ejecutará políticas comunes y acciones y se esforzará por lograr un alto grado de cooperación en todos los ámbitos de las relaciones internacionales con el fin de:\na)\ndefender sus valores, intereses fundamentales, seguridad, independencia e integridad;\nb)\nconsolidar y respaldar la democracia, el Estado de Derecho, los derechos humanos y los principios del Derecho internacional;\nc)\nmantener la paz, prevenir los conflictos y fortalecer la seguridad internacional, conforme a los propósitos y principios de la Carta de las Naciones Unidas, así como a los principios del Acta Final de Helsinki y a los objetivos de la Carta de París, incluidos los relacionados con las fronteras exteriores;\nd)\napoyar el desarrollo sostenible en los planos económico, social y medioambiental de los países en desarrollo, con el objetivo fundamental de erradicar la pobreza;\ne)\nfomentar la integración de todos los países en la economía mundial, entre otras cosas mediante la supresión progresiva de los obstáculos al comercio internacional;\nf)\ncontribuir a elaborar medidas internacionales de protección y mejora de la calidad del medio ambiente y de la gestión sostenible de los recursos naturales mundiales, para lograr el desarrollo sostenible;\ng)\nayudar a las poblaciones, países y regiones que se enfrenten a catástrofes naturales o de origen humano; y\nh)\npromover un sistema internacional basado en una cooperación multilateral sólida y en una buena gobernanza mundial.\n3. La Unión respetará los principios y perseguirá los objetivos mencionados en los apartados 1 y 2 al formular y llevar a cabo su acción exterior en los distintos ámbitos cubiertos por el presente título y por la quinta parte del Tratado de Funcionamiento de la Unión Europea, así como los aspectos exteriores de sus demás políticas.\nLa Unión velará por mantener la coherencia entre los distintos ámbitos de su acción exterior y entre éstos y sus demás políticas. El Consejo y la Comisión, asistidos por el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, garantizarán dicha coherencia y cooperarán a tal efecto.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 21
+    },
+    {
+      "numero": "22",
+      "tipo": "articulo",
+      "contenido": "1. Basándose en los principios y objetivos enumerados en el artículo 21, el Consejo Europeo determinará los intereses y objetivos estratégicos de la Unión.\nLas decisiones del Consejo Europeo sobre los intereses y objetivos estratégicos de la Unión tratarán de la política exterior y de seguridad común y de otros ámbitos de la acción exterior de la Unión. Podrán referirse a las relaciones de la Unión con un país o una región, o tener un planteamiento temático. Definirán su duración y los medios que deberán facilitar la Unión y los Estados miembros.\nEl Consejo Europeo se pronunciará por unanimidad, basándose en una recomendación del Consejo adoptada por éste según las modalidades previstas para cada ámbito. Las decisiones del Consejo Europeo se ejecutarán con arreglo a los procedimientos establecidos en los Tratados.\n2. El Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, en el ámbito de la política exterior y de seguridad común, y la Comisión, en los demás ámbitos de la acción exterior, podrán presentar propuestas conjuntas al Consejo.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 22
+    },
+    {
+      "numero": "23",
+      "tipo": "articulo",
+      "contenido": "La acción de la Unión en la escena internacional, en virtud del presente capítulo, se basará en los principios, perseguirá los objetivos y se realizará de conformidad con las disposiciones generales contempladas en el capítulo 1.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 23
+    },
+    {
+      "numero": "24",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 11 TUE)]\n1. La competencia de la Unión en materia de política exterior y de seguridad común abarcará todos los ámbitos de la política exterior y todas las cuestiones relativas a la seguridad de la Unión, incluida la definición progresiva de una política común de defensa que podrá conducir a una defensa común.\nLa política exterior y de seguridad común se regirá por reglas y procedimientos específicos. La definirán y aplicarán el Consejo Europeo y el Consejo, que deberán pronunciarse por unanimidad salvo cuando los Tratados dispongan otra cosa. Queda excluida la adopción de actos legislativos. La política exterior y de seguridad común será ejecutada por el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad y por los Estados miembros, de conformidad con los Tratados. La función específica del Parlamento Europeo y de la Comisión en este ámbito se define en los Tratados. El Tribunal de Justicia de la Unión Europea no tendrá competencia respecto de estas disposiciones, con la salvedad de su competencia para controlar el respeto del artículo 40 del presente Tratado y para controlar la legalidad de determinadas decisiones contempladas en el párrafo segundo del artículo 275 del Tratado de Funcionamiento de la Unión Europea.\n2. En el marco de los principios y de los objetivos de su acción exterior, la Unión dirigirá, definirá y ejecutará una política exterior y de seguridad común basada en el desarrollo de la solidaridad política mutua de los Estados miembros, en la identificación de los asuntos que presenten un interés general y en la consecución de una convergencia cada vez mayor de la actuación de los Estados miembros.\n3. Los Estados miembros apoyarán activamente y sin reservas la política exterior y de seguridad de la Unión, con espíritu de lealtad y solidaridad mutua y respetarán la acción de la Unión en este ámbito.\nLos Estados miembros trabajarán conjuntamente para intensificar y desarrollar su solidaridad política mutua. Se abstendrán de toda acción contraria a los intereses de la Unión o que pueda perjudicar su eficacia como fuerza de cohesión en las relaciones internacionales.\nEl Consejo y el Alto Representante velarán por que se respeten estos principios.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 24
+    },
+    {
+      "numero": "25",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 12 TUE)]\nLa Unión dirigirá la política exterior y de seguridad común:\na)\ndefiniendo sus orientaciones generales;\nb)\nadoptando decisiones por las que se establezcan:\ni)\nlas acciones que va a realizar la Unión;\nii)\nlas posiciones que va a adoptar la Unión;\niii)\nlas modalidades de ejecución de las decisiones contempladas en los incisos i) y ii);\ny\nc)\nfortaleciendo la cooperación sistemática entre los Estados miembros para llevar a cabo sus políticas.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 25
+    },
+    {
+      "numero": "26",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 13 TUE)]\n1. El Consejo Europeo determinará los intereses estratégicos de la Unión, fijará los objetivos y definirá las orientaciones generales de la política exterior y de seguridad común, incluidos los asuntos que tengan repercusiones en el ámbito de la defensa. Adoptará las decisiones que resulten necesarias.\nSi un acontecimiento internacional así lo exige, el Presidente del Consejo Europeo convocará una reunión extraordinaria del Consejo Europeo para definir las líneas estratégicas de la política de la Unión ante dicho acontecimiento.\n2. Basándose en las orientaciones generales y en las líneas estratégicas definidas por el Consejo Europeo, el Consejo elaborará la política exterior y de seguridad común y adoptará las decisiones necesarias para definir y aplicar dicha política.\nEl Consejo y el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad velarán por la unidad, la coherencia y la eficacia de la acción de la Unión.\n3. La política exterior y de seguridad común será ejecutada por el Alto Representante y por los Estados miembros, utilizando los medios nacionales y los de la Unión.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 26
+    },
+    {
+      "numero": "27",
+      "tipo": "articulo",
+      "contenido": "1. El Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, que presidirá el Consejo de Asuntos Exteriores, contribuirá con sus propuestas a elaborar la política exterior y de seguridad común y se encargará de ejecutar las decisiones adoptadas por el Consejo Europeo y el Consejo.\n2. El Alto Representante representará a la Unión en las materias concernientes a la política exterior y de seguridad común. Dirigirá el diálogo político con terceros en nombre de la Unión y expresará la posición de la Unión en las organizaciones internacionales y en las conferencias internacionales.\n3. En el ejercicio de su mandato, el Alto Representante se apoyará en un servicio europeo de acción exterior. Este servicio trabajará en colaboración con los servicios diplomáticos de los Estados miembros y estará compuesto por funcionarios de los servicios competentes de la Secretaría General del Consejo y de la Comisión y por personal en comisión de servicios de los servicios diplomáticos nacionales. La organización y el funcionamiento del servicio europeo de acción exterior se establecerán mediante decisión del Consejo, que se pronunciará a propuesta del Alto Representante, previa consulta al Parlamento Europeo y previa aprobación de la Comisión.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 27
+    },
+    {
+      "numero": "28",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 14 TUE)]\n1. Cuando una situación internacional exija una acción operativa de la Unión, el Consejo adoptará las decisiones necesarias. Éstas fijarán los objetivos, el alcance, los medios que haya que facilitar a la Unión, las condiciones de su ejecución y, en caso necesario, su duración.\nSi se produjera un cambio de circunstancias con clara incidencia sobre un asunto objeto de tal decisión, el Consejo revisará los principios y objetivos de dicha decisión y adoptará las decisiones necesarias.\n2. Las decisiones contempladas en el apartado 1 serán vinculantes para los Estados miembros en las posiciones que adopten y en el desarrollo de su acción.\n3. Cuando exista cualquier plan para adoptar una posición nacional o emprender una acción nacional en aplicación de una de las decisiones contempladas en el apartado 1, el Estado miembro de que se trate proporcionará información en un plazo que permita, en caso necesario, una concertación previa en el seno del Consejo. La obligación de información previa no se aplicará a las medidas que constituyan una mera transposición al ámbito nacional de las decisiones del Consejo.\n4. En caso de imperiosa necesidad derivada de la evolución de la situación y a falta de revisión de una de las decisiones del Consejo a que se refiere el apartado 1, los Estados miembros podrán adoptar con carácter de urgencia las medidas necesarias, teniendo en cuenta los objetivos generales de dicha decisión. El Estado miembro de que se trate informará al Consejo inmediatamente de tales medidas.\n5. En caso de que un Estado miembro tenga dificultades importantes para aplicar una decisión contemplada en el presente artículo, solicitará al Consejo que delibere al respecto y busque las soluciones adecuadas. Estas soluciones no podrán ser contrarias a los objetivos de la decisión contemplada en el apartado 1 ni mermar su eficacia.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 28
+    },
+    {
+      "numero": "29",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 15 TUE)]\nEl Consejo adoptará decisiones que definirán el enfoque de la Unión sobre un asunto concreto de carácter geográfico o temático. Los Estados miembros velarán por la conformidad de sus políticas nacionales con las posiciones de la Unión.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 29
+    },
+    {
+      "numero": "30",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 22 TUE)]\n1. Cualquier Estado miembro, el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, o el Alto Representante con el apoyo de la Comisión, podrá plantear al Consejo cualquier cuestión relacionada con la política exterior y de seguridad común y presentar, respectivamente, iniciativas o propuestas al Consejo.\n2. En los casos que requieran una decisión rápida, el Alto Representante convocará, de oficio o a petición de un Estado miembro, una reunión extraordinaria del Consejo, en un plazo de cuarenta y ocho horas o, en caso de necesidad absoluta, en un plazo más breve.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 30
+    },
+    {
+      "numero": "31",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 23 TUE)]\n1. El Consejo Europeo y el Consejo adoptarán por unanimidad las decisiones de que trata el presente capítulo, salvo en los casos en que el presente capítulo disponga otra cosa. Se excluye la adopción de actos legislativos.\nEn caso de que un miembro del Consejo se abstuviera en una votación, podrá acompañar su abstención de una declaración formal efectuada de conformidad con el presente párrafo. En ese caso, no estará obligado a aplicar la decisión, pero admitirá que ésta sea vinculante para la Unión. En aras de la solidaridad mutua, el Estado miembro de que se trate se abstendrá de cualquier acción que pudiera obstaculizar o impedir la acción de la Unión basada en dicha decisión y los demás Estados miembros respetarán su posición. En caso de que el número de miembros del Consejo que acompañara su abstención de tal declaración representara al menos un tercio de los Estados miembros que reúnen como mínimo un tercio de la población de la Unión, no se adoptará la decisión.\n2. Como excepción a lo dispuesto en el apartado 1, el Consejo adoptará por mayoría cualificada:\n—\nuna decisión que establezca una acción o una posición de la Unión a partir de una decisión del Consejo Europeo relativa a los intereses y objetivos estratégicos de la Unión prevista en el apartado 1 del artículo 22;\n—\nuna decisión que establezca una acción o una posición de la Unión a partir de una propuesta presentada por el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad en respuesta a una petición específica que el Consejo Europeo le haya dirigido bien por propia iniciativa, bien por iniciativa del Alto Representante;\n—\ncualquier decisión por la que se aplique una decisión que establezca una acción o una posición de la Unión;\n—\nla designación de un representante especial de conformidad con el artículo 33.\nSi un miembro del Consejo declarase que, por motivos vitales y explícitos de política nacional, tiene la intención de oponerse a la adopción de una decisión que se deba adoptar por mayoría cualificada, no se procederá a la votación. El Alto Representante intentará hallar, en estrecho contacto con el Estado miembro de que se trate, una solución aceptable para éste. De no hallarse dicha solución, el Consejo, por mayoría cualificada, podrá pedir que el asunto se remita al Consejo Europeo para que adopte al respecto una decisión por unanimidad.\n3. El Consejo Europeo podrá adoptar por unanimidad una decisión que establezca que el Consejo se pronuncie por mayoría cualificada en casos distintos de los previstos en el apartado 2.\n4. Los apartados 2 y 3 no se aplicarán a las decisiones que tengan repercusiones en el ámbito militar o de la defensa.\n5. En lo que se refiere a cuestiones de procedimiento, el Consejo se pronunciará por mayoría de los miembros que lo componen.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 31
+    },
+    {
+      "numero": "32",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 16 TUE)]\nLos Estados miembros se consultarán en el seno del Consejo Europeo y del Consejo sobre cualquier cuestión de política exterior y de seguridad que revista un interés general, a fin de definir un enfoque común. Antes de emprender cualquier actuación en la escena internacional o de asumir cualquier compromiso que pueda afectar a los intereses de la Unión, cada Estado miembro consultará a los demás en el seno del Consejo Europeo o del Consejo. Los Estados miembros garantizarán, mediante la convergencia de su actuación, que la Unión pueda defender sus intereses y valores en la escena internacional. Los Estados miembros serán solidarios entre sí.\nCuando el Consejo Europeo o el Consejo haya establecido un enfoque común de la Unión en el sentido del párrafo primero, el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad y los Ministros de Asuntos Exteriores de los Estados miembros coordinarán su actuación en el seno del Consejo.\nLas misiones diplomáticas de los Estados miembros y las delegaciones de la Unión en los terceros países y ante las organizaciones internacionales cooperarán entre sí y contribuirán a la formulación y puesta en práctica del enfoque común.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 32
+    },
+    {
+      "numero": "33",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 18 TUE)]\nA propuesta del Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, el Consejo podrá designar un representante especial provisto de un mandato en relación con cuestiones políticas concretas. El representante especial ejercerá su mandato bajo la autoridad del Alto Representante.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 33
+    },
+    {
+      "numero": "34",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 19 TUE)]\n1. Los Estados miembros coordinarán su acción en las organizaciones internacionales y con ocasión de las conferencias internacionales. Los Estados miembros defenderán en esos foros las posiciones de la Unión. El Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad organizará dicha coordinación.\nEn las organizaciones internacionales y en las conferencias internacionales en las que no participen todos los Estados miembros, aquellos que participen defenderán las posiciones de la Unión.\n2. De conformidad con el apartado 3 del artículo 24, los Estados miembros representados en organizaciones internacionales o en conferencias internacionales en las que no participen todos los Estados miembros mantendrán informados a los demás, así como al Alto Representante, sobre cualquier cuestión de interés común.\nLos Estados miembros que también son miembros del Consejo de Seguridad de las Naciones Unidas se concertarán entre sí y tendrán cabalmente informados a los demás Estados miembros y al Alto Representante. Los Estados miembros que son miembros del Consejo de Seguridad defenderán, en el desempeño de sus funciones, las posiciones e intereses de la Unión, sin perjuicio de las responsabilidades que les incumban en virtud de las disposiciones de la Carta de las Naciones Unidas.\nCuando la Unión haya definido una posición sobre un tema incluido en el orden del día del Consejo de Seguridad de las Naciones Unidas, los Estados miembros que sean miembros de éste pedirán que se invite al Alto Representante a presentar la posición de la Unión.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 34
+    },
+    {
+      "numero": "35",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 20 TUE)]\nLas misiones diplomáticas y consulares de los Estados miembros y las delegaciones de la Unión en los terceros países y en las conferencias internacionales, así como sus representaciones ante las organizaciones internacionales, cooperarán para garantizar el respeto y la ejecución de las decisiones que establezcan posiciones o acciones de la Unión adoptadas en virtud del presente capítulo.\nIntensificarán su cooperación intercambiando información y procediendo a valoraciones comunes.\nContribuirán a la aplicación del derecho de los ciudadanos de la Unión a gozar de protección en el territorio de terceros países, establecido en la letra c) del apartado 2 del artículo 20 del Tratado de Funcionamiento de la Unión Europea, así como de las medidas adoptadas en aplicación del artículo 23 de dicho Tratado.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 35
+    },
+    {
+      "numero": "36",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 21 TUE)]\nEl Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad consultará periódicamente al Parlamento Europeo sobre los aspectos principales y las opciones fundamentales de la política exterior y de seguridad común y de la política común de seguridad y defensa y le informará de la evolución de dichas políticas. Velará por que se tengan debidamente en cuenta las opiniones del Parlamento Europeo. Los representantes especiales podrán estar asociados a la información al Parlamento Europeo.\nEl Parlamento Europeo podrá dirigir preguntas o formular recomendaciones al Consejo y al Alto Representante. Dos veces al año procederá a un debate sobre los progresos realizados en el desarrollo de la política exterior y de seguridad común, incluida la política común de seguridad y defensa.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 36
+    },
+    {
+      "numero": "37",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 24 TUE)]\nLa Unión podrá celebrar acuerdos con uno o varios Estados u organizaciones internacionales en los ámbitos comprendidos en el presente capítulo.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 37
+    },
+    {
+      "numero": "38",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 25 TUE)]\nSin perjuicio de las disposiciones del artículo 240 del Tratado de Funcionamiento de la Unión Europea, un Comité Político y de Seguridad seguirá la situación internacional en los ámbitos concernientes a la política exterior y de seguridad común y contribuirá a definir la política mediante la emisión de dictámenes dirigidos al Consejo, bien a instancia de éste, del Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad o por propia iniciativa. Asimismo supervisará la ejecución de las políticas acordadas, sin perjuicio de las competencias del Alto Representante.\nEn el marco del presente capítulo, el Comité Político y de Seguridad ejercerá, bajo la responsabilidad del Consejo y del Alto Representante, el control político y la dirección estratégica de las operaciones de gestión de crisis contempladas en el artículo 43.\nA efectos de una operación de gestión de crisis y para el tiempo que dure dicha operación, según determine el Consejo, éste podrá autorizar al Comité a que adopte las decisiones adecuadas en lo que se refiere al control político y a la dirección estratégica de la operación.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 38
+    },
+    {
+      "numero": "39",
+      "tipo": "articulo",
+      "contenido": "De conformidad con el artículo 16 del Tratado de Funcionamiento de la Unión Europea, y no obstante lo dispuesto en su apartado 2, el Consejo adoptará una decisión que fije las normas sobre protección de las personas físicas respecto del tratamiento de datos de carácter personal por los Estados miembros en el ejercicio de las actividades comprendidas en el ámbito de aplicación del presente capítulo, y sobre la libre circulación de dichos datos. El respeto de dichas normas estará sometido al control de autoridades independientes.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 39
+    },
+    {
+      "numero": "40",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 47 TUE)]\nLa ejecución de la política exterior y de seguridad común no afectará a la aplicación de los procedimientos y al alcance respectivo de las atribuciones de las instituciones establecidos en los Tratados para el ejercicio de las competencias de la Unión mencionadas en los artículos 3 a 6 del Tratado de Funcionamiento de la Unión Europea.\nAsimismo, la ejecución de las políticas mencionadas en dichos artículos no afectará a la aplicación de los procedimientos y al alcance respectivo de las atribuciones de las instituciones establecidos en los Tratados para el ejercicio de las competencias de la Unión en virtud del presente capítulo.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 40
+    },
+    {
+      "numero": "41",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 28 TUE)]\n1. Los gastos administrativos que la aplicación del presente capítulo ocasione a las instituciones correrán a cargo del presupuesto de la Unión.\n2. Los gastos operativos derivados de la aplicación del presente capítulo también correrán a cargo del presupuesto de la Unión, excepto los relativos a las operaciones que tengan repercusiones en el ámbito militar o de la defensa y los casos en que el Consejo decida, por unanimidad, otra cosa.\nCuando los gastos no corran a cargo del presupuesto de la Unión, correrán a cargo de los Estados miembros con arreglo a una clave de reparto basada en el producto nacional bruto, a menos que el Consejo decida otra cosa por unanimidad. En cuanto a los gastos derivados de las operaciones que tengan repercusiones en el ámbito militar o de la defensa, los Estados miembros cuyos representantes en el Consejo hayan efectuado una declaración formal con arreglo al párrafo segundo del apartado 1 del artículo 31 no estarán obligados a contribuir a su financiación.\n3. El Consejo adoptará una decisión por la que se establezcan los procedimientos específicos para garantizar el acceso rápido a los créditos del presupuesto de la Unión destinados a la financiación urgente de iniciativas en el marco de la política exterior y de seguridad común, en particular los preparativos de una de las misiones contempladas en el apartado 1 del artículo 42 y en el artículo 43. El Consejo se pronunciará previa consulta al Parlamento Europeo.\nLos preparativos de las misiones contempladas en el apartado 1 del artículo 42 y en el artículo 43 que no se imputen al presupuesto de la Unión se financiarán mediante un fondo inicial constituido por contribuciones de los Estados miembros.\nEl Consejo adoptará por mayoría cualificada, a propuesta del Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, las decisiones que establezcan:\na)\nlas modalidades de constitución y de financiación del fondo inicial, en particular los importes financieros asignados al mismo;\nb)\nlas modalidades de gestión del fondo inicial;\nc)\nlas modalidades de control financiero.\nCuando la misión prevista de conformidad con el apartado 1 del artículo 42 y el artículo 43 no pueda imputarse al presupuesto de la Unión, el Consejo autorizará al Alto Representante a utilizar dicho fondo. El Alto Representante informará al Consejo acerca de la ejecución de este mandato.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 41
+    },
+    {
+      "numero": "42",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 17 TUE)]\n1. La política común de seguridad y defensa forma parte integrante de la política exterior y de seguridad común. Ofrecerá a la Unión una capacidad operativa basada en medios civiles y militares. La Unión podrá recurrir a dichos medios en misiones fuera de la Unión que tengan por objetivo garantizar el mantenimiento de la paz, la prevención de conflictos y el fortalecimiento de la seguridad internacional, conforme a los principios de la Carta de las Naciones Unidas. La ejecución de estas tareas se apoyará en las capacidades proporcionadas por los Estados miembros.\n2. La política común de seguridad y defensa incluirá la definición progresiva de una política común de defensa de la Unión. Ésta conducirá a una defensa común una vez que el Consejo Europeo lo haya decidido por unanimidad. En este caso, el Consejo Europeo recomendará a los Estados miembros que adopten una decisión en este sentido de conformidad con sus respectivas normas constitucionales.\nLa política de la Unión con arreglo a la presente sección no afectará al carácter específico de la política de seguridad y de defensa de determinados Estados miembros, respetará las obligaciones derivadas del Tratado del Atlántico Norte para determinados Estados miembros que consideran que su defensa común se realiza dentro de la Organización del Tratado del Atlántico Norte (OTAN) y será compatible con la política común de seguridad y de defensa establecida en dicho marco.\n3. Los Estados miembros pondrán a disposición de la Unión, a efectos de la aplicación de la política común de seguridad y defensa, capacidades civiles y militares para contribuir a los objetivos definidos por el Consejo. Los Estados miembros que constituyan entre ellos fuerzas multinacionales podrán asimismo ponerlas a disposición de la política común de seguridad y defensa.\nLos Estados miembros se comprometen a mejorar progresivamente sus capacidades militares. La Agencia en el ámbito del desarrollo de las capacidades de defensa, la investigación, la adquisición y el armamento (en lo sucesivo denominada «Agencia Europea de Defensa») determinará las necesidades operativas, fomentará medidas para satisfacerlas, contribuirá a definir y, en su caso, a aplicar cualquier medida oportuna para reforzar la base industrial y tecnológica del sector de la defensa, participará en la definición de una política europea de capacidades y de armamento y asistirá al Consejo en la evaluación de la mejora de las capacidades militares.\n4. El Consejo adoptará por unanimidad, a propuesta del Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad o a iniciativa de un Estado miembro, las decisiones relativas a la política común de seguridad y defensa, incluidas las relativas al inicio de una misión contemplada en el presente artículo. El Alto Representante podrá proponer que se recurra a medios nacionales y a los instrumentos de la Unión, en su caso conjuntamente con la Comisión.\n5. El Consejo podrá encomendar la realización de una misión, en el marco de la Unión, a un grupo de Estados miembros a fin de defender los valores y favorecer los intereses de la Unión. La realización de esta misión se regirá por el artículo 44.\n6. Los Estados miembros que cumplan criterios más elevados de capacidades militares y que hayan suscrito compromisos más vinculantes en la materia para realizar las misiones más exigentes establecerán una cooperación estructurada permanente en el marco de la Unión. Esta cooperación se regirá por el artículo 46 y no afectará a lo dispuesto en el artículo 43.\n7. Si un Estado miembro es objeto de una agresión armada en su territorio, los demás Estados miembros le deberán ayuda y asistencia con todos los medios a su alcance, de conformidad con el artículo 51 de la Carta de las Naciones Unidas. Ello se entiende sin perjuicio del carácter específico de la política de seguridad y defensa de determinados Estados miembros.\nLos compromisos y la cooperación en este ámbito seguirán ajustándose a los compromisos adquiridos en el marco de la Organización del Tratado del Atlántico Norte, que seguirá siendo, para los Estados miembros que forman parte de la misma, el fundamento de su defensa colectiva y el organismo de ejecución de ésta.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 42
+    },
+    {
+      "numero": "43",
+      "tipo": "articulo",
+      "contenido": "1. Las misiones contempladas en el apartado 1 del artículo 42, en las que la Unión podrá recurrir a medios civiles y militares, abarcarán las actuaciones conjuntas en materia de desarme, las misiones humanitarias y de rescate, las misiones de asesoramiento y asistencia en cuestiones militares, las misiones de prevención de conflictos y de mantenimiento de la paz, las misiones en las que intervengan fuerzas de combate para la gestión de crisis, incluidas las misiones de restablecimiento de la paz y las operaciones de estabilización al término de los conflictos. Todas estas misiones podrán contribuir a la lucha contra el terrorismo, entre otras cosas mediante el apoyo prestado a terceros países para combatirlo en su territorio.\n2. El Consejo adoptará las decisiones relativas a las misiones contempladas en el apartado 1, y en ellas definirá el objetivo y el alcance de estas misiones y las normas generales de su ejecución. El Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad, bajo la autoridad del Consejo y en contacto estrecho y permanente con el Comité Político y de Seguridad, se hará cargo de la coordinación de los aspectos civiles y militares de dichas misiones.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 43
+    },
+    {
+      "numero": "44",
+      "tipo": "articulo",
+      "contenido": "1. En el marco de las decisiones adoptadas de conformidad con el artículo 43, el Consejo podrá encomendar la realización de una misión a un grupo de Estados miembros que lo deseen y que dispongan de las capacidades necesarias para tal misión. La gestión de la misión se acordará entre dichos Estados miembros, en asociación con el Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad.\n2. Los Estados miembros que participen en la realización de la misión informarán periódicamente al Consejo acerca del desarrollo de la misma, por propia iniciativa o a petición de un Estado miembro. Los Estados miembros participantes comunicarán de inmediato al Consejo si la realización de la misión acarrea consecuencias importantes o exige una modificación del objetivo, alcance o condiciones de la misión establecidos en las decisiones a que se refiere el apartado 1. En tales casos, el Consejo adoptará las decisiones necesarias.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 44
+    },
+    {
+      "numero": "45",
+      "tipo": "articulo",
+      "contenido": "1. La Agencia Europea de Defensa a que se refiere el apartado 3 del artículo 42 estará bajo la autoridad del Consejo y tendrá como misión:\na)\ncontribuir a definir los objetivos de capacidades militares de los Estados miembros y a evaluar el respeto de los compromisos de capacidades contraídos por los Estados miembros;\nb)\nfomentar la armonización de las necesidades operativas y la adopción de métodos de adquisición eficaces y compatibles;\nc)\nproponer proyectos multilaterales para cumplir los objetivos de capacidades militares y coordinar los programas ejecutados por los Estados miembros y la gestión de programas de cooperación específicos;\nd)\napoyar la investigación sobre tecnología de defensa y coordinar y planificar actividades de investigación conjuntas y estudios de soluciones técnicas que respondan a las futuras necesidades operativas;\ne)\ncontribuir a definir y, en su caso, aplicar cualquier medida oportuna para reforzar la base industrial y tecnológica del sector de la defensa y para mejorar la eficacia de los gastos militares.\n2. Podrán participar en la Agencia Europea de Defensa todos los Estados miembros que lo deseen. El Consejo adoptará por mayoría cualificada una decisión en la que se determinará el estatuto, la sede y la forma de funcionamiento de la Agencia. La decisión tendrá en cuenta el grado de participación efectiva en las actividades de la Agencia. Dentro de ésta se constituirán grupos específicos, formados por los Estados miembros que realicen proyectos conjuntos. La Agencia desempeñará sus funciones manteniéndose, en caso necesario, en contacto con la Comisión.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 45
+    },
+    {
+      "numero": "46",
+      "tipo": "articulo",
+      "contenido": "1. Los Estados miembros que deseen participar en la cooperación estructurada permanente mencionada en el apartado 6 del artículo 42 y que reúnan los criterios y asuman los compromisos en materia de capacidades militares que figuran en el Protocolo sobre la cooperación estructurada permanente notificarán su intención al Consejo y al Alto Representante de la Unión para Asuntos Exteriores y Política de Seguridad.\n2. En un plazo de tres meses a partir de la notificación mencionada en el apartado 1, el Consejo adoptará una decisión por la que se establezca la cooperación estructurada permanente y se fije la lista de los Estados miembros participantes. El Consejo, tras consultar al Alto Representante, se pronunciará por mayoría cualificada.\n3. Cualquier Estado miembro que, con posterioridad, desee participar en la cooperación estructurada permanente, notificará su intención al Consejo y al Alto Representante.\nEl Consejo adoptará una decisión por la que se confirme la participación del Estado miembro de que se trate, que cumpla los criterios y asuma los compromisos contemplados en los artículos 1 y 2 del Protocolo sobre la cooperación estructurada permanente. El Consejo, tras consultar al Alto Representante, se pronunciará por mayoría cualificada. Únicamente participarán en la votación los miembros del Consejo que representen a los Estados miembros participantes.\nLa mayoría cualificada se definirá de conformidad con la letra a) del apartado 3 del artículo 238 del Tratado de Funcionamiento de la Unión Europea.\n4. Si un Estado miembro participante ya no cumple los criterios o ya no puede asumir los compromisos contemplados en los artículos 1 y 2 del Protocolo sobre la cooperación estructurada permanente, el Consejo podrá adoptar una decisión por la que se suspenda la participación de dicho Estado.\nEl Consejo se pronunciará por mayoría cualificada. Únicamente participarán en la votación los miembros del Consejo que representen a los Estados miembros participantes, con excepción del Estado miembro de que se trate.\nLa mayoría cualificada se definirá de conformidad con la letra a) del apartado 3 del artículo 238 del Tratado de Funcionamiento de la Unión Europea.\n5. Si un Estado miembro participante decide abandonar la cooperación estructurada permanente, notificará su decisión al Consejo, que tomará nota de que ha finalizado la participación de ese Estado miembro.\n6. Las decisiones y las recomendaciones del Consejo en el marco de la cooperación estructurada permanente, distintas de las contempladas en los apartados 2 a 5, se adoptarán por unanimidad. A efectos de la aplicación del presente apartado, la unanimidad estará constituida únicamente por los votos de los representantes de los Estados miembros participantes.",
+      "titulo_numero": "V",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 46
+    },
+    {
+      "numero": "47",
+      "tipo": "articulo",
+      "contenido": "La Unión tiene personalidad jurídica.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 47
+    },
+    {
+      "numero": "48",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 48 TUE)]\n1. Los Tratados podrán modificarse con arreglo a un procedimiento de revisión ordinario. También podrán modificarse con arreglo a procedimientos de revisión simplificados.\n2. El Gobierno de cualquier Estado miembro, el Parlamento Europeo o la Comisión podrán presentar al Consejo proyectos de revisión de los Tratados. Estos proyectos podrán tener por finalidad, entre otras cosas, la de aumentar o reducir las competencias atribuidas a la Unión en los Tratados. El Consejo remitirá dichos proyectos al Consejo Europeo y los notificará a los Parlamentos nacionales.\n3. Si el Consejo Europeo, previa consulta al Parlamento Europeo y a la Comisión, adopta por mayoría simple una decisión favorable al examen de las modificaciones propuestas, el Presidente del Consejo Europeo convocará una Convención compuesta por representantes de los Parlamentos nacionales, de los Jefes de Estado o de Gobierno de los Estados miembros, del Parlamento Europeo y de la Comisión. Cuando se trate de modificaciones institucionales en el ámbito monetario, se consultará también al Banco Central Europeo. La Convención examinará los proyectos de revisión y adoptará por consenso una recomendación dirigida a una Conferencia de representantes de los Gobiernos de los Estados miembros según lo dispuesto en el apartado 4.\nEl Consejo Europeo podrá decidir por mayoría simple, previa aprobación del Parlamento Europeo, no convocar una Convención cuando la importancia de las modificaciones no lo justifique. En este último caso, el Consejo Europeo establecerá un mandato para una Conferencia de representantes de los Gobiernos de los Estados miembros.\n4. El Presidente del Consejo convocará una Conferencia de representantes de los Gobiernos de los Estados miembros con el fin de que se aprueben de común acuerdo las modificaciones que deban introducirse en los Tratados.\nLas modificaciones entrarán en vigor después de haber sido ratificadas por todos los Estados miembros de conformidad con sus respectivas normas constitucionales.\n5. Si, transcurrido un plazo de dos años desde la firma de un tratado modificativo de los Tratados, las cuatro quintas partes de los Estados miembros lo han ratificado y uno o varios Estados miembros han encontrado dificultades para proceder a dicha ratificación, el Consejo Europeo examinará la cuestión.\n6. El Gobierno de cualquier Estado miembro, el Parlamento Europeo o la Comisión podrán presentar al Consejo Europeo proyectos de revisión de la totalidad o parte de las disposiciones de la tercera parte del Tratado de Funcionamiento de la Unión Europea, relativas a las políticas y acciones internas de la Unión.\nEl Consejo Europeo podrá adoptar una decisión que modifique la totalidad o parte de las disposiciones de la tercera parte del Tratado de Funcionamiento de la Unión Europea. El Consejo Europeo se pronunciará por unanimidad previa consulta al Parlamento Europeo y a la Comisión, así como al Banco Central Europeo en el caso de modificaciones institucionales en el ámbito monetario. Dicha decisión sólo entrará en vigor una vez que haya sido aprobada por los Estados miembros, de conformidad con sus respectivas normas constitucionales.\nLa decisión contemplada en el párrafo segundo no podrá aumentar las competencias atribuidas a la Unión por los Tratados.\n7. Cuando el Tratado de Funcionamiento de la Unión Europea o el título V del presente Tratado dispongan que el Consejo se pronuncie por unanimidad en un ámbito o en un caso determinado, el Consejo Europeo podrá adoptar una decisión que autorice al Consejo a pronunciarse por mayoría cualificada en dicho ámbito o en dicho caso. El presente párrafo no se aplicará a las decisiones que tengan repercusiones militares o en el ámbito de la defensa.\nCuando el Tratado de Funcionamiento de la Unión Europea disponga que el Consejo adopte actos legislativos con arreglo a un procedimiento legislativo especial, el Consejo Europeo podrá adoptar una decisión que autorice a adoptar dichos actos con arreglo al procedimiento legislativo ordinario.\nCualquier iniciativa tomada por el Consejo Europeo en virtud de los párrafos primero o segundo se transmitirá a los Parlamentos nacionales. En caso de oposición de un Parlamento nacional notificada en un plazo de seis meses a partir de esta transmisión, no se adoptará la decisión contemplada en los párrafos primero o segundo. A falta de oposición, el Consejo Europeo podrá adoptar la citada decisión.\nPara la adopción de las decisiones contempladas en los párrafos primero o segundo, el Consejo Europeo se pronunciará por unanimidad, previa aprobación del Parlamento Europeo, que se pronunciará por mayoría de los miembros que lo componen.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 48
+    },
+    {
+      "numero": "49",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 49 TUE)]\nCualquier Estado europeo que respete los valores mencionados en el artículo 2 y se comprometa a promoverlos podrá solicitar el ingreso como miembro en la Unión. Se informará de esta solicitud al Parlamento Europeo y a los Parlamentos nacionales. El Estado solicitante dirigirá su solicitud al Consejo, que se pronunciará por unanimidad después de haber consultado a la Comisión y previa aprobación del Parlamento Europeo, el cual se pronunciará por mayoría de los miembros que lo componen. Se tendrán en cuenta los criterios de elegibilidad acordados por el Consejo Europeo.\nLas condiciones de admisión y las adaptaciones que esta admisión supone en lo relativo a los Tratados sobre los que se funda la Unión serán objeto de un acuerdo entre los Estados miembros y el Estado solicitante. Dicho acuerdo se someterá a la ratificación de todos los Estados contratantes, de conformidad con sus respectivas normas constitucionales.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 49
+    },
+    {
+      "numero": "50",
+      "tipo": "articulo",
+      "contenido": "1. Todo Estado miembro podrá decidir, de conformidad con sus normas constitucionales, retirarse de la Unión.\n2. El Estado miembro que decida retirarse notificará su intención al Consejo Europeo. A la luz de las orientaciones del Consejo Europeo, la Unión negociará y celebrará con ese Estado un acuerdo que establecerá la forma de su retirada, teniendo en cuenta el marco de sus relaciones futuras con la Unión. Este acuerdo se negociará con arreglo al apartado 3 del artículo 218 del Tratado de Funcionamiento de la Unión Europea. El Consejo lo celebrará en nombre de la Unión por mayoría cualificada, previa aprobación del Parlamento Europeo.\n3. Los Tratados dejarán de aplicarse al Estado de que se trate a partir de la fecha de entrada en vigor del acuerdo de retirada o, en su defecto, a los dos años de la notificación a que se refiere el apartado 2, salvo si el Consejo Europeo, de acuerdo con dicho Estado, decide por unanimidad prorrogar dicho plazo.\n4. A efectos de los apartados 2 y 3, el miembro del Consejo Europeo y del Consejo que represente al Estado miembro que se retire no participará ni en las deliberaciones ni en las decisiones del Consejo Europeo o del Consejo que le afecten.\nLa mayoría cualificada se definirá de conformidad con la letra b) del apartado 3 del artículo 238 del Tratado de Funcionamiento de la Unión Europea.\n5. Si el Estado miembro que se ha retirado de la Unión solicita de nuevo la adhesión, su solicitud se someterá al procedimiento establecido en el artículo 49.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 50
+    },
+    {
+      "numero": "51",
+      "tipo": "articulo",
+      "contenido": "Los Protocolos y Anexos de los Tratados forman parte integrante de los mismos.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 51
+    },
+    {
+      "numero": "52",
+      "tipo": "articulo",
+      "contenido": "1. Los Tratados se aplicarán al Reino de Bélgica, a la República de Bulgaria, a la República Checa, al Reino de Dinamarca, a la República Federal de Alemania, a la República de Estonia, a Irlanda, a la República Helénica, al Reino de España, a la República Francesa, a la República de Croacia, a la República Italiana, a la República de Chipre, a la República de Letonia, a la República de Lituania, al Gran Ducado de Luxemburgo, a la República de Hungría, a la República de Malta, al Reino de los Países Bajos, a la República de Austria, a la República de Polonia, a la República Portuguesa, a Rumanía, a la República de Eslovenia, a la República Eslovaca, a la República de Finlandia, al Reino de Suecia y al Reino Unido de Gran Bretaña e Irlanda del Norte.\n2. El ámbito de aplicación territorial de los Tratados se especifica en el artículo 355 del Tratado de Funcionamiento de la Unión Europea.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 52
+    },
+    {
+      "numero": "53",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 51 TUE)]\nEl presente Tratado se concluye por un período de tiempo ilimitado.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 53
+    },
+    {
+      "numero": "54",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 52 TUE)]\n1. El presente Tratado será ratificado por las Altas Partes Contratantes, de conformidad con sus respectivas normas constitucionales. Los instrumentos de ratificación serán depositados ante el Gobierno de la República Italiana.\n2. El presente Tratado entrará en vigor el 1 de enero de 1993, siempre que se hayan depositado todos los instrumentos de ratificación o, en su defecto, el primer día del mes siguiente al depósito del instrumento de ratificación del último Estado signatario que cumpla dicha formalidad.",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 54
+    },
+    {
+      "numero": "55",
+      "tipo": "articulo",
+      "contenido": "[(antiguo artículo 53 TUE)]\n1. El presente Tratado, redactado en un ejemplar único, en lenguas alemana, búlgara, checa, croata, danesa, eslovaca, eslovena, española, estonia, finesa, francesa, griega, húngara, inglesa, irlandesa, italiana, letona, lituana, maltesa, neerlandesa, polaca, portuguesa, rumana y sueca, cuyos textos en cada una de estas lenguas son igualmente auténticos, será depositado en los archivos del Gobierno de la República Italiana, que remitirá una copia autenticada a cada uno de los Gobiernos de los restantes Estados signatarios.\n2. El presente Tratado podrá asimismo traducirse a cualquier otra lengua que determinen los Estados miembros entre aquellas que, de conformidad con sus ordenamientos constitucionales, tengan estatuto de lengua oficial en la totalidad o en parte de su territorio. El Estado miembro de que se trate facilitará una copia certificada de estas traducciones, que se depositará en los archivos del Consejo.\nEN FE DE LO CUAL, los plenipotenciarios abajo firmantes suscriben el presente Tratado.\nHecho en Maastricht, el siete de febrero de mil novecientos noventa y dos.\n(no se reproduce la lista de signatarios)",
+      "titulo_numero": "VI",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 55
+    }
+  ]
+}
