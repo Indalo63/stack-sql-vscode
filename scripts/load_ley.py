@@ -5,6 +5,7 @@ Carga una ley en el schema normas.* desde un archivo JSON estructurado.
 Uso:
   python3 scripts/load_ley.py data/leyes/lpac.json
   python3 scripts/load_ley.py data/leyes/lpac.json --embeddings
+  python3 scripts/load_ley.py data/leyes/lpac.json --supabase --embeddings
   python3 scripts/load_ley.py data/leyes/lpac.json --force     # sobreescribir si ya existe
   python3 scripts/load_ley.py --ejemplo > data/leyes/plantilla.json
 
@@ -21,20 +22,47 @@ import json
 import argparse
 import subprocess
 import psycopg2
+from pathlib import Path
 from psycopg2.extras import execute_values
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(BASE_DIR))
 
 from dotenv import load_dotenv
 load_dotenv()
 
-DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "localhost"),
-    "port":     int(os.getenv("DB_PORT", "5432")),
-    "dbname":   os.getenv("DB_NAME",     "stack_db"),
-    "user":     os.getenv("DB_USER",     "postgres"),
-    "password": os.getenv("DB_PASSWORD", "postgres"),
-}
+
+def _load_supabase_secrets():
+    secrets_path = BASE_DIR / ".streamlit" / "secrets.toml"
+    if not secrets_path.exists():
+        raise SystemExit("ERROR: .streamlit/secrets.toml no encontrado.")
+    secrets = {}
+    for line in secrets_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("["):
+            continue
+        if "=" in line:
+            k, _, v = line.partition("=")
+            secrets[k.strip()] = v.strip().strip('"').strip("'")
+    for k, v in secrets.items():
+        os.environ[k] = v
+    direct_host = secrets.get("DB_HOST", "")
+    ref = direct_host.split(".")[1] if direct_host.startswith("db.") else ""
+    if ref:
+        os.environ["DB_HOST"] = "aws-1-eu-west-2.pooler.supabase.com"
+        os.environ["DB_USER"] = f"postgres.{ref}"
+    print(f"Supabase via Session Pooler: {os.environ['DB_HOST']}")
+
+
+def _db_config():
+    return {
+        "host":     os.getenv("DB_HOST",     "localhost"),
+        "port":     int(os.getenv("DB_PORT", "5432")),
+        "dbname":   os.getenv("DB_NAME",     "stack_db"),
+        "user":     os.getenv("DB_USER",     "postgres"),
+        "password": os.getenv("DB_PASSWORD", "postgres"),
+    }
 
 # ── Plantilla de ejemplo ──────────────────────────────────────────────────────
 PLANTILLA = {
@@ -270,11 +298,22 @@ def main():
                         help="Eliminar la ley existente si el código ya existe")
     parser.add_argument("--ejemplo", action="store_true",
                         help="Imprimir una plantilla JSON y salir")
+    parser.add_argument("--supabase", action="store_true",
+                        help="Conectar a Supabase (lee .streamlit/secrets.toml)")
     args = parser.parse_args()
 
     if args.ejemplo:
         print(json.dumps(PLANTILLA, ensure_ascii=False, indent=2))
         return
+
+    if args.supabase:
+        _load_supabase_secrets()
+    else:
+        os.environ.setdefault("DB_HOST",     "localhost")
+        os.environ.setdefault("DB_PORT",     "5432")
+        os.environ.setdefault("DB_NAME",     "stack_db")
+        os.environ.setdefault("DB_USER",     "postgres")
+        os.environ.setdefault("DB_PASSWORD", "postgres")
 
     if not args.archivo:
         parser.error("Indica la ruta al JSON (o usa --ejemplo para ver la plantilla)")
@@ -288,7 +327,7 @@ def main():
     # Validar antes de conectar a la BD
     validar(data)
 
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**_db_config())
     try:
         # Comprobar si ya existe
         with conn.cursor() as cur:
