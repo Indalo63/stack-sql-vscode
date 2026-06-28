@@ -67,9 +67,22 @@ Estas reglas se aplican SIEMPRE en `app/test_pipeline.py` y en cualquier futuro 
 | 9 | LGP | Ley 47/2003 General Presupuestaria | ✅ cargada |
 | 12 | LCSP | Ley 9/2017 Contratos Sector Público | ✅ cargada |
 | 13 | GACE_NORM | Normativa Oposición GACE (criterios + programa) | ✅ cargada |
+| 15 | LODP | LO 3/1981 Defensor del Pueblo | ✅ cargada |
+| 17 | LOTC | LO 2/1979 Tribunal Constitucional | ✅ cargada |
+| 18 | LGOB | Ley 50/1997 del Gobierno | ✅ cargada |
+| 19 | LOCE | LO 3/1980 Consejo de Estado | ✅ cargada |
+| 20 | LBRL | Ley 7/1985 Bases del Régimen Local | ✅ cargada |
+| 21 | LTBG | Ley 19/2013 Transparencia y Buen Gobierno | ✅ cargada |
+| 22 | LOPD | LO 3/2018 Protección de Datos | ✅ cargada |
+| 23 | LOEPSF | LO 2/2012 Estabilidad Presupuestaria | ✅ cargada |
+| 26 | LOPJ | LO 6/1985 Poder Judicial | ✅ cargada |
+| 27 | LGSS | RDL 8/2015 Ley General Seguridad Social | ✅ cargada |
+| 29 | LTPP | Ley 8/1989 Tasas y Precios Públicos | ✅ cargada |
+| 31 | LGT | Ley 58/2003 General Tributaria | ✅ cargada |
 
-**Pendientes de carga** (48 leyes inventariadas, 42 pendientes — ver análisis BOE-443):
-- ALTA prioridad: LODP, LOTC, LGOB, LOPJ, LOCE, LBRL, LTBG, LOPD, LOEPSF, TUE, TFUE
+**Pendientes de carga** (48 leyes inventariadas, 30 pendientes — ver análisis BOE-443):
+- FASE 3 (siguiente): TUE + TFUE desde EUR-Lex (~9.6% fijo por examen)
+- FASE 4 (MEDIA prioridad): LJCA, LEF, Mutualismo, Indemnizaciones, LOPJ complementos…
 - Estrategia: ley por ley con `url_boe` individual (compatible con `sync_boe.py` y multi-oposición)
 - Fuente principal: `BOE-443_Normativa_para_ingreso...06_2026.pdf` (3.792 págs, actualizado 24/06/2026)
 - TUE/TFUE: desde EUR-Lex (no incluido en BOE-443)
@@ -117,14 +130,17 @@ Estas reglas se aplican SIEMPRE en `app/test_pipeline.py` y en cualquier futuro 
 ## Próximos pasos
 
 ### En curso
-- [FASE 1] Cargar 8 leyes ALTA prioridad del BOE-443: LODP, LOTC, LGOB, LOCE, LBRL, LTBG, LOPD, LOEPSF
-- [FASE 2] Cargar LOPJ, LGSS, Ley Tasas, Ley Tributaria
-- [FASE 3] Cargar TUE + TFUE desde EUR-Lex (~10 preguntas fijas por examen)
+- [FASE 3] Cargar TUE + TFUE desde EUR-Lex (~9.6% fijo por examen, ~10 preguntas)
 - [FASE 4] Completar leyes de prioridad MEDIA (LJCA, LEF, Mutualismo, Indemnizaciones…)
 
+### Completado en sesión 28/06/2026
+- [✅ FASE 1] 8 leyes ALTA prioridad: LODP, LOTC, LGOB, LOCE, LBRL, LTBG, LOPD, LOEPSF (673 arts.)
+- [✅ FASE 2] 4 leyes: LOPJ, LGSS, LTPP, LGT (1.603 arts.)
+- [✅ Validación] 79 preguntas oficiales cruzadas con BD → 0 artículos ausentes
+- [✅ Generador] build_test_bank.py mejorado: few-shot oficial, sub-artículos, estilo mixto, prioridad examinables
+
 ### Hitos pendientes
-- Mejorar generador IA con few-shot examples de exámenes oficiales (mejor calidad)
-- Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3€)
+- Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€)
 - Simulacro: 100 preguntas, temporizador, puntuación A-(E/3), escala 0-50 pts (Hito 4)
 - Interfaz de revisión: tab "Revisión" para aprobar/rechazar preguntas IA
 - Historial de conversación en Q&A (multi-turno con st.session_state)
