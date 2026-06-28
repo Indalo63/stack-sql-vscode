@@ -117,13 +117,13 @@ def parsear(soup: BeautifulSoup, include_protocols: bool = False, debug: bool = 
     def _guardar_titulo_si_nuevo():
         nonlocal titulo_orden
         if titulo_num_actual and titulo_num_actual not in titulos_vistos:
+            titulo_orden += 1
             titulos.append({
                 "numero":       titulo_num_actual,
                 "denominacion": titulo_den_actual or titulo_num_actual,
                 "orden":        titulo_orden,
             })
             titulos_vistos.add(titulo_num_actual)
-            titulo_orden += 1
 
     # Artículo en construcción
     art_num_actual = None
@@ -163,16 +163,15 @@ def parsear(soup: BeautifulSoup, include_protocols: bool = False, debug: bool = 
                     _cerrar_articulo()
                     break
                 else:
-                    # Crear un pseudo-título para el protocolo
+                    # Nuevo bloque de protocolo: cerrar artículo en curso y registrar pseudo-título
+                    en_protocolos = True
                     _cerrar_articulo()
                     art_num_actual = None
                     art_contenido_parrafos = []
                     titulo_num_actual = texto[:50]
                     titulo_den_actual = texto
+                    titulo_num_pendiente = None
                     _guardar_titulo_si_nuevo()
-            continue
-
-        if en_protocolos and not include_protocols:
             continue
 
         # ── Título (número) — solo si empieza por TÍTULO/TITULO ──
@@ -182,6 +181,10 @@ def parsear(soup: BeautifulSoup, include_protocols: bool = False, debug: bool = 
                 _cerrar_articulo()
                 art_num_actual = None
                 art_contenido_parrafos = []
+                # Actualizar titulo_num_actual ya aquí: cualquier ti-art que aparezca
+                # antes del ti-section-2 correspondiente quedará bajo el título correcto.
+                titulo_num_actual = num
+                titulo_den_actual = num  # denominación provisional hasta que llegue ti-section-2
                 titulo_num_pendiente = num
                 if debug:
                     print(f"[TIT-NUM] {titulo_num_pendiente}")
@@ -193,8 +196,7 @@ def parsear(soup: BeautifulSoup, include_protocols: bool = False, debug: bool = 
         # ── Título (denominación) ──
         if cls == "ti-section-2":
             if titulo_num_pendiente:
-                titulo_num_actual = titulo_num_pendiente
-                titulo_den_actual = texto
+                titulo_den_actual = texto  # actualiza la denominación provisional
                 _guardar_titulo_si_nuevo()
                 titulo_num_pendiente = None
                 if debug:
@@ -298,8 +300,12 @@ def main():
         if not url:
             parser.error("Indica --url o usa un código conocido (TUE, TFUE)")
         print(f"Descargando: {url}")
-        r = requests.get(url, timeout=60)
+        r = requests.get(url, timeout=60, headers={
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
+            "Accept-Language": "es-ES,es;q=0.9",
+        })
         r.raise_for_status()
+        r.encoding = "utf-8"
         html = r.text
 
     print("Parseando HTML...")

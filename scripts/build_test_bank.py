@@ -81,10 +81,10 @@ def _get_leyes(ley_id=None):
 
 def _fetch_articles(ley_id, n):
     """
-    Artículos a generar. Prioriza:
-      1. Artículos que ya aparecieron en exámenes oficiales (alta probabilidad de repetir)
-      2. Artículos largos y ricos en contenido
-    Excluye artículos que ya tienen pregunta IA generada.
+    Artículos candidatos para generación:
+    - Excluye artículos que ya tienen pregunta IA generada.
+    - Marca con examinado=True los que aparecieron en exámenes oficiales (indicador ★).
+    - Ordena por longitud de contenido ponderada aleatoriamente (cobertura uniforme).
     """
     from app.db import get_connection
     with get_connection() as conn:
@@ -108,8 +108,7 @@ def _fetch_articles(ley_id, n):
                         AND p.articulo = a.numero
                         AND p.fuente = 'ia'
                   )
-                ORDER BY examinado DESC,
-                         RANDOM() * log(length(a.contenido)) DESC
+                ORDER BY RANDOM() * log(length(a.contenido)) DESC
                 LIMIT %s
             """, (ley_id, MIN_LENGTH, n))
             cols = [d[0] for d in cur.description]
@@ -121,16 +120,20 @@ def _fetch_few_shots(ley_id, n=2):
     Carga n preguntas oficiales verificadas para usar como few-shot.
     Prefiere ejemplos de la misma ley; si no hay suficientes, usa de cualquier ley.
     Excluye preguntas con sub-artículos (11.3) y sin número (S/N).
+    El JOIN con articulos es LEFT JOIN para evitar descartar preguntas cuyo número
+    de artículo no coincide exactamente con articulos.numero (discrepancias de formato).
     """
     from app.db import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT p.pregunta, p.opcion_a, p.opcion_b, p.opcion_c, p.opcion_d,
-                       p.correcta, p.articulo, a.contenido, l.nombre
+                       p.correcta, p.articulo,
+                       COALESCE(a.contenido, '') AS contenido,
+                       l.nombre
                 FROM normas.preguntas_test p
                 JOIN normas.leyes l ON l.ley_id = p.ley_id
-                JOIN normas.articulos a
+                LEFT JOIN normas.articulos a
                   ON a.ley_id = p.ley_id
                  AND a.numero = p.articulo
                  AND a.tipo   = 'articulo'
@@ -175,7 +178,7 @@ def _save(ley_id, art, parsed):
 
 def _has_numbered_paragraphs(contenido):
     """Detecta si el artículo tiene apartados numerados (1., 2. o 1) 2))."""
-    return bool(re.search(r'^\s*[1-9][.)]\s', contenido, re.MULTILINE))
+    return bool(re.search(r'^\s*\d+[.)]\s', contenido, re.MULTILINE))
 
 
 def _format_few_shot(fs):
@@ -197,8 +200,7 @@ def _format_few_shot(fs):
     )
 
 
-def _build_prompt(art, ley_nombre, few_shots=None):
-    tiene_apartados = _has_numbered_paragraphs(art["contenido"])
+def _build_prompt(art, ley_nombre, few_shots=None, tiene_apartados=False):
 
     # Bloque de few-shot
     few_shots_block = ""
@@ -211,21 +213,30 @@ def _build_prompt(art, ley_nombre, few_shots=None):
             "──────────────────────────────────────\n\n"
         )
 
-    # Regla extra si hay apartados numerados
-    regla_apartado = ""
+    reglas = [
+        f"El enunciado DEBE comenzar con 'Según el artículo [número] de "
+        f"{ley_nombre},' o 'De acuerdo con el artículo [número] de {ley_nombre},'",
+        "Opciones en a), b), c), d) minúsculas.",
+        "Distractores con error sutil y técnico: plazo distinto, porcentaje "
+        "diferente, órgano incorrecto o palabra clave cambiada. Nunca distractores "
+        "conceptualmente muy distintos.",
+        "Nivel alto: datos exactos (plazos, porcentajes, órganos, requisitos), "
+        "no conceptos generales.",
+        "Sin símbolos matemáticos. Escribir en texto: 'igual a', 'mayor que', "
+        "'porcentaje', etc.",
+    ]
     if tiene_apartados:
-        regla_apartado = (
-            f"6. El artículo tiene apartados numerados. Cita el apartado concreto "
+        reglas.append(
+            f"El artículo tiene apartados numerados. Cita el apartado concreto "
             f"en el enunciado: 'el apartado X del artículo {art['numero']}' "
-            f"o 'el artículo {art['numero']}.X'.\n"
+            f"o 'el artículo {art['numero']}.X'."
         )
-
-    num_regla_estilo = "7" if tiene_apartados else "6"
-    regla_estilo = (
-        f"{num_regla_estilo}. La opción correcta puede citar textualmente la norma "
-        f"O parafrasearla con otras palabras (ambos estilos aparecen en exámenes "
-        f"oficiales GACE). Lo importante es que sea inequívocamente correcta.\n"
+    reglas.append(
+        "La opción correcta puede citar textualmente la norma "
+        "O parafrasearla con otras palabras (ambos estilos aparecen en exámenes "
+        "oficiales GACE). Lo importante es que sea inequívocamente correcta."
     )
+    reglas_txt = "\n".join(f"{i}. {r}" for i, r in enumerate(reglas, 1))
 
     return [{
         "role": "user",
@@ -237,18 +248,7 @@ def _build_prompt(art, ley_nombre, few_shots=None):
             f"del examen GACE.\n\n"
             f"{few_shots_block}"
             f"REGLAS DE ESTILO OBLIGATORIAS:\n"
-            f"1. El enunciado DEBE comenzar con 'Según el artículo [número] de "
-            f"{ley_nombre},' o 'De acuerdo con el artículo [número] de {ley_nombre},'\n"
-            f"2. Opciones en a), b), c), d) minúsculas.\n"
-            f"3. Distractores con error sutil y técnico: plazo distinto, porcentaje "
-            f"diferente, órgano incorrecto o palabra clave cambiada. Nunca distractores "
-            f"conceptualmente muy distintos.\n"
-            f"4. Nivel alto: datos exactos (plazos, porcentajes, órganos, requisitos), "
-            f"no conceptos generales.\n"
-            f"5. Sin símbolos matemáticos. Escribir en texto: 'igual a', 'mayor que', "
-            f"'porcentaje', etc.\n"
-            f"{regla_apartado}"
-            f"{regla_estilo}"
+            f"{reglas_txt}\n"
             f"\nARTÍCULO {art['numero']}:\n{art['contenido']}\n\n"
             f"Responde SOLO con JSON válido, sin texto adicional:\n"
             f'{{"articulo":"{art["numero"]}","pregunta":"...","opciones":'
@@ -281,7 +281,11 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
             print("  Sin artículos nuevos que procesar.")
             continue
 
-        few_shots = _fetch_few_shots(ley["ley_id"])
+        try:
+            few_shots = _fetch_few_shots(ley["ley_id"])
+        except Exception as e:
+            print(f"  AVISO: no se pudieron cargar few-shots ({e}). Se continúa sin ellos.")
+            few_shots = []
         examinados = sum(1 for a in arts if a.get("examinado"))
         print(f"  Artículos a generar : {len(arts)}  "
               f"(examinados en GACE: {examinados})")
@@ -289,11 +293,14 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
 
         ok = err = 0
         for i, art in enumerate(arts, 1):
+            tiene_apartados = _has_numbered_paragraphs(art["contenido"])
             try:
                 resp = client.messages.create(
                     model=CLAUDE_MODEL,
                     max_tokens=800,
-                    messages=_build_prompt(art, ley["nombre"], few_shots=few_shots),
+                    messages=_build_prompt(art, ley["nombre"],
+                                          few_shots=few_shots,
+                                          tiene_apartados=tiene_apartados),
                 )
                 parsed = _parse_and_validate(resp.content[0].text)
 
@@ -303,7 +310,7 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
                 ok += 1
                 tag = "[DRY]" if dry_run else "[OK] "
                 examen_tag = " ★" if art.get("examinado") else ""
-                apart_tag  = " [apt]" if _has_numbered_paragraphs(art["contenido"]) else ""
+                apart_tag  = " [apt]" if tiene_apartados else ""
                 print(f"  {tag} [{i:>3}/{len(arts)}] Art. {art['numero']}{examen_tag}{apart_tag}")
             except Exception as e:
                 err += 1
