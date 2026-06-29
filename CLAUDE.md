@@ -89,5 +89,6 @@ Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
 ## Hito inmediato
-**[FASE 4 — ALTA] 5/14 leyes cargadas.** Pendientes inmediatas: **LPAP, RIRS, MUFACE, LMRFP, RDSA, RDRD, REGI, LOTCU, ET**.
-El backlog completo (fases, leyes MEDIA/baja, módulos de simulacro y supuestos prácticos, configurabilidad) está en `TODO.md`.
+**[FASE 4 — ALTA completada]** 35 leyes cargadas con embeddings (ley_id 1–49).
+Siguiente: **FASE 4 — MEDIA** (LOIT, LCCU, LASEE, PGCP, ENI, CC, LPNAT, LE — 8 leyes).
+El backlog completo está en `TODO.md`.

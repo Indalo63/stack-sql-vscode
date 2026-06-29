@@ -14,21 +14,48 @@ Uso:
 """
 
 import os
+import sys
 import time
+import argparse
+from pathlib import Path
 import psycopg2
 from openai import OpenAI
+from dotenv import load_dotenv
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_supabase_secrets():
+    secrets_path = BASE_DIR / ".streamlit" / "secrets.toml"
+    if not secrets_path.exists():
+        raise SystemExit("ERROR: .streamlit/secrets.toml no encontrado.")
+    for line in secrets_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("["):
+            continue
+        if "=" in line:
+            k, _, v = line.partition("=")
+            os.environ[k.strip()] = v.strip().strip('"').strip("'")
+    direct_host = os.environ.get("DB_HOST", "")
+    ref = direct_host.split(".")[1] if direct_host.startswith("db.") else ""
+    if ref:
+        os.environ["DB_HOST"] = "aws-1-eu-west-2.pooler.supabase.com"
+        os.environ["DB_USER"] = f"postgres.{ref}"
+    print(f"Supabase via Session Pooler: {os.environ['DB_HOST']}")
 
 EMBEDDING_MODEL  = "text-embedding-3-small"
 BATCH_SIZE       = 50
-MAX_CHARS        = 30000  # ~7500 tokens, por debajo del límite de 8192
+MAX_CHARS        = 24000  # ~6800 tokens, margen seguro bajo el límite de 8192
 
-DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "localhost"),
-    "port":     int(os.getenv("DB_PORT", "5432")),
-    "dbname":   os.getenv("DB_NAME",     "stack_db"),
-    "user":     os.getenv("DB_USER",     "postgres"),
-    "password": os.getenv("DB_PASSWORD", "postgres"),
-}
+def _db_config():
+    return {
+        "host":     os.getenv("DB_HOST",     "localhost"),
+        "port":     int(os.getenv("DB_PORT", "5432")),
+        "dbname":   os.getenv("DB_NAME",     "stack_db"),
+        "user":     os.getenv("DB_USER",     "postgres"),
+        "password": os.getenv("DB_PASSWORD", "postgres"),
+    }
 
 
 def build_text(row: dict) -> str:
@@ -50,12 +77,18 @@ def build_text(row: dict) -> str:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--supabase", action="store_true", help="Usar Supabase via Session Pooler")
+    args = parser.parse_args()
+    if args.supabase:
+        _load_supabase_secrets()
+
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise SystemExit("Error: define la variable de entorno OPENAI_API_KEY")
 
     client = OpenAI(api_key=api_key)
-    conn   = psycopg2.connect(**DB_CONFIG)
+    conn   = psycopg2.connect(**_db_config())
     cur    = conn.cursor()
 
     cur.execute("""
@@ -98,17 +131,32 @@ def main():
         batch  = rows[i:i + BATCH_SIZE]
         textos = [build_text(r) for r in batch]
 
-        response   = client.embeddings.create(model=EMBEDDING_MODEL, input=textos)
-        embeddings = [e.embedding for e in response.data]
+        try:
+            response   = client.embeddings.create(model=EMBEDDING_MODEL, input=textos)
+            embeddings = [e.embedding for e in response.data]
+            pairs = list(zip(batch, embeddings))
+        except Exception:
+            # Lote con artículo demasiado largo: procesar uno a uno
+            pairs = []
+            for row, texto in zip(batch, textos):
+                for max_c in (MAX_CHARS, 16000, 8000):
+                    try:
+                        resp = client.embeddings.create(
+                            model=EMBEDDING_MODEL, input=[texto[:max_c]]
+                        )
+                        pairs.append((row, resp.data[0].embedding))
+                        break
+                    except Exception:
+                        continue
 
-        for row, vector in zip(batch, embeddings):
+        for row, vector in pairs:
             cur.execute(
                 "UPDATE normas.articulos SET embedding = %s WHERE articulo_id = %s",
                 (vector, row["articulo_id"])
             )
 
         conn.commit()
-        procesados += len(batch)
+        procesados += len(pairs)
         print(f"  {procesados}/{total} embeddings almacenados")
         time.sleep(0.3)
 

@@ -32,6 +32,15 @@ Backlog completo. El estado macro y el hito inmediato viven en `CLAUDE.md`.
 | 37 | LJCA | Ley 29/1998 Jurisdicción Contencioso-Administrativa | ✅ cargada |
 | 38 | LGS | Ley 38/2003 General de Subvenciones | ✅ cargada |
 | 39 | LEF | Ley de Expropiación Forzosa (1954) | ✅ cargada |
+| 40 | LPAP | Ley 33/2003 Patrimonio de las Administraciones Públicas | ✅ cargada |
+| 42 | RIRS | RD 462/2002 Indemnizaciones por Razón del Servicio | ✅ cargada |
+| 43 | MUFACE | RD 375/2003 Reglamento General del Mutualismo Administrativo | ✅ cargada |
+| 44 | LMRFP | Ley 30/1984 Medidas para la Reforma de la Función Pública | ✅ cargada |
+| 45 | RDSA | RD 365/1995 Situaciones Administrativas Funcionarios AGE | ✅ cargada |
+| 46 | RDRD | RD 33/1986 Régimen Disciplinario Funcionarios AGE | ✅ cargada |
+| 47 | REGI | RD 364/1995 Reglamento General de Ingreso AGE | ✅ cargada |
+| 48 | LOTCU | LO 2/1982 Tribunal de Cuentas | ✅ cargada |
+| 49 | ET | RDLeg 2/2015 Estatuto de los Trabajadores | ✅ cargada |
 
 ## Pendientes de carga – inventario BOE-443
 
@@ -43,15 +52,15 @@ Estrategia por ley: `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_l
 
 | Código | Ley | BOE-ID |
 |--------|-----|--------|
-| LPAP | Ley 33/2003 Patrimonio de las Administraciones Públicas | BOE-A-2003-20254 |
-| RIRS | RD 462/2002 Indemnizaciones por Razón del Servicio | BOE-A-2002-10337 |
-| MUFACE | RD 375/2003 Reglamento General Mutualismo Administrativo | BOE-A-2003-7527 |
-| LMRFP | Ley 30/1984 Medidas Reforma Función Pública | BOE-A-1984-17387 |
-| RDSA | RD 365/1995 Situaciones Administrativas Funcionarios AGE | BOE-A-1995-8730 |
-| RDRD | RD 33/1986 Régimen Disciplinario Funcionarios AGE | BOE-A-1986-1216 |
-| REGI | RD 364/1995 Reglamento General de Ingreso AGE | BOE-A-1995-8729 |
-| LOTCU | LO 2/1982 Tribunal de Cuentas | BOE-A-1982-11584 |
-| ET | TR Ley del Estatuto de los Trabajadores | BOE-A-2015-11430 |
+| ~~LPAP~~ | ~~Ley 33/2003 Patrimonio de las Administraciones Públicas~~ | ~~BOE-A-2003-20254~~ |
+| ~~RIRS~~ | ~~RD 462/2002 Indemnizaciones por Razón del Servicio~~ | ~~BOE-A-2002-10337~~ |
+| ~~MUFACE~~ | ~~RD 375/2003 Reglamento General Mutualismo Administrativo~~ | ~~BOE-A-2003-7527~~ |
+| ~~LMRFP~~ | ~~Ley 30/1984 Medidas Reforma Función Pública~~ | ~~BOE-A-1984-17387~~ |
+| ~~RDSA~~ | ~~RD 365/1995 Situaciones Administrativas Funcionarios AGE~~ | ~~BOE-A-1995-8730~~ |
+| ~~RDRD~~ | ~~RD 33/1986 Régimen Disciplinario Funcionarios AGE~~ | ~~BOE-A-1986-1216~~ |
+| ~~REGI~~ | ~~RD 364/1995 Reglamento General de Ingreso AGE~~ | ~~BOE-A-1995-8729~~ |
+| ~~LOTCU~~ | ~~LO 2/1982 Tribunal de Cuentas~~ | ~~BOE-A-1982-11584~~ |
+| ~~ET~~ | ~~TR Ley del Estatuto de los Trabajadores~~ | ~~BOE-A-2015-11430~~ |
 
 ### FASE 4 – MEDIA prioridad
 
@@ -93,7 +102,11 @@ Estrategia por ley: `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_l
 ## Próximos pasos
 
 ### En curso
-- [FASE 4] 5/14 leyes ALTA cargadas — pendientes: LPAP, RIRS, MUFACE, LMRFP, RDSA, RDRD, REGI, LOTCU, ET.
+- [FASE 4 — MEDIA] Pendientes: LOIT, LCCU, LASEE, PGCP, ENI, CC, LPNAT, LE (8 leyes).
+
+### Completado en sesión 29/06/2026
+- [✅ FASE 4 — ALTA completa] LPAP (240) + RIRS (54) + MUFACE (182) + LMRFP (79) + RDSA (35) + RDRD (59) + REGI (99) + LOTCU (59) + ET (142) — 949 artículos con embeddings
+- [✅ Bugs corregidos] load_ley.py: leyes sin títulos con título sintético _ROOT; generate_embeddings.py: flag --supabase, MAX_CHARS 24K, fallback por artículo
 
 ### Completado en sesión 28/06/2026
 - [✅ FASE 1] 8 leyes ALTA: LODP, LOTC, LGOB, LOCE, LBRL, LTBG, LOPD, LOEPSF (673 arts.)

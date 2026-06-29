@@ -156,7 +156,7 @@ def validar(data: dict) -> None:
     cap_set     = set()
 
     for c in data.get("capitulos", []):
-        if c.get("titulo_numero") not in titulos_set:
+        if titulos_set and c.get("titulo_numero") not in titulos_set:
             errores.append(f"Capítulo '{c.get('numero')}' referencia título '{c.get('titulo_numero')}' inexistente")
         cap_set.add((c.get("titulo_numero"), c.get("numero")))
 
@@ -214,6 +214,16 @@ def cargar_ley(data: dict, conn) -> int:
     print(f"  Títulos:    {len(titulo_map)}")
 
     # 3. Capítulos — mapa: (titulo_numero, capitulo_numero) → capitulo_id
+    # Si la ley tiene capítulos pero no títulos, crear un título raíz sintético
+    capitulos = data.get("capitulos", [])
+    if capitulos and not titulo_map:
+        cur.execute("""
+            INSERT INTO normas.titulos (ley_id, numero, denominacion, orden)
+            VALUES (%s, %s, %s, %s)
+            RETURNING titulo_id
+        """, (ley_id, "_ROOT", "[Sin título]", 0))
+        titulo_map[None] = cur.fetchone()[0]
+
     capitulo_map: dict[tuple, int] = {}
     for c in data.get("capitulos", []):
         titulo_id = titulo_map[c["titulo_numero"]]
