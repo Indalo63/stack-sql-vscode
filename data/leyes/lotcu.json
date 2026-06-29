@@ -1,0 +1,677 @@
+{
+  "ley": {
+    "codigo": "LOTCU",
+    "nombre": "Ley Orgánica 2/1982, de 12 de mayo, del Tribunal de Cuentas",
+    "nombre_corto": "LO 2/1982",
+    "tipo": "ley_organica",
+    "numero_oficial": "",
+    "fecha_pub": "1982-05-21",
+    "url_boe": "https://www.boe.es/buscar/act.php?id=BOE-A-1982-11584",
+    "url_eli": "https://www.boe.es/eli/es/lo/1982/05/12/2/con"
+  },
+  "titulos": [
+    {
+      "numero": "I",
+      "denominacion": "Fiscalización económico-financiera y jurisdicción contable",
+      "orden": 1
+    },
+    {
+      "numero": "II",
+      "denominacion": "Composición y organización del Tribunal de Cuentas",
+      "orden": 2
+    },
+    {
+      "numero": "III",
+      "denominacion": "Los miembros del Tribunal y el personal a su servicio",
+      "orden": 3
+    },
+    {
+      "numero": "IV",
+      "denominacion": "La responsabilidad contable",
+      "orden": 4
+    },
+    {
+      "numero": "V",
+      "denominacion": "Funcionamiento del Tribunal",
+      "orden": 5
+    }
+  ],
+  "capitulos": [
+    {
+      "titulo_numero": "I",
+      "numero": "I",
+      "denominacion": "El Tribunal de Cuentas. Competencias y funciones",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "I",
+      "numero": "II",
+      "denominacion": "La función fiscalizadora del Tribunal",
+      "orden": 2
+    },
+    {
+      "titulo_numero": "I",
+      "numero": "III",
+      "denominacion": "El enjuiciamiento contable",
+      "orden": 3
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "I",
+      "denominacion": "Organos del Tribunal",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "II",
+      "denominacion": "El Presidente, el Pleno y la Comisión de Gobierno",
+      "orden": 2
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "III",
+      "denominacion": "La Sección de Fiscalización",
+      "orden": 3
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "IV",
+      "denominacion": "La Sección de Enjuiciamiento",
+      "orden": 4
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "V",
+      "denominacion": "La Fiscalía",
+      "orden": 5
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "VI",
+      "denominacion": "La Secretaría General",
+      "orden": 6
+    },
+    {
+      "titulo_numero": "III",
+      "numero": "I",
+      "denominacion": "Los miembros del Tribunal",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "III",
+      "numero": "II",
+      "denominacion": "El personal al servicio del Tribunal",
+      "orden": 2
+    },
+    {
+      "titulo_numero": "IV",
+      "numero": "I",
+      "denominacion": "Disposiciones comunes",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "IV",
+      "numero": "II",
+      "denominacion": "La responsabilidad directa",
+      "orden": 2
+    },
+    {
+      "titulo_numero": "IV",
+      "numero": "III",
+      "denominacion": "La responsabilidad subsidiaria",
+      "orden": 3
+    },
+    {
+      "titulo_numero": "V",
+      "numero": "I",
+      "denominacion": "Disposición común",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "V",
+      "numero": "II",
+      "denominacion": "Los procedimientos fiscalizadores",
+      "orden": 2
+    },
+    {
+      "titulo_numero": "V",
+      "numero": "III",
+      "denominacion": "Los procedimientos judiciales",
+      "orden": 3
+    }
+  ],
+  "secciones": [],
+  "articulos": [
+    {
+      "numero": "PREAMBULO",
+      "tipo": "preambulo",
+      "contenido": "A todos los que la presente vieren y entendieren,\nSabed: Que las Cortes Generales han aprobado y Yo vengo en sancionar la siguiente Ley Orgánica:",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 1
+    },
+    {
+      "numero": "Artículo primero.",
+      "tipo": "articulo",
+      "contenido": "Uno. El Tribunal de Cuentas es el supremo órgano fiscalizador de las cuentas y de la gestión económica del Estado y del sector público, sin perjuicio de su propia jurisdicción, de acuerdo con la Constitución y la presente Ley Orgánica.\nAsimismo, corresponde al Tribunal de Cuentas la fiscalización de la actividad económico-financiera de los partidos políticos inscritos en el Registro de Partidos Políticos del Ministerio del Interior, así como la de las fundaciones y demás entidades vinculadas o dependientes de ellos.\nDos. Es único en su orden y extiende su jurisdicción a todo el territorio nacional, sin perjuicio de los órganos fiscalizadores de cuentas que para las Comunidades Autónomas puedan prever sus Estatutos. Depende directamente de las Cortes Generales.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 2
+    },
+    {
+      "numero": "Artículo segundo.",
+      "tipo": "articulo",
+      "contenido": "Son funciones propias del Tribunal de Cuentas:\na) La fiscalización externa, permanente y consuntiva de la actividad económico-financiera del sector público.\nb) El enjuiciamiento de la responsabilidad contable en que incurran quienes tengan a su cargo el manejo de caudales o efectos públicos.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 3
+    },
+    {
+      "numero": "Artículo tercero.",
+      "tipo": "articulo",
+      "contenido": "Uno. El Tribunal de Cuentas tiene competencia para todo lo concerniente al gobierno y régimen interior del mismo y al personal a su servicio y podrá dictar reglamentos sobre su propio funcionamiento y organización, así como sobre el estatuto de su personal y servicios dentro del ámbito de la presente ley y de la de ordenación de su funcionamiento.\nDos. También podrá dictar reglamentos en desarrollo, aplicación y ejecución de su Ley de Funcionamiento para establecer regulaciones de carácter secundario y auxiliar en todo lo relativo al Estatuto del personal a su servicio.\nTres. Los Reglamentos deberán ser aprobados por el Pleno y se publicarán en el \"Boletín Oficial del Estado\", autorizados por su Presidente.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 4
+    },
+    {
+      "numero": "Artículo cuarto.",
+      "tipo": "articulo",
+      "contenido": "Uno. Integran el sector público:\na) La Administración del Estado.\nb) Las Comunidades Autónomas.\nc) Las Corporaciones Locales.\nd) Las entidades gestoras de la Seguridad Social.\ne) Los Organismos autónomos.\nf) Las Sociedades estatales y demás Empresas públicas.\nDos. Al Tribunal de Cuentas corresponde la fiscalización de las subvenciones, créditos, avales u otras ayudas del sector público percibidas por personas físicas o jurídicas.\nTres. Corresponde al Tribunal de Cuentas la fiscalización de la actividad económico-financiera de los partidos políticos inscritos en el Registro de Partidos Políticos del Ministerio del Interior, así como la de las fundaciones y demás entidades vinculadas o dependientes de ellos. Se considera que una fundación o una entidad está vinculada o es dependiente de un partido político cuando concurran las circunstancias previstas en la Ley Orgánica 8/2007, de 4 de julio, sobre financiación de los partidos políticos.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 5
+    },
+    {
+      "numero": "Artículo quinto.",
+      "tipo": "articulo",
+      "contenido": "El Tribunal de Cuentas ejercerá sus funciones con plena independencia y sometimiento al ordenamiento jurídico.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 6
+    },
+    {
+      "numero": "Artículo sexto.",
+      "tipo": "articulo",
+      "contenido": "El Tribunal de Cuentas elaborará su propio presupuesto, que se integrará en los Generales del Estado, en una sección independiente y será aprobado por las Cortes Generales.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 7
+    },
+    {
+      "numero": "Artículo séptimo.",
+      "tipo": "articulo",
+      "contenido": "Uno. El Tribunal de Cuentas podrá exigir la colaboración de todas las personas físicas o jurídicas, públicas o privadas que estarán obligadas a suministrarle cuantos datos, estados, documentos, antecedentes o informes solicite relacionados con el ejercicio de sus funciones fiscalizadora o jurisdiccional.\nEl Estado y demás entidades integrantes del sector público sujetas a control del Tribunal de Cuentas deberán facilitarle la información económico y financiera que les soliciten con ocasión de la tramitación de los procedimientos de control y jurisdiccionales. El Tribunal de Cuentas podrá celebrar convenios de colaboración con la Administración General del Estado y demás órganos, organismos y entidades para el acceso a la información de que estos dispongan de conformidad con la normativa especial que regule la información a suministrar con la finalidad de agilizar y facilitar el ejercicio de su función fiscalizadora y jurisdiccional.\nDos. La petición se efectuará por conducto del Ministerio, Comunidad Autónoma o Corporación Local correspondiente.\nTres. El incumplimiento de los requerimientos del Tribunal podrá suponer la aplicación de las multas coercitivas que se establezcan en su Ley de Funcionamiento. Si los requerimientos se refieren a la reclamación de justificantes de inversiones o gastos públicos y no son cumplidos en el plazo solicitado, se iniciará de oficio el oportuno expediente de reintegro.\nEl Tribunal de Cuentas pondrá en conocimiento de las Cortes Generales la falta de colaboración de los obligados a prestársela.\nCuatro. Asimismo el Tribunal podrá comisionar a expertos que tengan titulación adecuada al objeto de inspeccionar, revisar y comprobar la documentación, libros, metálico, valores, bienes y existencias de las Entidades integrantes del sector público en los supuestos a los que se refiere el artículo cuarto, dos, y, en general, para comprobar la realidad de las operaciones reflejadas en sus cuentas y emitir los informes correspondientes.\nCinco. Las entidades de crédito estarán obligadas a colaborar con el Tribunal de cuentas facilitando la documentación e información que les sea requerida. En particular, estarán obligadas a identificar las diferentes cuentas que se refieran a fondos de los partidos políticos, y fundaciones y entidades vinculadas a los mismos o dependientes de ellos, así como las personas autorizadas a efectuar operaciones de disposición con cargo a las mismas.\nEn el caso de cuentas en que se ingresen únicamente cuotas en concepto de afiliación, deberán aportarse a solicitud del Tribunal de Cuentas datos sobre saldos y movimientos en las fechas o períodos respecto de los que se solicite. En ningún caso se le facilitarán, en relación a estas cuentas, datos que permitan identificar a personas físicas afiliadas a los partidos políticos.\nPara el caso de las cuentas abiertas en entidades de crédito exclusivamente destinadas a la recepción de donaciones y de las cuentas en las que reciban otras aportaciones, además de la información citada en el párrafo precedente, se aportará información sobre la identidad de quienes realicen las aportaciones si, en este último supuesto, el importe acumulado de las aportaciones en un año natural excede de 3.000 euros.\nEsta información también deberá ser objeto de aportación en relación con las entidades y fundaciones vinculadas a los partidos políticos o dependientes de ellos.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 8
+    },
+    {
+      "numero": "Artículo octavo.",
+      "tipo": "articulo",
+      "contenido": "Uno. Los conflictos que se susciten sobre las competencias o atribuciones del Tribunal de Cuentas serán resueltos por el Tribunal Constitucional.\nDos. Los requerimientos de inhibición hechos al Tribunal de Cuentas no producirán la suspensión del respectivo procedimiento.",
+      "titulo_numero": "I",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 9
+    },
+    {
+      "numero": "Artículo noveno.",
+      "tipo": "articulo",
+      "contenido": "Uno. La función fiscalizadora del Tribunal de Cuentas se referirá al sometimiento de la actividad económico-financiera del sector público a los principios de legalidad, eficiencia, economía, transparencia, así como a la sostenibilidad ambiental y la igualdad de género.\nDos. El Tribunal de Cuentas ejercerá su función en relación con la ejecución de los programas de ingresos y gastos públicos.",
+      "titulo_numero": "I",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 10
+    },
+    {
+      "numero": "Artículo diez.",
+      "tipo": "articulo",
+      "contenido": "El Tribunal de Cuentas, por delegación, de las Cortes Generales, procederá al examen y comprobación de la Cuenta General del Estado dentro del plazo de seis meses, a partir de la fecha en que se haya rendido. El Pleno, oído el Fiscal, dictará la declaración definitiva que le merezca para elevarla a las Cámaras con la oportuna propuesta, dando traslado al Gobierno.",
+      "titulo_numero": "I",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 11
+    },
+    {
+      "numero": "Artículo once.",
+      "tipo": "articulo",
+      "contenido": "El Tribunal de Cuentas fiscalizará en particular:\na) Los contratos celebrados por la Administración del Estado y las demás Entidades del sector público en los casos en que así esté establecido o que considere conveniente el Tribunal.\nb) La situación y las variaciones del patrimonio del Estado y demás Entidades del sector público.\nc) Los créditos extraordinarios y suplementarios, así como las incorporaciones, ampliaciones, transferencias y demás modificaciones de los créditos presupuestarios iniciales.",
+      "titulo_numero": "I",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 12
+    },
+    {
+      "numero": "Artículo doce.",
+      "tipo": "articulo",
+      "contenido": "Uno. El resultado de la fiscalización se expondrá por medio de informes o memorias ordinarias o extraordinarias y de mociones o notas que se elevarán a las Cortes Generales y se publicarán en el «Boletín Oficial del Estado».\nCuando la actividad fiscalizadora se refiera a las Comunidades Autónomas o a Entidades que de ellas dependan, el Informe se remitirá, asimismo, a la Asamblea Legislativa de la respectiva Comunidad y se publicará también en su «Boletín Oficial».\nDos. El Tribunal de Cuentas hará constar cuantas infracciones, abusos o prácticas irregulares haya observado, con indicación de la responsabilidad en que, a su juicio, se hubiere incurrido y de las medidas para exigirla.",
+      "titulo_numero": "I",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 13
+    },
+    {
+      "numero": "Artículo trece.",
+      "tipo": "articulo",
+      "contenido": "Uno. El Informe o Memoria anual que el Tribunal debe remitir a las Cortes Generales en virtud del artículo ciento treinta y seis, dos, de la Constitución, comprenderá el análisis de la Cuenta General del Estado y de las demás del sector público. Se extenderá, además, a la fiscalización de la gestión económica del Estado y del sector público y, entre otros, a los extremos siguientes:\na) La observancia de la Constitución, de las Leyes reguladoras de los Ingresos y Gastos del sector público y, en general, de las normas que afecten a la actividad económico-financiera del mismo.\nb) El cumplimiento de las previsiones y la ejecución de los Presupuestos del Estado, de las Comunidades Autónomas, de las Corporaciones Locales y de las demás Entidades sujetas a régimen presupuestario público.\nc) La racionalidad en la ejecución del gasto público basada en criterios de eficiencia y economía.\nd) La ejecución de los programas de actuación, inversiones y financiación de las Sociedades estatales y de los demás planes o previsiones que rijan la actividad de las Empresas públicas, así como el empleo o aplicación de las subvenciones con cargo a fondos públicos.\nDos. Idéntico informe será remitido anualmente a las Asambleas Legislativas de las Comunidades Autónomas para el control económico y presupuestario de su actividad financiera.\nTres. El informe contendrá una Memoria de las actuaciones jurisdiccionales del Tribunal durante el ejercicio económico correspondiente.",
+      "titulo_numero": "I",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 14
+    },
+    {
+      "numero": "Artículo catorce.",
+      "tipo": "articulo",
+      "contenido": "Uno. El Tribunal de Cuentas propondrá las medidas a adoptar, en su caso, para la mejora de la gestión económico-financiera del sector público.\nDos. Cuando las medidas propuestas por el Tribunal de Cuentas se refieran a la gestión económico-financiera de las Comunidades Autónomas o Entidades del sector público de ellas dependientes, la Asamblea Legislativa correspondiente, en el ámbito de su competencia, entenderá de la propuesta y dictará, en su caso, las disposiciones necesarias para su aplicación.",
+      "titulo_numero": "I",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 15
+    },
+    {
+      "numero": "Artículo quince.",
+      "tipo": "articulo",
+      "contenido": "Uno. El enjuiciamiento contable, como jurisdicción propia del Tribunal de Cuentas, se ejerce respecto de las cuentas que deban rendir quienes recauden, intervengan, administren, custodien, manejen o utilicen bienes, caudales o efectos públicos.\nDos. La jurisdicción contable se extiende a los alcances de caudales o efectos públicos, así como a las obligaciones accesorias constituidas en garantía de su gestión.",
+      "titulo_numero": "I",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 16
+    },
+    {
+      "numero": "Artículo dieciséis.",
+      "tipo": "articulo",
+      "contenido": "No corresponderá a la jurisdicción contable el enjuiciamiento de:\na) Los asuntos atribuidos a la competencia del Tribunal Constitucional.\nb) Las cuestiones sometidas a la jurisdicción contencioso-administrativa.\nc) Los hechos constitutivos de delito o falta.\nd) Las cuestiones de índole civil, laboral o de otra naturaleza encomendadas al conocimiento de los órganos del Poder Judicial.",
+      "titulo_numero": "I",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 17
+    },
+    {
+      "numero": "Artículo diecisiete.",
+      "tipo": "articulo",
+      "contenido": "Uno. La jurisdicción contable es necesaria e improrrogable, exclusiva y plena.\nDos. Se extenderá, a los solos efectos del ejercicio de su función, al conocimiento y decisión en las cuestiones prejudiciales e incidentales, salvo las de carácter penal, que constituyan elemento previo necesario para la declaración de responsabilidad contable y estén con ella relacionadas directamente.\nTres. La decisión que se pronuncie no producirá efectos fuera del ámbito de la jurisdicción contable.",
+      "titulo_numero": "I",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 18
+    },
+    {
+      "numero": "Artículo dieciocho.",
+      "tipo": "articulo",
+      "contenido": "Uno. La jurisdicción contable es compatible respecto de unos mismos hechos con el ejercicio de la potestad disciplinaria y con la actuación de la jurisdicción penal.\nDos. Cuando los hechos fueren constitutivos de delito, la responsabilidad civil será determinada por la jurisdicción contable en el ámbito de su competencia.",
+      "titulo_numero": "I",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 19
+    },
+    {
+      "numero": "Artículo diecinueve.",
+      "tipo": "articulo",
+      "contenido": "Son órganos del Tribunal de Cuentas:\na) El Presidente.\nb) El Pleno.\nc) La Comisión de Gobierno.\nd) La Sección de Fiscalización.\ne) La Sección de Enjuiciamiento.\nf) Los Consejeros de Cuentas.\ng) La Fiscalía.\nh) La Secretaría General.",
+      "titulo_numero": "II",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 20
+    },
+    {
+      "numero": "Artículo veinte.",
+      "tipo": "articulo",
+      "contenido": "Son atribuciones del Presidente:\na) Representar al Tribunal.\nb) Convocar y presidir el Pleno y la Comisión de Gobierno, así como decidir con voto de calidad en caso de empate.\nc) Ejercer la jefatura superior del personal al servicio del mismo y las funciones relativas a su nombramiento, contratación, gobierno y administración en general.\nd) Disponer los gastos propios del Tribunal y la contratación de obras, bienes, servicios, suministros y demás prestaciones necesarias para su funcionamiento.\ne) Las demás que le reconozca la Ley.\nf) Resolver las demás cuestiones de carácter gubernativo no asignadas a otros órganos del Tribunal.",
+      "titulo_numero": "II",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 21
+    },
+    {
+      "numero": "Artículo veintiuno.",
+      "tipo": "articulo",
+      "contenido": "Uno. El Tribunal en Pleno estará integrado por doce Consejeros de Cuentas, uno de los cuales será el Presidente, y el Fiscal.\nDos. El cuórum para la válida constitución del Pleno será el de dos tercios de sus componentes y sus acuerdos serán adoptados por mayoría de asistentes.\nTres. Corresponde al Pleno:\na) Ejercer la función fiscalizadora.\nb) Plantear los conflictos que afecten a las competencias o atribuciones del Tribunal.\nc) Conocer de los recursos de alzada contra las resoluciones administrativas dictadas por órganos del Tribunal.\nd) Aprobar y modificar los Reglamentos del Tribunal de Cuentas.\ne) Las demás funciones que se determinen en la Ley de Funcionamiento del Tribunal de Cuentas.",
+      "titulo_numero": "II",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 22
+    },
+    {
+      "numero": "Artículo veintidós.",
+      "tipo": "articulo",
+      "contenido": "Uno. La Comisión de Gobierno quedará constituida por el Presidente y los Consejeros de Cuentas Presidentes de Sección.\nDos. Corresponde a la Comisión de Gobierno:\na) Establecer el régimen de trabajo del personal.\nb) Ejercer la potestad disciplinaria en los casos de faltas muy graves respecto del personal al servicio del Tribunal.\nc) Distribuir los asuntos entre las Secciones.\nd) Nombrar los Delegados instructores.\ne) Las demás facultades que le atribuye la Ley de Funcionamiento del Tribunal.",
+      "titulo_numero": "II",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 23
+    },
+    {
+      "numero": "Artículo veintitrés.",
+      "tipo": "articulo",
+      "contenido": "Uno. A la Sección de Fiscalización corresponde la verificación de la contabilidad de las Entidades del sector público y el examen y comprobación de las cuentas que han de someterse a la fiscalización del Tribunal.\nDos. La Sección de Fiscalización se organizará en departamentos sectoriales y territoriales al frente de cada uno de los cuales estará un Consejero de Cuentas.\nTres. La Ley de Funcionamiento del Tribunal determinará la estructura interna que adopten los departamentos.\nCuatro. El Fiscal del Tribunal designará los Abogados Fiscales adscritos al Departamento.",
+      "titulo_numero": "II",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 24
+    },
+    {
+      "numero": "Artículo veinticuatro.",
+      "tipo": "articulo",
+      "contenido": "Uno. La Sección de Enjuiciamiento se organizará en Salas integradas por un Presidente y dos Consejeros de Cuentas, y asistidas por uno o más Secretarios.\nDos. Las Salas conocerán de las apelaciones contra las resoluciones en primera instancia dictadas por los Consejeros de Cuentas en los juicios de cuentas, los procedimientos de reintegro por alcance y los expedientes de cancelación de fianzas; y, en instancia o por vía de recurso, de los asuntos que determine la Ley de Funcionamiento del Tribunal.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 25
+    },
+    {
+      "numero": "Artículo veinticinco.",
+      "tipo": "articulo",
+      "contenido": "Compete a los Consejeros de Cuentas, en la forma que determine la Ley de Funcionamiento del Tribunal, la resolución en primera o única instancia de los siguientes asuntos:\na) Los juicios de las cuentas.\nb) Los procedimientos de reintegro por alcance.\nc) Los expedientes de cancelación de fianzas.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 26
+    },
+    {
+      "numero": "Artículo veintiséis.",
+      "tipo": "articulo",
+      "contenido": "Uno. La instrucción de los procedimientos de reintegro por alcance se efectuará por los Delegados Instructores.\nDos. Los Delegados Instructores serán nombrados entre funcionarios públicos que presten servicio en la provincia en que hayan ocurrido los actos que puedan constituir alcance o entre los funcionarios del propio Tribunal.\nTres. En las Comunidades Autónomas cuyos Estatutos hayan establecido órganos propios de fiscalización, el Tribunal podrá delegar en éstos la instrucción de los procedimientos jurisdiccionales para el enjuiciamiento de la responsabilidad contable en que incurran quienes tengan a su cargo el manejo de caudales o efectos públicos.\nCuatro. El cargo de Delegado Instructor es de obligada aceptación por el funcionario designado.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 27
+    },
+    {
+      "numero": "Artículo veintisiete.",
+      "tipo": "articulo",
+      "contenido": "La Fiscalía del Tribunal de Cuentas, dependiente funcionalmente del Fiscal general del Estado, quedará integrada por el Fiscal y los Abogados Fiscales.",
+      "titulo_numero": "II",
+      "capitulo_numero": "V",
+      "seccion_numero": null,
+      "orden_global": 28
+    },
+    {
+      "numero": "Artículo veintiocho.",
+      "tipo": "articulo",
+      "contenido": "La Secretaría General desempeñará las funciones conducentes al adecuado ejercicio de las competencias gubernativas del Presidente, del Pleno y de la Comisión de Gobierno en todo lo relativo al régimen interior del Tribunal de Cuentas.",
+      "titulo_numero": "II",
+      "capitulo_numero": "VI",
+      "seccion_numero": null,
+      "orden_global": 29
+    },
+    {
+      "numero": "Artículo veintinueve.",
+      "tipo": "articulo",
+      "contenido": "El Presidente del Tribunal de Cuentas será nombrado de entre sus miembros por el Rey, a propuesta del mismo Tribunal en Pleno y por un período de tres años.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 30
+    },
+    {
+      "numero": "Artículo treinta.",
+      "tipo": "articulo",
+      "contenido": "Uno. Los Consejeros de Cuentas serán designados por las Cortes Generales, seis por el Congreso de los Diputados y seis por el Senado, mediante votación por mayoría de tres quintos de cada una de las Cámaras, por un período de nueve años, entre Censores del Tribunal de Cuentas, Censores Jurados de Cuentas, Magistrados y Fiscales, Profesores de Universidad y funcionarios públicos pertenecientes a Cuerpos para cuyo ingreso se exija titulación académica superior, Abogados, Economistas y Profesores Mercantiles, todos ellos de reconocida competencia, con más de quince años de ejercicio profesional.\nDos. En la designación de las personas Consejeras de Cuentas, se garantizará el principio de presencia equilibrada de mujeres y hombres de forma que cada uno de los sexos suponga como mínimo el cuarenta por ciento de los designados por cada una de las Cámaras.\nTres. Los Consejeros de Cuentas del Tribunal son independientes e inamovibles.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 31
+    },
+    {
+      "numero": "Artículo treinta y uno.",
+      "tipo": "articulo",
+      "contenido": "Los Presidentes de las Secciones de Fiscalización y de Enjuiciamiento serán designados por el Tribunal entre los Consejeros de cuentas, a propuesta del Pleno.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 32
+    },
+    {
+      "numero": "Artículo treinta y dos.",
+      "tipo": "articulo",
+      "contenido": "El Fiscal del Tribunal de Cuentas, que pertenecerá a la Carrera Fiscal, se nombrará por el Gobierno en la forma determinada en el Estatuto del Ministerio Fiscal.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 33
+    },
+    {
+      "numero": "Artículo treinta y tres.",
+      "tipo": "articulo",
+      "contenido": "Uno. Los miembros del Tribunal de Cuentas estarán sujetos a las mismas causas de incapacidad, incompatibilidades y prohibiciones establecidas para los Jueces en la Ley Orgánica del Poder Judicial.\nDos. Si el nombramiento recayese en quien ostente la condición de Senador o Diputado, antes de tomar posesión, habrá de renunciar a su escaño.\nTres. No podrán ser designados Consejeros de Cuentas quienes en los dos años anteriores hubieran estado comprendidos en alguno de los supuestos que se indican en los apartados siguientes:\na) Las autoridades o funcionarios que tengan a su cargo la gestión, inspección o intervención de los ingresos y gastos del sector público.\nb) Los Presidentes, Directores y miembros de los Consejos de Administración de los Organismos autónomos y Sociedades integrados en el sector público.\nc) Los particulares que, excepcionalmente, administren, recauden o custodien fondos o valores públicos.\nd) Los perceptores de las subvenciones con cargo a fondos públicos.\ne) Cualquiera otra persona que tenga la condición de cuentadante ante el Tribunal de Cuentas.\nCuatro. Las personas comprendidas en alguno de los supuestos del párrafo anterior tampoco podrán ser comisionadas por el Tribunal de Cuentas para el desempeño de las funciones a que se refiere el artículo séptimo, cuatro, de esta Ley.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 34
+    },
+    {
+      "numero": "Artículo treinta y cuatro.",
+      "tipo": "articulo",
+      "contenido": "El nombramiento de los miembros del Tribunal de Cuentas implicará, en su caso, la declaración del interesado en la situación de excedencia especial o equivalente en la Carrera o Cuerpo de procedencia.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 35
+    },
+    {
+      "numero": "Artículo treinta y cinco.",
+      "tipo": "articulo",
+      "contenido": "Uno. La responsabilidad civil o criminal en que puedan incurrir los miembros del Tribunal de Cuentas en el ejercicio de sus funciones será exigida ante la Sala correspondiente del Tribunal Supremo.\nDos. La responsabilidad disciplinaria del Presidente del Tribunal y de los Consejeros de Cuentas se deducirá conforme establezca la Ley de funcionamiento del Tribunal, y la del Fiscal en la forma que determine el Estatuto del Ministerio Fiscal.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 36
+    },
+    {
+      "numero": "Artículo treinta y seis.",
+      "tipo": "articulo",
+      "contenido": "El Presidente y los Consejeros de Cuentas del Tribunal no podrán ser removidos de sus cargos sino por agotamiento de su mandato, renuncia aceptada por las Cortes Generales, incapacidad, incompatibilidad o incumplimiento grave de los deberes de su cargo.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 37
+    },
+    {
+      "numero": "Artículo treinta y siete.",
+      "tipo": "articulo",
+      "contenido": "Uno. El personal al servicio del Tribunal de Cuentas, integrado por funcionarios con titulación adecuada, sin perjuicio de las normas especiales que les sean de aplicación, estará sujeto al régimen general de la Función Pública y a sus incompatibilidades.\nDos. El desempeño de la Función Pública en el Tribunal de Cuentas será incompatible con cualquier otra función, destino o cargo, así como con el ejercicio profesional y con la intervención en actividades industriales, mercantiles o profesionales, incluso las consultivas y las de asesoramiento, siempre que perjudiquen la imparcialidad o independencia profesional del funcionario, o guarden relación con Entidades que, no integrando el sector público, utilicen fondos públicos que deban ser fiscalizados o enjuiciados por el Tribunal de Cuentas.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 38
+    },
+    {
+      "numero": "Artículo treinta y ocho.",
+      "tipo": "articulo",
+      "contenido": "Uno. El que por acción u omisión contraria a la Ley originare el menoscabo de los caudales o efectos públicos quedará obligado a la indemnización de los daños y perjuicios causados.\nDos. La responsabilidad podrá ser directa o subsidiaria.\nTres. La responsabilidad directa será siempre solidaria y comprenderá todos los perjuicios causados.\nCuatro. Respecto a los responsables subsidiarios, la cuantía de su responsabilidad se limitará a los perjuicios que sean consecuencia de sus actos y podrá moderarse en forma prudencial y equitativa.\nCinco. Las responsabilidades, tanto directas como subsidiarias, se transmiten a los causahabientes de los responsables por la aceptación expresa o tácita de la herencia, pero sólo en la cuantía a que ascienda el importe líquido de la misma.",
+      "titulo_numero": "IV",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 39
+    },
+    {
+      "numero": "Artículo treinta y nueve.",
+      "tipo": "articulo",
+      "contenido": "Uno. Quedarán exentos de responsabilidad quienes actuaren en virtud de obediencia debida, siempre que hubieren advertido por escrito la imprudencia o ilegalidad de la correspondiente orden, con las razones en que se funden.\nDos. Tampoco se exigirá responsabilidad cuando el retraso en la rendición, justificación o examen de las cuentas y en la solvencia de los reparos sea debido al incumplimiento por otros de sus obligaciones específicas, siempre que el responsable así lo haya hecho constar por escrito.\nTres. Quedarán exentos de responsabilidad quienes hubiesen cometido actos que hayan sido amnistiados en los términos en los que se establezca en la ley.",
+      "titulo_numero": "IV",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 40
+    },
+    {
+      "numero": "Artículo cuarenta.",
+      "tipo": "articulo",
+      "contenido": "Uno. No habrá lugar a la exigencia de responsabilidad subsidiaria cuando se pruebe que el presunto responsable no pudo cumplir las obligaciones, cuya omisión es causa de aquélla, con los medios personales y materiales que tuviere a su disposición en el momento de producirse los hechos.\nDos. Cuando no existiere imposibilidad material para el cumplimiento de tales obligaciones, pero el esfuerzo que hubiera de exigirse al funcionario para ello resultara desproporcionado por el correspondiente a la naturaleza de su cargo, podrá atenuarse la responsabilidad conforme a lo dispuesto en el artículo treinta y ocho de esta Ley.",
+      "titulo_numero": "IV",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 41
+    },
+    {
+      "numero": "Artículo cuarenta y uno.",
+      "tipo": "articulo",
+      "contenido": "Uno. En los casos en que las responsabilidades a que se refiere el artículo treinta y ocho sean exigibles con arreglo a normas específicas en vía administrativa, la autoridad que acuerde la incoación del expediente la comunicará al Tribunal de Cuentas, que podrá en cualquier momento recabar el conocimiento del asunto.\nDos. Las resoluciones que se dicten por la Administración en que se declaren responsabilidades contables serán recurribles ante el Tribunal de Cuentas y resueltas por la Sala correspondiente.",
+      "titulo_numero": "IV",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 42
+    },
+    {
+      "numero": "Artículo cuarenta y dos.",
+      "tipo": "articulo",
+      "contenido": "Uno. Serán responsables directos quienes hayan ejecutado, forzado o inducido a ejecutar o cooperado en la comisión de los hechos o participado con posterioridad para ocultarlos o impedir su persecución.\nDos. Toda persona sujeta a obligación de rendir, justificar, intervenir o aprobar cuentas que dejare de hacerlo en el plazo marcado o lo hiciere con graves defectos o no solventara sus reparos, será compelido a ello mediante requerimiento conminatorio del Tribunal de Cuentas.\nTres. Si el requerimiento no fuere atendido en el improrrogable plazo señalado al efecto, el Tribunal de Cuentas podrá aplicar las medidas siguientes:\na) La formación de oficio de la cuenta retrasada a costa del moroso, siempre que existieran los elementos suficientes para realizarlo sin su cooperación.\nb) La imposición de multas coercitivas en la cuantía que legalmente se establezca.\nc) La propuesta a quien corresponda para la suspensión, la destitución, el cese o la separación del servicio de la autoridad, funcionario o persona responsable.\nCuatro. El Tribunal de Cuentas, en su caso, pasará el tanto de culpa al Fiscal general del Estado por el delito de desobediencia.",
+      "titulo_numero": "IV",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 43
+    },
+    {
+      "numero": "Artículo cuarenta y tres.",
+      "tipo": "articulo",
+      "contenido": "Uno. Son responsables subsidiarios quienes por negligencia o demora en el cumplimiento de obligaciones atribuidas de modo expreso por las Leyes o Reglamentos hayan dado ocasión directa o indirecta a que los caudales públicos resulten menoscabados o a que no pueda conseguirse el resarcimiento total o parcial del importe de las responsabilidades directas.\nDos. La exigencia de responsabilidades subsidiarias sólo procede cuando no hayan podido hacerse efectivas las directas.",
+      "titulo_numero": "IV",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 44
+    },
+    {
+      "numero": "Artículo cuarenta y cuatro.",
+      "tipo": "articulo",
+      "contenido": "El Tribunal de Cuentas ajustará su actuación a los procedimientos establecidos en su Ley de Funcionamiento, de acuerdo con lo previsto en la presente Ley Orgánica.",
+      "titulo_numero": "V",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 45
+    },
+    {
+      "numero": "Artículo cuarenta y cinco.",
+      "tipo": "articulo",
+      "contenido": "Los procedimientos para el ejercicio de la función fiscalizadora se impulsarán de oficio en todos sus trámites. La iniciativa corresponde al propio Tribunal, a las Cortes Generales y, en su ámbito, a las Asambleas Legislativas u otros órganos representativos análogos que se constituyan en las Comunidades Autónomas.",
+      "titulo_numero": "V",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 46
+    },
+    {
+      "numero": "Artículo cuarenta y seis.",
+      "tipo": "articulo",
+      "contenido": "Uno. Los órganos del Tribunal de Cuentas que fueren competentes para conocer de un asunto lo serán también para todas sus incidencias y para ejecutar las resoluciones que dictaren.\nDos. La competencia de los órganos de la jurisdicción contable no será prorrogable y podrá ser apreciada por los mismos incluso de oficio, previa audiencia de las partes.",
+      "titulo_numero": "V",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 47
+    },
+    {
+      "numero": "Artículo cuarenta y siete.",
+      "tipo": "articulo",
+      "contenido": "Uno. Estarán legitimados para actuar ante la jurisdicción contable quienes tuvieran interés directo en el asunto o fueren titulares de derechos subjetivos relacionados con el caso.\nDos. Las Administraciones públicas podrán ejercer toda clase de pretensiones ante el Tribunal de Cuentas, sin necesidad de declarar previamente lesivos los actos que impugnen.\nTres. Será pública la acción para la exigencia de la responsabilidad contable en cualquiera de los procedimientos jurisdiccionales del Tribunal de Cuentas. En ningún caso se exigirá la prestación de fianza o caución, sin perjuicio de la responsabilidad criminal y civil en que pudiera incurrir el que ejercite la acción indebidamente.",
+      "titulo_numero": "V",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 48
+    },
+    {
+      "numero": "Artículo cuarenta y ocho.",
+      "tipo": "articulo",
+      "contenido": "Uno. Los funcionarios y el personal al servicio de las Entidades del sector público legitimado para comparecer ante el Tribunal de Cuentas podrán hacerlo por sí mismos y asumir su propia defensa.\nDos. La representación y defensa del Estado y de sus Organismos autónomos en las actuaciones a que se refiere la presente Ley corresponderá a los Abogados del Estado. La de las Comunidades Autónomas, provincias y municipios a sus propios Letrados, a los Abogados que designen o a los Abogados del Estado.",
+      "titulo_numero": "V",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 49
+    },
+    {
+      "numero": "Artículo cuarenta y nueve.",
+      "tipo": "articulo",
+      "contenido": "Las resoluciones del Tribunal de Cuentas, en los casos y en la forma que determine su Ley de Funcionamiento, serán susceptibles del recurso de casación y revisión ante el Tribunal Supremo.",
+      "titulo_numero": "V",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 50
+    },
+    {
+      "numero": "DF-1",
+      "tipo": "disposicion_final",
+      "contenido": "Quedan derogadas cuantas disposiciones se opongan a lo preceptuado en la presente Ley Orgánica.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 51
+    },
+    {
+      "numero": "DF-2",
+      "tipo": "disposicion_final",
+      "contenido": "Uno. La Ley de Procedimiento Administrativo será supletoria de las normas reguladoras de los procedimientos fiscalizadores.\nDos. Para el ejercicio de las funciones jurisdiccionales del Tribunal de Cuentas, en cuanto no esté previsto en la presente Ley o en la de su funcionamiento, se aplicarán supletoriamente la Ley reguladora de la Jurisdicción Contencioso-Administrativa y las de Enjuiciamiento Civil y Criminal, por este mismo orden de prelación.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 52
+    },
+    {
+      "numero": "DF-3",
+      "tipo": "disposicion_final",
+      "contenido": "En el plazo de seis meses el Gobierno elevará a las Cortes Generales, a los efectos procedentes, un proyecto de ley para la ordenación del funcionamiento del Tribunal de Cuentas, con regulación de los distintos procedimientos y el Estatuto de su personal.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 53
+    },
+    {
+      "numero": "DT-1",
+      "tipo": "disposicion_transitoria",
+      "contenido": "Uno. En los términos que regulen la materia los Reglamentos de las Cortes Generales se constituirá una Comisión Mixta de ambas Cámaras encargada de las relaciones con el Tribunal de Cuentas, así como de estudiar y proponer a los respectivos Plenos las medidas y normas oportunas.\nDos. A las reuniones de dicha Comisión podrá asistir, si fuera convocado al efecto, el Presidente del Tribunal de Cuentas.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 54
+    },
+    {
+      "numero": "DT-2",
+      "tipo": "disposicion_transitoria",
+      "contenido": "Los actuales Presidente y Ministros del Tribunal de Cuentas cesarán en sus cargos el día de la publicación de los nombramientos de los Consejeros de Cuentas, con arreglo a lo establecido en la presente Ley, correspondiéndoles los derechos pasivos que se determinen por Decreto.\nLos mismos derechos serán reconocidos a los Presidentes, Ministros y Fiscales cesados por motivos políticos al término de la guerra civil.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 55
+    },
+    {
+      "numero": "DT-3",
+      "tipo": "disposicion_transitoria",
+      "contenido": "Los funcionarios actualmente al servicio del Tribunal de Cuentas continuarán desempeñando su función en la forma que determine la Ley de Funcionamiento y, en tanto no entre en vigor dicha Ley, en la forma establecida por la legislación vigente con las adaptaciones requeridas por la presente Ley Orgánica.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 56
+    },
+    {
+      "numero": "DT-4",
+      "tipo": "disposicion_transitoria",
+      "contenido": "Uno. El Tribunal de Cuentas podrá delegar en los órganos que han asumido las funciones del suprimido Servicio Nacional de Asesoramiento e Inspección de las Corporaciones Locales la revisión contable de aquéllas y la instrucción de los procedimientos de reintegro por alcance y de cancelación de fianzas.\nDos. La resolución de dichos asuntos en primera instancia corresponderá al Tribunal de Cuentas y los recursos serán enjuiciados por sus Secciones.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 57
+    },
+    {
+      "numero": "DT-5",
+      "tipo": "disposicion_transitoria",
+      "contenido": "Aquellos territorios en los cuales se hubieren constituido Entes Preautonómicos se equipararán, a efectos de esta Ley Orgánica, a lo previsto para las Comunidades Autónomas.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 58
+    },
+    {
+      "numero": "DT-6",
+      "tipo": "disposicion_transitoria",
+      "contenido": "Las Cortes Generales nombrarán, en el plazo máximo de dos meses, a los Consejeros de Cuentas del Tribunal en la forma establecida en el apartado uno del artículo treinta de esta Ley.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 59
+    }
+  ]
+}
