@@ -108,28 +108,32 @@ Se cargan **antes** de generar el banco de preguntas IA.
 | ~~PLJ~~ | ~~Pagos librados a justificar (RD 640/1987)~~ | ~~BOE-A-1987-12158~~ |
 | ~~ROCE~~ | ~~Reglamento Orgánico del Consejo de Estado~~ | ~~BOE-A-1980-18703~~ |
 
-#### FASE 5B – Leyes complementarias (media incidencia en supuestos)
+#### ~~FASE 5B~~ – ~~Leyes complementarias (media incidencia en supuestos)~~ ✅ COMPLETADA
 
-| Código | Nombre | BOE-ID |
-|--------|--------|--------|
-| LGPD | TR Ley General derechos personas con discapacidad | BOE-A-2013-12632 |
-| LAEPD | Acceso empleo personas con discapacidad | BOE-A-2004-21221 |
-| LSSF | TR Ley SS Funcionarios Civiles del Estado | BOE-A-2000-12140 |
-| LDEP | Ley 39/2006 Dependencia (TR Empleo) | BOE-A-2015-11431 |
-| LOE | LO 2/2006 Educación | BOE-A-2006-7899 |
-| LO4000 | LO 4/2000 Extranjeros en España | BOE-A-2000-544 |
-| LASIL | Ley 12/2009 Derecho de Asilo | BOE-A-2009-17242 |
-| LTRANS | Ley 4/2023 Trans e igualdad LGTBI | BOE-A-2023-5366 |
-| LGUM | Ley 2/2013 Garantía Unidad de Mercado | BOE-A-2013-12888 |
-| LGT22 | Ley 9/2022 General de Telecomunicaciones | BOE-A-2022-10757 |
-| LEPP | Ley 22/2022 Evaluación Políticas Públicas AGE | BOE-A-2022-21677 |
+| Código | Nombre | BOE-ID | Arts. | ley_id |
+|--------|--------|--------|-------|--------|
+| ~~LGPD~~ | ~~TR Ley General derechos personas con discapacidad~~ | ~~BOE-A-2013-12632~~ | 128 | 68 |
+| ~~LAEPD~~ | ~~RD 2271/2004 Acceso empleo discapacidad~~ | ~~BOE-A-2004-21221~~ | 17 | 69 |
+| ~~LSSF~~ | ~~TR Ley SS Funcionarios Civiles del Estado~~ | ~~BOE-A-2000-12140~~ | 54 | 70 |
+| ~~LDEP~~ | ~~TR Ley de Empleo (RDLeg 3/2015)~~ | ~~BOE-A-2015-11431~~ | 61 | 71 |
+| ~~LOE~~ | ~~LO 2/2006 Educación~~ | ~~BOE-A-2006-7899~~ | 250 | 72 |
+| ~~LO4000~~ | ~~LO 4/2000 Extranjeros en España~~ | ~~BOE-A-2000-544~~ | 117 | 73 |
+| ~~LASIL~~ | ~~Ley 12/2009 Derecho de Asilo~~ | ~~BOE-A-2009-17242~~ | 64 | 74 |
+| ~~LTRANS~~ | ~~Ley 4/2023 Trans e igualdad LGTBI~~ | ~~BOE-A-2023-5366~~ | 108 | 75 |
+| ~~LGUM~~ | ~~Ley 20/2013 Garantía Unidad de Mercado~~ | ~~BOE-A-2013-12888~~ | 47 | 77 |
+| ~~LGT22~~ | ~~Ley 11/2022 General de Telecomunicaciones~~ | ~~BOE-A-2022-10757~~ | 158 | 78 |
+| ~~LEPP~~ | ~~Ley 27/2022 Evaluación Políticas Públicas AGE~~ | ~~BOE-A-2022-21677~~ | 42 | 79 |
 
 ## Próximos pasos
 
 ### En curso
 - [FASE 4 — MEDIA completada 6/8] LCCU y PGCP pendientes con parser específico (ver anotaciones en tabla).
-- [FASE 5B] 11 normas complementarias pendientes — LGPD, LAEPD, LSSF, LDEP, LOE, LO4000, LASIL, LTRANS, LGUM, LGT22, LEPP.
-- [Tras FASE 5] Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€).
+- [⏭️ Siguiente] Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€).
+
+### Completado en sesión 29/06/2026 (FASE 5B)
+- [✅ FASE 5B completa] LGPD (128) + LAEPD (17) + LSSF (54) + LDEP (61) + LOE (250) + LO4000 (117) + LASIL (64) + LTRANS (108) + LGUM (47) + LGT22 (158) + LEPP (42) — 1.046 artículos con embeddings (ley_ids 68–79)
+- [ℹ️ Incidencia] LGUM: capítulo VIII numerado "IV" en el BOE — corregido en el JSON antes de cargar
+- [ℹ️ Corrección] LGT22: el TODO indicaba Ley 9/2022; el BOE-A-2022-10757 es Ley 11/2022 (actualizado)
 
 ### Completado en sesión 29/06/2026 (FASE 5A)
 - [✅ FASE 5A completa] RLEF (140) + RLGS (122) + BCPSA (22) + RRCP (27) + IGAE (58) + ACF (17) + PLJ (16) + ROCE (146) — 548 artículos con embeddings (ley_ids 60–67)
@@ -153,7 +157,6 @@ Se cargan **antes** de generar el banco de preguntas IA.
 - [✅ FASE 4 — bloque 1] LOIEMH (130) + LOIVG (107) + LJCA (175) + LGS (105) + LEF (134) — 651 arts. con embeddings
 
 ### Hitos pendientes — Normativa (GACE)
-- [FASE 5B] LGPD, LAEPD, LSSF, LDEP, LOE, LO4000, LASIL, LTRANS, LGUM, LGT22, LEPP (11 normas)
 - [FASE 4 pendiente] LCCU y PGCP con parser específico (baja urgencia)
 - Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€)
 

@@ -1,0 +1,459 @@
+{
+  "ley": {
+    "codigo": "LEPP",
+    "nombre": "Ley de institucionalización de la evaluación de políticas públicas en la Administración General del Estado",
+    "nombre_corto": "Ley 27/2022",
+    "tipo": "ley_ordinaria",
+    "numero_oficial": "Ley 27/2022, de 20 de diciembre",
+    "fecha_pub": "2022-12-21",
+    "url_boe": "https://www.boe.es/buscar/act.php?id=BOE-A-2022-21677",
+    "url_eli": "https://www.boe.es/eli/es/l/2022/12/20/27/con"
+  },
+  "titulos": [
+    {
+      "numero": "PRELIMINAR",
+      "denominacion": "Disposiciones generales",
+      "orden": 1
+    },
+    {
+      "numero": "I",
+      "denominacion": "Marco conceptual de la evaluación",
+      "orden": 2
+    },
+    {
+      "numero": "II",
+      "denominacion": "Práctica de la evaluación de políticas públicas",
+      "orden": 3
+    },
+    {
+      "numero": "III",
+      "denominacion": "Marco institucional de la evaluación de políticas públicas",
+      "orden": 4
+    }
+  ],
+  "capitulos": [
+    {
+      "titulo_numero": "II",
+      "numero": "I",
+      "denominacion": "Concepto y modalidades de evaluación de políticas públicas",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "II",
+      "denominacion": "Indicadores de seguimiento y evaluación de políticas públicas",
+      "orden": 2
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "III",
+      "denominacion": "Equipo evaluador",
+      "orden": 3
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "IV",
+      "denominacion": "El proceso evaluador",
+      "orden": 4
+    },
+    {
+      "titulo_numero": "II",
+      "numero": "V",
+      "denominacion": "Incorporación de los resultados de la evaluación a la toma de decisiones",
+      "orden": 5
+    },
+    {
+      "titulo_numero": "III",
+      "numero": "I",
+      "denominacion": "La planificación de la actividad de evaluación",
+      "orden": 1
+    },
+    {
+      "titulo_numero": "III",
+      "numero": "II",
+      "denominacion": "Organización institucional de la evaluación de las políticas públicas en la Administración General del Estado",
+      "orden": 2
+    }
+  ],
+  "secciones": [],
+  "articulos": [
+    {
+      "numero": "1",
+      "tipo": "articulo",
+      "contenido": "1. Esta ley tiene por objeto estructurar el sistema público de evaluación de políticas públicas en la Administración General del Estado con el fin de institucionalizar la evaluación como herramienta de aprendizaje colectivo y organizativo, de mejora del servicio público, rendición de cuentas y transparencia, contribuyendo a la eficacia y eficiencia de la acción pública.\n2. A efectos de esta ley, el sistema público de evaluación de políticas públicas está integrado por la organización institucional de la evaluación en la Administración General del Estado y por las medidas destinadas a la formalización y sistematización de las prácticas de evaluación.",
+      "titulo_numero": "PRELIMINAR",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 1
+    },
+    {
+      "numero": "2",
+      "tipo": "articulo",
+      "contenido": "A efectos de esta ley, se aplicarán las siguientes definiciones:\n1. Política pública: Es el conjunto de actuaciones dirigidas a la satisfacción del interés general o a la solución de un problema o necesidad públicos, en cualquiera de sus formas de despliegue en normas, estrategias, planes, programas, medidas, o cualquier otra denominación equivalente.\n2. Objeto de la evaluación: Se considera a la intervención sobre la que se realiza el proceso de evaluación y que podrá ser una política pública, cualquier dimensión, elemento o característica de la misma, o un conjunto de ellas.\n3. Metodología de evaluación: Es el conjunto coherente de técnicas, instrumentos y herramientas cuantitativas y cualitativas que se siguen en el proceso de evaluación de una política pública para realizar los análisis necesarios y obtener evidencias que apoyen la construcción de conclusiones y recomendaciones.\n4. Enfoque de la evaluación: Es la orientación del proceso de evaluación que adopta el equipo evaluador en función del marco teórico y la metodología que aplica en cada caso.\n5. Encargo de la evaluación: Es la acción de encomendar la realización de la evaluación de una política pública a un equipo evaluador por parte del órgano responsable de la evaluación de esa política.\n6. Dato: Es la representación de una variable cualitativa o cuantitativa, que permite el conocimiento exacto de un hecho o sirve para deducir las consecuencias derivadas del mismo.\n7. Indicador: Es un dato o información, individual o agrupada, que permite medir el progreso o efectos de una política pública.",
+      "titulo_numero": "PRELIMINAR",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 2
+    },
+    {
+      "numero": "3",
+      "tipo": "articulo",
+      "contenido": "1. Las disposiciones de la Ley se aplicarán a la evaluación de las políticas públicas desarrolladas por la Administración General del Estado y sus organismos públicos vinculados o dependientes.\n2. La fiscalización de la actividad económico-financiera de la Administración General del Estado correspondiente a sus políticas públicas se realizará por el Tribunal de Cuentas de acuerdo con los principios de legalidad, eficiencia, economía, transparencia, sostenibilidad e igualdad de género, en los términos establecidos en su normativa reguladora.\n3. Las evaluaciones ex post de revisión del gasto público que se consideren necesarias se realizarán por la Autoridad Independiente de Responsabilidad Fiscal, AIReF, en los términos establecidos en su normativa reguladora.\n4. Quedarán excluidas del ámbito de aplicación de esta ley todas aquellas actuaciones de auditoría, control de eficacia, supervisión continua, control interno de la actividad económica y financiera, de calidad de los servicios y cualquier otra actividad de evaluación que sea objeto de regulación específica.\n5. La presente ley tendrá carácter supletorio respecto de aquellos aspectos de las actividades de evaluación de políticas públicas no previstos en la normativa específica.",
+      "titulo_numero": "PRELIMINAR",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 3
+    },
+    {
+      "numero": "4",
+      "tipo": "articulo",
+      "contenido": "La evaluación de políticas públicas tendrá como objetivos finales:\na) Optimizar el proceso de toma de decisiones públicas, sugiriendo recomendaciones sobre su diseño e implementación.\nb) Mejorar la planificación y los instrumentos de la acción pública.\nc) Impulsar la innovación en la actuación del sector público.\nd) Colaborar en la consecución de la eficiencia en la asignación y utilización de los recursos públicos, de forma que se garantice una adecuada gestión económica, y el cumplimiento del principio de sostenibilidad financiera y de los fines perseguidos.\ne) Permitir, con sistemas de recogida, valoración y difusión de la información, el control de responsabilidades y la rendición de cuentas a la sociedad.\nf) Contribuir a mejorar la situación de los retos de la sociedad y del desarrollo sostenible.",
+      "titulo_numero": "PRELIMINAR",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 4
+    },
+    {
+      "numero": "5",
+      "tipo": "articulo",
+      "contenido": "Las políticas públicas deberán estar sólidamente formuladas en sus aspectos técnicos, basadas en evidencias, deberán responder a las necesidades y desafíos de la sociedad, identificar su valor público a partir de criterios y definir una métrica que permita su evaluación.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 5
+    },
+    {
+      "numero": "6",
+      "tipo": "articulo",
+      "contenido": "Son aspectos técnicos comunes del diseño de las políticas públicas los siguientes componentes:\na) Identificación y definición del problema, el propósito público a cuyo servicio está la política, la lógica o teoría que sustenta el diseño, los instrumentos de implementación de la política pública, y los mecanismos de seguimiento y evaluación.\nb) Elementos colaborativos en el diseño y la implementación, como la cocreación, la construcción con la ciudadanía, en partenariados, o coparticipación.\nc) Gobernanza de los datos.\nd) Métricas en su diseño e implementación que permitan el seguimiento y la evaluación de las políticas públicas.\ne) Impactos de la política pública: sociales, ambientales, de cambio climático, de género, territoriales, de reto demográfico, transformación digital, empleo, económicos y científicos, y cualesquiera otros que sean previstos.\nf) Grado de innovación que implica o aporta.\ng) Otros que puedan formularse.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 6
+    },
+    {
+      "numero": "7",
+      "tipo": "articulo",
+      "contenido": "En su formulación, las políticas públicas atenderán a los siguientes criterios de valor público para su evaluación:\na) Coherencia.\nb) Pertinencia.\nc) Eficacia.\nd) Eficiencia.\ne) Sostenibilidad económica, social, laboral, ambiental o ecológica.\nf) Igualdad de trato y de oportunidades.\ng) Crecimiento económico y equidad.\nh) Ética pública: Valores constitucionales y de servicio público.\ni) Otros criterios en función de la naturaleza de la política pública.\nj) Prevención de la despoblación.",
+      "titulo_numero": "I",
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 7
+    },
+    {
+      "numero": "8",
+      "tipo": "articulo",
+      "contenido": "1. La evaluación de una política pública, a efectos de esta ley, es el proceso sistemático y razonado de generación de conocimiento, a partir de la recopilación, análisis e interpretación de información, encaminado a la comprensión global de una política pública, para alcanzar un juicio valorativo, basado en evidencias, respecto de su diseño, puesta en práctica y efectos.\n2. La evaluación será independiente, objetiva y participativa. Se fomentará la adopción de un enfoque integral en su realización, y sus resultados, conclusiones y recomendaciones serán públicos.\n3. La evaluación tendrá una finalidad y alcance definidos y deberá asentarse en el rigor científico, la objetividad y la solidez metodológica. Con carácter general, atenderá a la perspectiva de género, del equilibrio intergeneracional, del reto demográfico y de la cohesión territorial, de la transformación digital, de la sostenibilidad social y medioambiental. Se valorará la inclusión de otras perspectivas por razón de la naturaleza y el objeto de la evaluación.\n4. En cada proyecto de evaluación deberá destinarse una partida económica a tal fin. El encargo de evaluación especificará la cuantía de la citada partida de forma clara y ajustada a las necesidades reales.",
+      "titulo_numero": "II",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 8
+    },
+    {
+      "numero": "9",
+      "tipo": "articulo",
+      "contenido": "1. Dependiendo de su contenido y objeto, la evaluación será:\na) Evaluación de diseño, que se centrará en los aspectos relacionados con los elementos que justifican la necesidad de la política pública y el diseño de las políticas.\nb) Evaluación de implementación, que tendrá por objeto la valoración del despliegue y el progreso de la ejecución de la política pública, así como el análisis de los mecanismos internos y los recursos.\nc) Evaluación de resultados e impactos, que prestará especial atención a la consecución de los objetivos previamente establecidos, analizando los efectos sobre sus destinatarios y sobre la población en general.\n2. Las evaluaciones adoptarán un enfoque integral en su realización, incluyendo la evaluación del diseño, de la implementación y de los resultados de la política pública.\n3. Sin perjuicio de la modalidad de evaluación que se establezca, se favorecerán instrumentos que garanticen la participación de los agentes implicados y de los sectores de la ciudadanía afectados por la política pública. Preferentemente, se promoverá un enfoque inclusivo, que corrija las inequidades sociales, abordando la heterogeneidad social y comunitaria. Los resultados obtenidos en el proceso de participación serán públicos y deberán ser tenidos en cuenta en la evaluación. En todo caso, deberá motivarse la omisión de los argumentos deducidos del proceso participativo.",
+      "titulo_numero": "II",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 9
+    },
+    {
+      "numero": "10",
+      "tipo": "articulo",
+      "contenido": "1. La evaluación se podrá realizar en una o varias de las fases en la que se encuentre la política pública objeto de evaluación.\nSegún la fase temporal de la política pública en la que se realice, la evaluación será:\na) Evaluación ex ante , cuando la política pública se encuentre en la fase de planificación, formulación o diseño.\nb) Evaluación intermedia, durante la implementación de la política pública objeto de evaluación.\nc) Evaluación ex post , con posterioridad a la finalización de la ejecución.\n2. Se fijará la realización de evaluaciones intermedias en políticas públicas de duración de cuatro años o más de vigencia para posibilitar la revisión y, en su caso, la modificación de la política pública objeto de evaluación para garantizar el cumplimiento de sus objetivos, sus resultados e impactos.",
+      "titulo_numero": "II",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 10
+    },
+    {
+      "numero": "11",
+      "tipo": "articulo",
+      "contenido": "1. Los anteproyectos de ley, los programas o planes estratégicos, y todo tipo de documento de planificación estratégica e iniciativas que desarrollen políticas públicas deberán incorporar, antes de ser aprobados, un documento técnico de evaluabilidad, denominado Informe de Evaluabilidad, con el fin de verificar la calidad y precisión del diagnóstico realizado, la viabilidad, coherencia y consistencia del diseño elaborado, la claridad, suficiencia y accesibilidad del sistema de información y evaluación previsto, así como si existen suficientes capacidades, recursos y compromisos para que la evaluación pueda implementarse.\n2. En el análisis de evaluabilidad se valorarán, como mínimo, los siguientes elementos:\na) La calidad de la planificación, que incluirá un análisis del contexto socioeconómico de la política pública y del impacto sobre el bienestar ecológico, económico y social de las generaciones presentes y futuras; la relación existente entre los problemas y los objetivos planteados y su lógica causal; y un examen de la coherencia interna de la estrategia propuesta en la política pública objeto de evaluación.\nb) La comprobación de la existencia de un sistema de información, seguimiento y evaluación que posibilite la monitorización periódica y sistemática de la ejecución de la política pública, y la disponibilidad de los datos, en su caso desagregados por sexo, necesarios para su evaluación y los recursos presupuestarios disponibles. Este sistema debe posibilitar la monitorización periódica y sistemática de la ejecución de la política pública, e identificar de manera preliminar los datos necesarios para su evaluación.\nc) La gobernanza de la política pública objeto de evaluación, en la que se analizarán los recursos humanos y materiales y se comprobará la existencia de mecanismos de coordinación y cooperación entre partes implicadas. Se incluirán las responsabilidades de cada nivel y las diferentes estructuras de dichos mecanismos, así como el formato de comunicación.\n3. El análisis de evaluabilidad podrá realizarse por un equipo evaluador interno o externo al órgano responsable de la política pública objeto de evaluación, siempre que se garantice la independencia de criterio del equipo evaluador.\n4. El análisis se documentará en un Informe de Evaluabilidad que contendrá las conclusiones y recomendaciones para la mejora de la evaluación, e identificará, en su caso, qué elementos de la política pública necesitan mejorarse y sus posibles alternativas.\n5. Las recomendaciones del Informe de Evaluabilidad serán tenidas en cuenta por el órgano responsable de la política pública, debiendo explicar, en su caso, su separación de las mismas.\n6. El Informe de Evaluabilidad y, en su caso, la explicación de la separación de las recomendaciones se remitirá a la Unidad de Coordinación de Evaluación de políticas públicas en el departamento ministerial para su seguimiento.\n7. Los Planes estratégicos que sean aprobados, previa obtención del informe favorable de evaluabilidad, y se ajusten a los principios de buena gestión económico-financiera y sostenibilidad presupuestaria de las finanzas públicas, podrán tener preferencia en su presupuestación y financiación en la forma que se determine por el ministerio competente en materia de función pública.\n8. Las Unidades de Coordinación de Evaluación de políticas públicas informarán a la Agencia Estatal de Evaluación de Políticas Públicas, de dicho seguimiento.\n9. La Agencia Estatal de Evaluación de Políticas Públicas, elaborará la metodología y el modelo de Informe de Evaluabilidad a fin de garantizar la consistencia y estandarización del análisis de evaluabilidad.",
+      "titulo_numero": "II",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 11
+    },
+    {
+      "numero": "12",
+      "tipo": "articulo",
+      "contenido": "1. Las políticas públicas contarán desde su diseño con indicadores que faciliten su gestión y permitan su seguimiento y evaluación y estarán recogidos en un sistema de información adecuado.\n2. El sistema de información, seguimiento y evaluación referido en el artículo 11.2.b), contará, al menos, con los siguientes tipos de indicadores:\na) Indicadores de realización, que recogerán los datos necesarios para medir el estado de ejecución de las acciones que comprendan dichas políticas públicas.\nb) Indicadores de resultados, relativos al grado de cumplimiento de los objetivos de la política pública o los cambios vinculados a dichos objetivos.\nc) Indicadores de impacto, relativos al efecto de los cambios vinculados a los resultados de la política pública.\n3. Los indicadores serán específicos, medibles, alcanzables, realistas y temporalmente determinados, y fundados en un sistema de información fiable.\n4. La Agencia Estatal de Evaluación de Políticas Públicas elaborará metodologías para facilitar la elaboración y selección de indicadores para el seguimiento y la evaluación de las políticas públicas, incluyendo sus elementos básicos.",
+      "titulo_numero": "II",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 12
+    },
+    {
+      "numero": "13",
+      "tipo": "articulo",
+      "contenido": "1. Las políticas públicas contendrán indicadores para la evaluación ex ante de su valor público.\n2. La Agencia Estatal de Evaluación de Políticas Públicas elaborará indicadores generales de evaluación ex ante de la medición efectiva de los resultados esperados en la igualdad de género, en la infancia, en el equilibrio intergeneracional, en el reto demográfico, en la transformación digital, empleo, justicia social y sostenibilidad medioambiental. Podrán participar en la construcción de estos indicadores los departamentos ministeriales competentes en la materia propia de la perspectiva de análisis que incorporará el indicador.\n3. La Agencia Estatal de Evaluación de Políticas Públicas establecerá, en coordinación con los departamentos ministeriales, el procedimiento de elaboración y selección de los indicadores de evaluación ex ante y la participación de los ministerios competentes por razón de la materia.",
+      "titulo_numero": "II",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 13
+    },
+    {
+      "numero": "14",
+      "tipo": "articulo",
+      "contenido": "1. Se crea el Sistema de Indicadores Comunes con la finalidad de contribuir a la gestión eficaz y eficiente de las políticas públicas, el seguimiento adecuado que facilite una toma de decisiones basada en evidencias para la consecución de sus fines, la evaluación de sus resultados y servir como herramienta de rendición de cuentas y transparencia.\n2. El sistema comprenderá al menos los siguientes elementos:\na) Los indicadores comunes, los criterios de selección de estos indicadores y su estructura básica, así como la frecuencia de recogida de datos.\nb) Los mecanismos de acceso, uso e intercambio de información.\n3. Las políticas públicas deberán incorporar a sus sistemas de información, seguimiento y evaluación indicadores comunes, de acuerdo con los criterios de selección que se acuerden técnicamente y que estén determinados en función de la política pública. En todo caso, los criterios serán públicos.\n4. La Agencia Estatal de Evaluación de Políticas Públicas, será la responsable del diseño, puesta en marcha, gestión y seguimiento del sistema común de indicadores para las políticas públicas. La definición de la estructura y contenido del sistema se realizará en colaboración con los departamentos ministeriales y organismos con competencias relacionadas con la materia correspondiente y, en su caso, con cualesquiera otros organismos vinculados al tratamiento del dato.\n5. El Sistema de Indicadores Comunes se alojará en una base de datos a la que se incorporarán los indicadores sectoriales identificados en el ámbito interno de cada Departamento, así como los de carácter transversal en aquellas materias en las que se haya establecido legalmente.",
+      "titulo_numero": "II",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 14
+    },
+    {
+      "numero": "15",
+      "tipo": "articulo",
+      "contenido": "1. A efectos de esta ley, tendrá la consideración de equipo evaluador el órgano o unidad administrativa, persona física o jurídica que recibe el encargo de evaluación.\n2. Con carácter general, la evaluación de políticas públicas se realizará por un equipo evaluador externo al órgano responsable de la política pública a evaluar. No obstante, se podrán constituir equipos mixtos con las personas responsables de la planificación de la política pública y de la evaluación.\n3. El equipo evaluador deberá garantizar su independencia de criterio, imparcialidad, neutralidad y ausencia de conflicto de intereses, aportando la declaración responsable de cada integrante.",
+      "titulo_numero": "II",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 15
+    },
+    {
+      "numero": "16",
+      "tipo": "articulo",
+      "contenido": "La Agencia Estatal de Evaluación de Políticas Públicas, en colaboración con el Instituto Nacional de Administración Pública y, en su caso, con el Instituto de Estudios Fiscales, identificará las competencias necesarias para el desempeño de la función evaluadora y diseñará planes específicos de formación en materia de evaluación de políticas públicas para las empleadas y empleados públicos.",
+      "titulo_numero": "II",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 16
+    },
+    {
+      "numero": "17",
+      "tipo": "articulo",
+      "contenido": "El equipo evaluador tendrá en cuenta los siguientes principios de conducta en el ejercicio de la función evaluadora:\na) Independencia.\nb) Imparcialidad.\nc) Objetividad.\nd) Eficacia y eficiencia.\ne) Excelencia profesional.\nf) Confidencialidad, especialmente en el tratamiento de datos personales, patrimoniales o de cualquier otra índole.\ng) Transparencia.\nh) Igualdad y no discriminación.\ni) Respeto a la sostenibilidad social, territorial y medioambiental.",
+      "titulo_numero": "II",
+      "capitulo_numero": "III",
+      "seccion_numero": null,
+      "orden_global": 17
+    },
+    {
+      "numero": "18",
+      "tipo": "articulo",
+      "contenido": "1. El proceso de evaluación se desarrollará utilizando una metodología de evaluación sistemática y se articulará en diferentes fases que contendrán, en todo caso, el análisis del encargo de la evaluación, el diseño de la evaluación, la recopilación y análisis de la información, el Informe Final de Evaluación y la difusión y el seguimiento de los resultados.\n2. El proceso de evaluación se desarrollará garantizando la participación de los actores interesados, en función de la naturaleza y los objetivos de la evaluación.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 18
+    },
+    {
+      "numero": "19",
+      "tipo": "articulo",
+      "contenido": "1. El proceso de evaluación se inicia con el encargo de evaluación, que se formalizará mediante un documento en el que figurará el órgano responsable de la política pública a evaluar, el objeto, los objetivos, la justificación, el alcance, el plazo de entrega y el presupuesto de la evaluación.\n2. El encargo definirá la gobernanza del proceso de evaluación, las obligaciones y responsabilidades de cada una de las partes, la planificación de la evaluación y los mecanismos de coordinación y seguimiento y, en su caso, la presentación de un informe de progreso.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 19
+    },
+    {
+      "numero": "20",
+      "tipo": "articulo",
+      "contenido": "1. En la fase de diseño de la evaluación se delimitarán el alcance y la tipología de la evaluación, se determinarán los elementos de evaluación, y se explicitarán los recursos necesarios para su realización.\n2. Deberá describirse la metodología empleada para la recopilación y análisis de la información. En la selección de herramientas, se dará preferencia a la utilización mixta de técnicas cuantitativas y cualitativas y a la triangulación de datos y resultados.\n3. Constituyen los elementos de evaluación las preguntas y criterios de evaluación, los indicadores, las fuentes y la tipología de la información. Estos elementos se recogerán en una matriz de evaluación.\n4. Como apoyo al diseño de la evaluación se llevará a cabo una reconstrucción de la lógica de la política pública, que consiste en la realización de un análisis del contexto, del problema, de la teoría causal de la política pública y de sus objetivos, actividades, medidas y recursos.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 20
+    },
+    {
+      "numero": "21",
+      "tipo": "articulo",
+      "contenido": "1. El equipo evaluador diseñará un plan de recopilación de datos coherente con la metodología definida en el diseño de la evaluación que contemplará, al menos, las fuentes de datos, el método y el instrumento de recopilación y la muestra. El plan de recopilación de datos podrá ampliarse a lo largo de la evaluación.\n2. Se adoptarán las medidas necesarias para garantizar al equipo evaluador el acceso a la información que precise para llevar a cabo la evaluación, en el contexto y con los límites determinados en la misma.\n3. El acceso e intercambio de datos recogidos en este artículo se realizarán de acuerdo con lo previsto en el Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo, de 27 de abril de 2016, relativo a la protección de las personas físicas en lo que respecta al tratamiento de datos personales y a la libre circulación de estos datos, en la Ley Orgánica 3/2018, de 5 de diciembre, de Protección de Datos Personales y garantía de los derechos digitales, sus desarrollos reglamentarios, y en cualquier otra legislación específica sobre acceso, cesión y comunicación de datos.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 21
+    },
+    {
+      "numero": "22",
+      "tipo": "articulo",
+      "contenido": "1. El equipo evaluador redactará un informe comprensivo de los trabajos realizados, así como de las evidencias obtenidas, que sostendrán las conclusiones y recomendaciones. Recogerá, al menos, la información referente al equipo evaluador y al órgano responsable de la política pública evaluada, una descripción del encargo y la política pública evaluada, el enfoque y la metodología de la evaluación, los resultados del análisis, y las conclusiones y recomendaciones, y se presentará en un Informe Final de Evaluación acompañado por un resumen ejecutivo y, en su caso, los anexos necesarios. El resumen ejecutivo contendrá la información suficiente con lenguaje claro para su comprensión por parte de la ciudadanía.\n2. Con carácter previo a la elaboración del Informe Final, el equipo evaluador remitirá un borrador al órgano responsable de la política pública para las observaciones oportunas en el plazo que se acuerde al respecto.\n3. El equipo evaluador valorará y, en su caso, incorporará las observaciones en el Informe Final de Evaluación.\n4. El Informe Final de Evaluación será publicado en el plazo de un mes desde su recepción, en el portal temático de evaluación de políticas públicas, sin perjuicio de su publicación también en el Portal de Transparencia de la Administración General del Estado, garantizando el acceso general y resultando de aplicación las obligaciones en materia de publicidad activa recogidas en la Ley 19/2013, de 9 de diciembre, de transparencia, acceso a la información y buen gobierno.\n5. La Agencia Estatal de Evaluación de Políticas Públicas elaborará una metodología que incluirá los estándares de calidad y reglas de normalización para la elaboración del Informe Final de Evaluación, y podrá verificar su cumplimiento.",
+      "titulo_numero": "II",
+      "capitulo_numero": "IV",
+      "seccion_numero": null,
+      "orden_global": 22
+    },
+    {
+      "numero": "23",
+      "tipo": "articulo",
+      "contenido": "1. A los efectos de promover la incorporación de los resultados de la evaluación de políticas públicas al proceso de toma de decisiones, el órgano responsable de la política pública objeto de evaluación deberá elaborar, a partir del Informe Final de Evaluación, un Informe de Resultados, en un plazo máximo de dos meses desde la publicación del Informe Final de Evaluación.\n2. El Informe de Resultados indicará las medidas que se van a adoptar en relación con las recomendaciones y, en su caso, justificará las razones que llevan a la inaplicación de aquellas que no se vayan a adoptar.\n3. La Unidad de Coordinación de Evaluación de políticas públicas será la encargada de realizar el seguimiento de los resultados de las evaluaciones desarrolladas en su ministerio, en coordinación con la Agencia Estatal de Evaluación de Políticas Públicas.",
+      "titulo_numero": "II",
+      "capitulo_numero": "V",
+      "seccion_numero": null,
+      "orden_global": 23
+    },
+    {
+      "numero": "24",
+      "tipo": "articulo",
+      "contenido": "1. Con carácter cuatrienal, el Consejo de Ministros aprobará y publicará, a propuesta de la persona titular del ministerio competente en materia de función pública, un Plan de Evaluaciones Estratégicas elaborado por la Agencia Estatal de Evaluación de Políticas Públicas.\n2. El Plan de Evaluaciones Estratégicas detallará las políticas públicas estatales que serán objeto de evaluación, el tipo de evaluación que se realizará en cada caso, así como los recursos y plazos de realización previstos.\n3. Las políticas públicas que se vayan a incluir serán relevantes desde el punto de vista del impacto social y económico y del gasto previsto.\n4. Mediante real decreto se determinará el procedimiento de elaboración del Plan de Evaluaciones Estratégicas, que incluirá los mecanismos de coordinación y el refuerzo de la complementariedad de las actuaciones de evaluación de los organismos públicos de la Administración General del Estado competentes en revisión y control del gasto público.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 24
+    },
+    {
+      "numero": "25",
+      "tipo": "articulo",
+      "contenido": "1. Con carácter bienal, cada departamento elaborará un Plan de Evaluación del Departamento para los dos ejercicios siguientes.\n2. El Plan de Evaluación departamental contendrá la planificación de las actividades en materia de evaluación, que podrá incluir la realización de evaluaciones de políticas públicas y otras actividades de apoyo y fomento de la evaluación.\n3. El Plan de Evaluación departamental se presentará a la Comisión Superior de Evaluación con carácter previo a su aprobación por parte de la Agencia Estatal de Evaluación de Políticas Públicas. El seguimiento del Plan de Evaluación departamental corresponderá igualmente a la Agencia Estatal de Evaluación de Políticas Públicas.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 25
+    },
+    {
+      "numero": "26",
+      "tipo": "articulo",
+      "contenido": "1. Cada ministerio asegurará la realización de una evaluación ex ante y una evaluación ex post de aquellas políticas públicas de su ámbito competencial que tengan especial repercusión en el presupuesto o sean de gran relevancia por su impacto esperado en el ámbito social o económico. Reglamentariamente se aprobarán los criterios por los que se determinará la relevancia de las políticas públicas en términos presupuestarios, económicos y de su impacto social.\n2. Los documentos en los que se formalicen o aprueben las políticas públicas referidas en el apartado anterior incluirán la programación de las evaluaciones a realizar.\n3. Las evaluaciones ex ante del apartado 1 tendrán por finalidad analizar, con un enfoque transversal y participativo, el valor público de las actuaciones objeto de análisis. A estos efectos son relevantes aspectos como el impacto en la igualdad de género, en materia de reto demográfico, en la transformación digital, en la transición verde, o en las repercusiones en el ámbito de la infancia, la inclusión social o en la racionalidad administrativa, entre otros.\n4. También se preverá una evaluación intermedia si las políticas públicas del apartado 1 tienen una duración estimada de ejecución de cuatro o más años.\n5. Las evaluaciones de carácter obligatorio a las que se refiere el presente artículo se entienden sin perjuicio de las demás evaluaciones que se determinen por parte del departamento ministerial en el Plan de Evaluación departamental correspondiente.",
+      "titulo_numero": "III",
+      "capitulo_numero": "I",
+      "seccion_numero": null,
+      "orden_global": 26
+    },
+    {
+      "numero": "27",
+      "tipo": "articulo",
+      "contenido": "1. En cada departamento ministerial se encomendará a uno de sus órganos las funciones de coordinación y seguimiento de la actividad en materia de evaluación de políticas públicas en el ámbito del ministerio y sus organismos públicos vinculados o dependientes.\n2. Dicho órgano tendrá la consideración de Unidad de Coordinación de Evaluación de políticas públicas y actuará como interlocutor ante la Agencia Estatal de Evaluación de Políticas Públicas, en relación con las citadas funciones.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 27
+    },
+    {
+      "numero": "28",
+      "tipo": "articulo",
+      "contenido": "1. Mediante real decreto se creará la Comisión Superior de Evaluación como órgano colegiado de coordinación, cooperación y participación en materia de evaluación de políticas públicas en la Administración General del Estado.\n2. Entre sus fines estará impulsar y extender la cultura de evaluación en la Administración General del Estado, promover la formación en materia de evaluación de políticas públicas, informar sobre la propuesta del Plan de Evaluaciones Estratégicas del Gobierno y participar en la Estrategia para reforzar el sistema público de evaluación.\n3. Podrán constituirse grupos de trabajo específicos para aquellos asuntos que lo requieran. En todo caso se constituirá un Grupo de Trabajo de indicadores para colaborar en la definición y construcción de los indicadores generales de evaluación ex ante contenidos en el artículo 13.2.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 28
+    },
+    {
+      "numero": "29",
+      "tipo": "articulo",
+      "contenido": "1. De acuerdo con lo previsto en el artículo 91 de la Ley 40/2015, de 1 de octubre, del Régimen Jurídico del Sector Público, se autoriza la creación de la Agencia Estatal de Evaluación de Políticas Públicas, como organismo público con personalidad jurídica pública y patrimonio propios y plena capacidad de obrar. En el ejercicio de sus funciones de evaluación la Agencia actuará con independencia y autonomía.\n2. La actuación de la Agencia responderá a los siguientes fines:\na) La supervisión, coordinación e impulso del sistema público de evaluación de políticas públicas en la Administración General del Estado.\nb) La coordinación, acompañamiento y apoyo a los departamentos ministeriales en las materias recogidas en las disposiciones de esta ley.\nc) La promoción de las relaciones institucionales con los sistemas de evaluación de políticas públicas de otras administraciones públicas.\nd) La realización de aquellas evaluaciones que se determine.\n3. De acuerdo con los fines enunciados, corresponderá a la Agencia, sin perjuicio de su desarrollo estatutario:\na) La formulación y difusión de metodologías de evaluación.\nb) La definición de indicadores generales de evaluación ex ante.\nc) El diseño, gestión y seguimiento del Sistema de Indicadores Comunes del artículo 14.\nd) La elaboración de la propuesta del Plan de Evaluaciones Estratégicas del Gobierno.\ne) La aprobación de los Planes de Evaluación departamentales.\nf) La realización del Informe de Evaluabilidad de las políticas públicas incluidas en el Plan de Evaluaciones Estratégicas del Gobierno.\ng) La elaboración de la Memoria del estado general de la institucionalización de la evaluación de las políticas públicas.\nh) El desarrollo de un mecanismo de coordinación para el seguimiento de los resultados y la verificación del cumplimiento de las recomendaciones de las evaluaciones.\ni) El fomento de la cultura evaluadora y de la formación de las empleadas y empleados públicos en evaluación de políticas públicas.\nj) La elaboración de la propuesta de una estrategia de ámbito estatal para reforzar el sistema público de evaluación en las administraciones públicas.\nk) La cooperación con otras administraciones públicas en materia de evaluación.\nl) La promoción de la colaboración con Universidades y otras instituciones de investigación.\nm) Representar a la Administración General del Estado ante organismos e instituciones internacionales en materia de evaluación de políticas públicas.\nn) La actualización del portal temático de evaluación de políticas públicas.\nñ) La emisión de informe preceptivo sobre la regulación específica en materia de evaluación que se adopte en las actividades de evaluación referidas en el artículo 3.4.\no) Cualesquiera otras que le asigne la normativa vigente.\n4. Estará adscrita a la Secretaría de Estado de Función Pública. Se regirá por lo establecido en su estatuto orgánico y por lo dispuesto en la Ley 40/2015, de 1 de octubre, de Régimen Jurídico del Sector Público.\n5. La asistencia jurídica, consistente en el asesoramiento y la representación y defensa en juicio de la Agencia, corresponderá a los abogados del Estado integrados en el Servicio Jurídico del Estado.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 29
+    },
+    {
+      "numero": "30",
+      "tipo": "articulo",
+      "contenido": "La Agencia Estatal de Evaluación de Políticas Públicas, presentará en el último trimestre de cada año una Memoria a las Cortes Generales en el que se dará cuenta del estado general de la institucionalización de la evaluación de políticas públicas, el seguimiento de los resultados de las evaluaciones y del cumplimiento de esta ley. Esta memoria se publicará en el portal web de la Agencia Estatal de Evaluación de Políticas Públicas y en el portal temático de evaluación de políticas públicas.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 30
+    },
+    {
+      "numero": "31",
+      "tipo": "articulo",
+      "contenido": "1. Se creará el Consejo General de Evaluación, como órgano colegiado de naturaleza participativa y de carácter consultivo y asesor, adscrito a la Administración General del Estado a través del ministerio competente en materia de función pública.\n2. Los fines del Consejo serán la promoción de la colaboración y cooperación institucional, en la elaboración el fomento de la evaluación de las políticas públicas y de su práctica, así como de la participación de la sociedad civil. A tal efecto, podrá elaborar estudios e informes, llevar a cabo actividades que redunden en la difusión y promoción de la evaluación de las políticas públicas.\n3. El Consejo intervendrá en la elaboración de la Estrategia de ámbito estatal para reforzar el sistema público de evaluación.\n4. Reglamentariamente se determinará su composición, organización y funcionamiento. Su composición será equilibrada en mujeres y hombres, según lo dispuesto en el artículo 54 de la Ley Orgánica 3/2007, de 22 de marzo, de igualdad efectiva de mujeres y hombres.\n5. El funcionamiento del Consejo General de Evaluación no supondrá incremento de gasto público y será atendido con los medios personales, técnicos y presupuestarios de la Agencia Estatal de Evaluación de Políticas Públicas.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 31
+    },
+    {
+      "numero": "32",
+      "tipo": "articulo",
+      "contenido": "1. Para facilitar el intercambio de información, y fomentar la difusión de las prácticas de excelencia en evaluación de políticas públicas se creará un portal temático de evaluación de políticas públicas. El portal web tendrá también carácter de espacio colaborativo y participativo de las administraciones públicas y de la sociedad civil.\n2. La gestión y el mantenimiento del portal corresponderá a la Agencia Estatal de Evaluación de Políticas Públicas, con independencia de las aportaciones que puedan realizar las instituciones participantes, de conformidad con los acuerdos que se adopten al efecto.",
+      "titulo_numero": "III",
+      "capitulo_numero": "II",
+      "seccion_numero": null,
+      "orden_global": 32
+    },
+    {
+      "numero": "DA-1",
+      "tipo": "disposicion_adicional",
+      "contenido": "1. La actividad de evaluación de políticas públicas que realice la Agencia Estatal de Evaluación de Políticas Públicas, contará con la colaboración del Instituto Nacional de Estadística. Sin perjuicio de otras modalidades de colaboración, esta tendrá lugar de modo específico en la producción de información estadística requerida para el cálculo de indicadores, el análisis y la evaluación de políticas públicas.\nEl sistema de indicadores de contexto e impacto asociado a cada estrategia, plan o programa será objeto de difusión por el Sistema Estadístico Nacional.\n2. El Sistema Estadístico Nacional tendrá en cuenta las necesidades estadísticas que requiera la evaluación de políticas públicas, para lo cual la Agencia informará con suficiente antelación de dichas necesidades con el fin de coordinar y planificar las actividades necesarias. En todo momento se garantizará el Secreto Estadístico y la Confidencialidad de los datos, de acuerdo con lo establecido en la Ley de la Función Estadística Pública.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 33
+    },
+    {
+      "numero": "DA-2",
+      "tipo": "disposicion_adicional",
+      "contenido": "Los controles y auditorías de carácter operativo y las actuaciones en el marco del sistema de supervisión continua realizadas por la Intervención General de la Administración del Estado se regirán, en todo caso, por su normativa específica.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 34
+    },
+    {
+      "numero": "DA-3",
+      "tipo": "disposicion_adicional",
+      "contenido": "Lo establecido en esta ley únicamente se aplicará a la Agencia Estatal de Administración Tributaria de forma supletoria y en cuanto resulte compatible con su legislación específica.\nEl acceso, la cesión o la comunicación de información de naturaleza tributaria se regirá en todo caso por su legislación específica.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 35
+    },
+    {
+      "numero": "DA-4",
+      "tipo": "disposicion_adicional",
+      "contenido": "La evaluación de las políticas públicas relacionadas con la operatividad y eficacia de las Fuerzas Armadas se regirá en todo caso por su normativa específica.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 36
+    },
+    {
+      "numero": "DA-5",
+      "tipo": "disposicion_adicional",
+      "contenido": "La Agencia Estatal de Evaluación de Políticas Públicas colaborará con los ministerios competentes por razón de la materia en la elaboración de las metodologías de evaluación ex ante referidas a la previsión de impactos de la Memoria del Análisis de Impacto Normativo.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 37
+    },
+    {
+      "numero": "DA-6",
+      "tipo": "disposicion_adicional",
+      "contenido": "1. El Gobierno impulsará un Mecanismo Rural de Garantía, asegurando la participación de los actores interesados en su diseño y aplicación.\n2. Dicho Mecanismo incluirá, en todo caso:\na) La incorporación de la evaluación de los efectos territoriales y sobre el medio y la sociedad rural de las políticas públicas, de acuerdo con lo dispuesto en el artículo 2.1 de esta ley.\nb) La elaboración de una metodología de evaluación específica que tenga en cuenta los principios, recomendaciones y herramientas propuestas por la Unión Europea en este ámbito.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 38
+    },
+    {
+      "numero": "DT-1",
+      "tipo": "disposicion_transitoria",
+      "contenido": "1. Hasta la entrada en funcionamiento efectivo de la Agencia Estatal de Evaluación de Políticas Públicas, el actual Instituto para la Evaluación de Políticas Públicas asumirá el ejercicio de las funciones recogidas en el artículo 29 de la Ley que se adecúen al contenido de las funciones encomendadas por el artículo 14.6 del Real Decreto 682/2021, de 3 de agosto, por el que se desarrolla la estructura orgánica básica del Ministerio de Hacienda y Función Pública y se modifica el Real Decreto 139/2020, de 28 de enero, por el que se establece la estructura orgánica básica de los departamentos ministeriales.\n2. Hasta que la Agencia Estatal de Evaluación de Políticas Públicas cuente con un presupuesto propio, los gastos que conlleve su puesta en funcionamiento o su actividad se financiarán con cargo a los créditos presupuestarios de la Secretaría de Estado de Función Pública.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 39
+    },
+    {
+      "numero": "DF-1",
+      "tipo": "disposicion_final",
+      "contenido": "En el plazo de seis meses desde la entrada en vigor de esta ley, deberá procederse a la aprobación de los Estatutos de la Agencia.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 40
+    },
+    {
+      "numero": "DF-2",
+      "tipo": "disposicion_final",
+      "contenido": "Se habilita al Gobierno para aprobar cuantas normas sean precisas para garantizar la eficacia de las previsiones de la presente ley.",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 41
+    },
+    {
+      "numero": "DF-3",
+      "tipo": "disposicion_final",
+      "contenido": "Esta ley entrará en vigor el día siguiente al de su publicación en el «Boletín Oficial del Estado».",
+      "titulo_numero": null,
+      "capitulo_numero": null,
+      "seccion_numero": null,
+      "orden_global": 42
+    }
+  ]
+}
