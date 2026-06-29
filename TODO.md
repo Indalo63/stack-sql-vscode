@@ -41,6 +41,12 @@ Backlog completo. El estado macro y el hito inmediato viven en `CLAUDE.md`.
 | 47 | REGI | RD 364/1995 Reglamento General de Ingreso AGE | ✅ cargada |
 | 48 | LOTCU | LO 2/1982 Tribunal de Cuentas | ✅ cargada |
 | 49 | ET | RDLeg 2/2015 Estatuto de los Trabajadores | ✅ cargada |
+| 50 | LOIT | Ley 15/2022 Igualdad de Trato y No Discriminación | ✅ cargada |
+| 51 | LASEE | Ley 2/2014 Acción y Servicio Exterior del Estado | ✅ cargada |
+| 52 | ENI | RD 4/2010 Esquema Nacional de Interoperabilidad | ✅ cargada |
+| 56 | CC | Código Civil (RD 24 julio 1889) | ✅ cargada |
+| 57 | LPNAT | Ley 42/2007 Patrimonio Natural y Biodiversidad | ✅ cargada |
+| 58 | LE | Ley 3/2023 de Empleo | ✅ cargada |
 
 ## Pendientes de carga – inventario BOE-443
 
@@ -66,14 +72,14 @@ Estrategia por ley: `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_l
 
 | Código | Ley | BOE-ID |
 |--------|-----|--------|
-| LOIT | Ley 15/2022 Igualdad de Trato y No Discriminación | BOE-A-2022-11589 |
-| LCCU | IV Convenio Colectivo Único Personal Laboral AGE | BOE-A-2019-7414 |
-| LASEE | Ley 2/2014 Acción y Servicio Exterior del Estado | BOE-A-2014-3248 |
-| PGCP | Plan General de Contabilidad Pública 2010 | BOE-A-2010-6710 |
-| ENI | Esquema Nacional de Interoperabilidad | BOE-A-2010-1331 |
-| CC | Código Civil (1889) | BOE-A-1889-4763 |
-| LPNAT | Ley 42/2007 Patrimonio Natural y Biodiversidad | BOE-A-2007-21490 |
-| LE | Ley 3/2023 de Empleo | BOE-A-2023-5365 |
+| ~~LOIT~~ | ~~Ley 15/2022 Igualdad de Trato y No Discriminación~~ | ~~BOE-A-2022-11589~~ |
+| LCCU | IV Convenio Colectivo Único Personal Laboral AGE | BOE-A-2019-7414 | ⚠️ No tiene ELI consolidado en BOE. Estructura de Resolución/Convenio (cláusulas y anexos), incompatible con parse_boe.py. Requiere parser específico. Prioridad: MEDIA. |
+| ~~LASEE~~ | ~~Ley 2/2014 Acción y Servicio Exterior del Estado~~ | ~~BOE-A-2014-3248~~ |
+| PGCP | Plan General de Contabilidad Pública 2010 | BOE-A-2010-6710 | ⚠️ Parser captura solo 65 arts. normativos (Orden EHA/1037/2010). Faltan los anexos con el plan de cuentas (grupos, subgrupos, cuentas con definiciones y relaciones de cargo/abono). Requiere parser específico para tablas contables. Prioridad: MEDIA. |
+| ~~ENI~~ | ~~Esquema Nacional de Interoperabilidad~~ | ~~BOE-A-2010-1331~~ |
+| ~~CC~~ | ~~Código Civil (1889)~~ | ~~BOE-A-1889-4763~~ |
+| ~~LPNAT~~ | ~~Ley 42/2007 Patrimonio Natural y Biodiversidad~~ | ~~BOE-A-2007-21490~~ |
+| ~~LE~~ | ~~Ley 3/2023 de Empleo~~ | ~~BOE-A-2023-5365~~ |
 
 ### Reglamentos / normas técnicas complementarias (baja prioridad GACE)
 
@@ -102,7 +108,13 @@ Estrategia por ley: `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_l
 ## Próximos pasos
 
 ### En curso
-- [FASE 4 — MEDIA] Pendientes: LOIT, LCCU, LASEE, PGCP, ENI, CC, LPNAT, LE (8 leyes).
+- [FASE 4 — MEDIA completada 6/8] LCCU y PGCP pendientes con parser específico (ver anotaciones en tabla).
+- [Siguiente] Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€).
+
+### Completado en sesión 29/06/2026 (continuación)
+- [✅ FASE 4 — MEDIA 6/8] LOIT (71) + LASEE (87) + ENI (41) + CC (1941) + LPNAT (113) + LE (103) — 2.356 artículos con embeddings
+- [✅ Bugs corregidos load_ley.py] Secciones huérfanas sin título/capítulo; capítulos numero vacío duplicados; artículos numero duplicado
+- [⚠️ LCCU + PGCP] Pendientes parser específico (anotados en tabla con prioridad MEDIA)
 
 ### Completado en sesión 29/06/2026
 - [✅ FASE 4 — ALTA completa] LPAP (240) + RIRS (54) + MUFACE (182) + LMRFP (79) + RDSA (35) + RDRD (59) + REGI (99) + LOTCU (59) + ET (142) — 949 artículos con embeddings

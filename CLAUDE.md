@@ -89,6 +89,7 @@ Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
 ## Hito inmediato
-**[FASE 4 — ALTA completada]** 35 leyes cargadas con embeddings (ley_id 1–49).
-Siguiente: **FASE 4 — MEDIA** (LOIT, LCCU, LASEE, PGCP, ENI, CC, LPNAT, LE — 8 leyes).
+**[FASE 4 — ALTA + MEDIA completadas]** 41 leyes cargadas con embeddings (ley_id hasta 58).
+Pendientes con parser específico: **LCCU** (Convenio Colectivo, sin ELI) y **PGCP** (plan de cuentas + anexos).
+Siguiente: generar banco IA → `build_test_bank.py --supabase --n 50`.
 El backlog completo está en `TODO.md`.

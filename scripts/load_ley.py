@@ -162,7 +162,7 @@ def validar(data: dict) -> None:
 
     for s in data.get("secciones", []):
         key = (s.get("titulo_numero"), s.get("capitulo_numero"))
-        if key not in cap_set:
+        if s.get("capitulo_numero") is not None and key not in cap_set:
             errores.append(f"Sección '{s.get('numero')}' referencia capítulo inexistente")
 
     for a in data.get("articulos", []):
@@ -225,20 +225,50 @@ def cargar_ley(data: dict, conn) -> int:
         titulo_map[None] = cur.fetchone()[0]
 
     capitulo_map: dict[tuple, int] = {}
+    _cap_empty_counter: dict = {}
     for c in data.get("capitulos", []):
-        titulo_id = titulo_map[c["titulo_numero"]]
+        t_num = c["titulo_numero"]
+        orig_num = c.get("numero", "")
+        if not orig_num:
+            _cap_empty_counter[t_num] = _cap_empty_counter.get(t_num, 0) + 1
+            db_num = f"_CAP_{_cap_empty_counter[t_num]}"
+        else:
+            db_num = orig_num
+        titulo_id = titulo_map[t_num]
         cur.execute("""
             INSERT INTO normas.capitulos (titulo_id, numero, denominacion, orden)
             VALUES (%s, %s, %s, %s)
             RETURNING capitulo_id
-        """, (titulo_id, c["numero"], c["denominacion"], c["orden"]))
-        capitulo_map[(c["titulo_numero"], c["numero"])] = cur.fetchone()[0]
+        """, (titulo_id, db_num, c["denominacion"], c["orden"]))
+        cap_id = cur.fetchone()[0]
+        capitulo_map[(t_num, orig_num)] = cap_id  # referencia original (puede sobreescribirse si hay duplicados vacíos)
+        capitulo_map[(t_num, db_num)] = cap_id    # referencia por db_num
     print(f"  Capítulos:  {len(capitulo_map)}")
 
     # 4. Secciones — mapa: (titulo_numero, capitulo_numero, seccion_numero) → seccion_id
+    # Si hay secciones sin capítulo, crear capítulo _ROOT por cada título afectado
+    for s in data.get("secciones", []):
+        if s.get("capitulo_numero") is None:
+            t_num = s.get("titulo_numero")
+            t_id = titulo_map.get(t_num)
+            if t_id is None:
+                continue  # sección totalmente huérfana (sin título ni capítulo): se omite
+            key = (t_num, None)
+            if key not in capitulo_map:
+                cur.execute("""
+                    INSERT INTO normas.capitulos (titulo_id, numero, denominacion, orden)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING capitulo_id
+                """, (t_id, "_ROOT", "[Sin capítulo]", 0))
+                capitulo_map[key] = cur.fetchone()[0]
+
     seccion_map: dict[tuple, int] = {}
     for s in data.get("secciones", []):
-        capitulo_id = capitulo_map[(s["titulo_numero"], s["capitulo_numero"])]
+        t_num = s.get("titulo_numero")
+        c_num = s.get("capitulo_numero")
+        capitulo_id = capitulo_map.get((t_num, c_num))
+        if capitulo_id is None:
+            continue  # sección huérfana: se omite sin interrumpir la carga
         cur.execute("""
             INSERT INTO normas.secciones (capitulo_id, numero, denominacion, orden)
             VALUES (%s, %s, %s, %s)
@@ -254,6 +284,7 @@ def cargar_ley(data: dict, conn) -> int:
             a["orden_global"] = i
 
     rows = []
+    _numeros_vistos: dict[tuple, int] = {}
     for a in articulos:
         t_num = a.get("titulo_numero")
         c_num = a.get("capitulo_numero")
@@ -263,10 +294,18 @@ def cargar_ley(data: dict, conn) -> int:
         capitulo_id = capitulo_map.get((t_num, c_num)) if t_num and c_num else None
         seccion_id  = seccion_map.get((t_num, c_num, s_num)) if t_num and c_num and s_num else None
 
+        numero = a["numero"]
+        tipo   = a.get("tipo", "articulo")
+        clave  = (numero, tipo)
+        if clave in _numeros_vistos:
+            _numeros_vistos[clave] += 1
+            numero = f"{numero}_{_numeros_vistos[clave]}"
+        else:
+            _numeros_vistos[clave] = 1
+
         rows.append((
             ley_id, titulo_id, capitulo_id, seccion_id,
-            a["numero"],
-            a.get("tipo", "articulo"),
+            numero, tipo,
             a["contenido"],
             a["orden_global"],
         ))
