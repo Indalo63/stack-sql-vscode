@@ -89,7 +89,7 @@ Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
 ## Hito inmediato
-**[FASE 4 — ALTA + MEDIA completadas]** 41 leyes cargadas con embeddings (ley_id hasta 58).
-Pendientes con parser específico: **LCCU** (Convenio Colectivo, sin ELI) y **PGCP** (plan de cuentas + anexos).
-Siguiente: generar banco IA → `build_test_bank.py --supabase --n 50`.
+**[FASE 5 — Reglamentos de desarrollo]** 41 leyes cargadas. Siguiente bloque: 19 reglamentos y normas complementarias necesarios para los supuestos prácticos GACE (procedimientos, plazos, órganos). Se cargan antes del banco de preguntas IA.
+- FASE 5A (8 normas): RLEF, RLGS, BCPSA, RRCP, IGAE, ACF, PLJ, ROCE
+- FASE 5B (11 normas): LGPD, LAEPD, LSSF, LDEP, LOE, LO4000, LASIL, LTRANS, LGUM, LGT22, LEPP
 El backlog completo está en `TODO.md`.

@@ -81,35 +81,47 @@ Estrategia por ley: `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_l
 | ~~LPNAT~~ | ~~Ley 42/2007 Patrimonio Natural y Biodiversidad~~ | ~~BOE-A-2007-21490~~ |
 | ~~LE~~ | ~~Ley 3/2023 de Empleo~~ | ~~BOE-A-2023-5365~~ |
 
-### Reglamentos / normas técnicas complementarias (baja prioridad GACE)
+### FASE 5 – Reglamentos de desarrollo (necesarios para supuestos prácticos)
 
-| Nombre | BOE-ID |
-|--------|--------|
-| Reglamento Ley Expropiación Forzosa | BOE-A-1957-7998 |
-| Reglamento Ley General de Subvenciones | BOE-A-2006-13371 |
-| Bases comunes procesos selectivos AGE | BOE-A-2017-8652 |
-| Acceso empleo personas con discapacidad | BOE-A-2004-21221 |
-| TR Ley General derechos personas con discapacidad | BOE-A-2013-12632 |
-| Reglamento Registro Central de Personal | BOE-A-2000-1007 |
-| Reglamento Orgánico del Consejo de Estado | BOE-A-1980-18703 |
-| Control interno IGAE (RD 2188/1995) | BOE-A-1996-1578 |
-| Anticipos de Caja Fija (RD 725/1989) | BOE-A-1989-14441 |
-| Pagos librados a justificar (RD 640/1987) | BOE-A-1987-12158 |
-| Ley 39/2006 Movilidad / Dependencia (TR Empleo) | BOE-A-2015-11431 |
-| TR Ley SS Funcionarios Civiles del Estado | BOE-A-2000-12140 |
-| LO 4/2000 Extranjeros en España | BOE-A-2000-544 |
-| Ley 12/2009 Derecho de Asilo | BOE-A-2009-17242 |
-| Ley 4/2023 Trans e igualdad LGTBI | BOE-A-2023-5366 |
-| LO 2/2006 Educación | BOE-A-2006-7899 |
-| Ley 2/2013 Garantía Unidad de Mercado | BOE-A-2013-12888 |
-| Ley 9/2022 General de Telecomunicaciones | BOE-A-2022-10757 |
-| Ley 22/2022 Evaluación Políticas Públicas AGE | BOE-A-2022-21677 |
+Prioridad elevada a FASE 5 por su incidencia directa en los supuestos prácticos GACE
+(procedimientos detallados, plazos, órganos competentes, formularios).
+Se cargan **antes** de generar el banco de preguntas IA.
+
+#### FASE 5A – Reglamentos de función pública y procedimiento (alta incidencia en supuestos)
+
+| Código | Nombre | BOE-ID |
+|--------|--------|--------|
+| RLEF | Reglamento Ley Expropiación Forzosa | BOE-A-1957-7998 |
+| RLGS | Reglamento Ley General de Subvenciones | BOE-A-2006-13371 |
+| BCPSA | Bases comunes procesos selectivos AGE | BOE-A-2017-8652 |
+| RRCP | Reglamento Registro Central de Personal | BOE-A-2000-1007 |
+| IGAE | Control interno IGAE (RD 2188/1995) | BOE-A-1996-1578 |
+| ACF | Anticipos de Caja Fija (RD 725/1989) | BOE-A-1989-14441 |
+| PLJ | Pagos librados a justificar (RD 640/1987) | BOE-A-1987-12158 |
+| ROCE | Reglamento Orgánico del Consejo de Estado | BOE-A-1980-18703 |
+
+#### FASE 5B – Leyes complementarias (media incidencia en supuestos)
+
+| Código | Nombre | BOE-ID |
+|--------|--------|--------|
+| LGPD | TR Ley General derechos personas con discapacidad | BOE-A-2013-12632 |
+| LAEPD | Acceso empleo personas con discapacidad | BOE-A-2004-21221 |
+| LSSF | TR Ley SS Funcionarios Civiles del Estado | BOE-A-2000-12140 |
+| LDEP | Ley 39/2006 Dependencia (TR Empleo) | BOE-A-2015-11431 |
+| LOE | LO 2/2006 Educación | BOE-A-2006-7899 |
+| LO4000 | LO 4/2000 Extranjeros en España | BOE-A-2000-544 |
+| LASIL | Ley 12/2009 Derecho de Asilo | BOE-A-2009-17242 |
+| LTRANS | Ley 4/2023 Trans e igualdad LGTBI | BOE-A-2023-5366 |
+| LGUM | Ley 2/2013 Garantía Unidad de Mercado | BOE-A-2013-12888 |
+| LGT22 | Ley 9/2022 General de Telecomunicaciones | BOE-A-2022-10757 |
+| LEPP | Ley 22/2022 Evaluación Políticas Públicas AGE | BOE-A-2022-21677 |
 
 ## Próximos pasos
 
 ### En curso
 - [FASE 4 — MEDIA completada 6/8] LCCU y PGCP pendientes con parser específico (ver anotaciones en tabla).
-- [Siguiente] Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€).
+- [FASE 5] Reglamentos de desarrollo: 8 normas FASE 5A + 11 normas FASE 5B — necesarias para supuestos prácticos.
+- [Tras FASE 5] Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€).
 
 ### Completado en sesión 29/06/2026 (continuación)
 - [✅ FASE 4 — MEDIA 6/8] LOIT (71) + LASEE (87) + ENI (41) + CC (1941) + LPNAT (113) + LE (103) — 2.356 artículos con embeddings
