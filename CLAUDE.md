@@ -58,8 +58,8 @@ Se aplican SIEMPRE en `app/test_pipeline.py` y en cualquier futuro generador. In
 ## Estado actual
 
 ### Normativa cargada en `normas.*` (con embeddings)
-26 leyes cargadas y operativas:
-CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTBG, LOPD, LOEPSF, LOPJ, LGSS, LTPP, LGT, TUE, TFUE, LOIEMH, LOIVG, LJCA, LGS, LEF.
+49 normas cargadas y operativas (ley_ids hasta 67):
+CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTBG, LOPD, LOEPSF, LOPJ, LGSS, LTPP, LGT, TUE, TFUE, LOIEMH, LOIVG, LJCA, LGS, LEF, LPAP, RIRS, MUFACE, LMRFP, RDSA, RDRD, REGI, LOTCU, ET, LOIT, LASEE, ENI, CC, LPNAT, LE, RLEF, RLGS, BCPSA, RRCP, IGAE, ACF, PLJ, ROCE.
 
 *(Mapeo completo `ley_id` → código → nombre, e inventario de leyes pendientes BOE-443 con sus ELI, en `TODO.md`.)*
 
@@ -89,7 +89,7 @@ Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
 ## Hito inmediato
-**[FASE 5 — Reglamentos de desarrollo]** 41 leyes cargadas. Siguiente bloque: 19 reglamentos y normas complementarias necesarios para los supuestos prácticos GACE (procedimientos, plazos, órganos). Se cargan antes del banco de preguntas IA.
-- FASE 5A (8 normas): RLEF, RLGS, BCPSA, RRCP, IGAE, ACF, PLJ, ROCE
+**[FASE 5B — Normas complementarias]** 49 normas cargadas. FASE 5A completada (8/8 reglamentos, 548 arts.). Siguiente bloque: 11 normas de media incidencia en supuestos prácticos GACE.
 - FASE 5B (11 normas): LGPD, LAEPD, LSSF, LDEP, LOE, LO4000, LASIL, LTRANS, LGUM, LGT22, LEPP
+- Tras FASE 5B: `build_test_bank.py --supabase --n 50` (~300 preguntas IA, ~3-4€)
 El backlog completo está en `TODO.md`.

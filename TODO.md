@@ -47,6 +47,14 @@ Backlog completo. El estado macro y el hito inmediato viven en `CLAUDE.md`.
 | 56 | CC | Código Civil (RD 24 julio 1889) | ✅ cargada |
 | 57 | LPNAT | Ley 42/2007 Patrimonio Natural y Biodiversidad | ✅ cargada |
 | 58 | LE | Ley 3/2023 de Empleo | ✅ cargada |
+| 60 | RLEF | Reglamento de la Ley de Expropiación Forzosa (Decreto 657/1957) | ✅ cargada |
+| 61 | RLGS | Reglamento de la Ley General de Subvenciones (RD 887/2006) | ✅ cargada |
+| 62 | BCPSA | Bases comunes procesos selectivos AGE (RD 364/2017) | ✅ cargada |
+| 63 | RRCP | Reglamento del Registro Central de Personal (RD 2073/1999) | ✅ cargada |
+| 64 | IGAE | Reglamento control interno IGAE (RD 2188/1995) | ✅ cargada |
+| 65 | ACF | Reglamento Anticipos de Caja Fija (RD 725/1989) | ✅ cargada |
+| 66 | PLJ | Reglamento pagos librados a justificar (RD 640/1987) | ✅ cargada |
+| 67 | ROCE | Reglamento Orgánico del Consejo de Estado (RD 1674/1980) | ✅ cargada |
 
 ## Pendientes de carga – inventario BOE-443
 
@@ -91,14 +99,14 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 | Código | Nombre | BOE-ID |
 |--------|--------|--------|
-| RLEF | Reglamento Ley Expropiación Forzosa | BOE-A-1957-7998 |
-| RLGS | Reglamento Ley General de Subvenciones | BOE-A-2006-13371 |
-| BCPSA | Bases comunes procesos selectivos AGE | BOE-A-2017-8652 |
-| RRCP | Reglamento Registro Central de Personal | BOE-A-2000-1007 |
-| IGAE | Control interno IGAE (RD 2188/1995) | BOE-A-1996-1578 |
-| ACF | Anticipos de Caja Fija (RD 725/1989) | BOE-A-1989-14441 |
-| PLJ | Pagos librados a justificar (RD 640/1987) | BOE-A-1987-12158 |
-| ROCE | Reglamento Orgánico del Consejo de Estado | BOE-A-1980-18703 |
+| ~~RLEF~~ | ~~Reglamento Ley Expropiación Forzosa~~ | ~~BOE-A-1957-7998~~ |
+| ~~RLGS~~ | ~~Reglamento Ley General de Subvenciones~~ | ~~BOE-A-2006-13371~~ |
+| ~~BCPSA~~ | ~~Bases comunes procesos selectivos AGE~~ | ~~BOE-A-2017-8652~~ |
+| ~~RRCP~~ | ~~Reglamento Registro Central de Personal~~ | ~~BOE-A-2000-1007~~ |
+| ~~IGAE~~ | ~~Control interno IGAE (RD 2188/1995)~~ | ~~BOE-A-1996-1578~~ |
+| ~~ACF~~ | ~~Anticipos de Caja Fija (RD 725/1989)~~ | ~~BOE-A-1989-14441~~ |
+| ~~PLJ~~ | ~~Pagos librados a justificar (RD 640/1987)~~ | ~~BOE-A-1987-12158~~ |
+| ~~ROCE~~ | ~~Reglamento Orgánico del Consejo de Estado~~ | ~~BOE-A-1980-18703~~ |
 
 #### FASE 5B – Leyes complementarias (media incidencia en supuestos)
 
@@ -120,8 +128,11 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ### En curso
 - [FASE 4 — MEDIA completada 6/8] LCCU y PGCP pendientes con parser específico (ver anotaciones en tabla).
-- [FASE 5] Reglamentos de desarrollo: 8 normas FASE 5A + 11 normas FASE 5B — necesarias para supuestos prácticos.
+- [FASE 5B] 11 normas complementarias pendientes — LGPD, LAEPD, LSSF, LDEP, LOE, LO4000, LASIL, LTRANS, LGUM, LGT22, LEPP.
 - [Tras FASE 5] Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€).
+
+### Completado en sesión 29/06/2026 (FASE 5A)
+- [✅ FASE 5A completa] RLEF (140) + RLGS (122) + BCPSA (22) + RRCP (27) + IGAE (58) + ACF (17) + PLJ (16) + ROCE (146) — 548 artículos con embeddings (ley_ids 60–67)
 
 ### Completado en sesión 29/06/2026 (continuación)
 - [✅ FASE 4 — MEDIA 6/8] LOIT (71) + LASEE (87) + ENI (41) + CC (1941) + LPNAT (113) + LE (103) — 2.356 artículos con embeddings
@@ -142,8 +153,8 @@ Se cargan **antes** de generar el banco de preguntas IA.
 - [✅ FASE 4 — bloque 1] LOIEMH (130) + LOIVG (107) + LJCA (175) + LGS (105) + LEF (134) — 651 arts. con embeddings
 
 ### Hitos pendientes — Normativa (GACE)
-- [FASE 4 — ALTA] LPAP, RIRS, MUFACE, LMRFP, RDSA, RDRD, REGI, LOTCU, ET (9 leyes)
-- [FASE 4 — MEDIA] LOIT, LCCU, LASEE, PGCP, ENI, CC, LPNAT, LE (8 leyes)
+- [FASE 5B] LGPD, LAEPD, LSSF, LDEP, LOE, LO4000, LASIL, LTRANS, LGUM, LGT22, LEPP (11 normas)
+- [FASE 4 pendiente] LCCU y PGCP con parser específico (baja urgencia)
 - Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€)
 
 ### Hitos pendientes — Ejercicio tipo test
