@@ -25,7 +25,8 @@ st.set_page_config(
 )
 
 # ── Autenticación ─────────────────────────────────────────────────────────────
-user = st.experimental_user
+user = st.user
+logged_in = "email" in user
 
 # ── Carga de leyes ────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
@@ -47,14 +48,14 @@ ley_id     = ley_seleccionada["ley_id"]
 ley_nombre = ley_seleccionada["nombre"]
 
 modos = ["Q&A", "Generar test"]
-if user.is_logged_in:
+if logged_in:
     modos.append("Editor")
 
 modo = st.sidebar.radio("Modo", modos)
 
 st.sidebar.markdown("---")
-if user.is_logged_in:
-    st.sidebar.markdown(f"👤 {user.email}")
+if logged_in:
+    st.sidebar.markdown(f"👤 {user["email"]}")
     if st.sidebar.button("Cerrar sesión"):
         st.logout()
 else:
@@ -178,14 +179,14 @@ elif modo == "Generar test":
 
 # ── Modo Editor ────────────────────────────────────────────────────────────────
 elif modo == "Editor":
-    if not user.is_logged_in:
+    if not logged_in:
         st.warning("Esta sección requiere autenticación con Google.")
         if st.button("Iniciar sesión con Google", type="primary"):
             st.login("google")
         st.stop()
 
     st.header("Editor de preguntas")
-    st.caption(f"Sesión activa: {user.email}")
+    st.caption(f"Sesión activa: {user["email"]}")
 
     tab_gen, tab_rev = st.tabs(["Generar", "Revisar"])
 
@@ -269,7 +270,7 @@ elif modo == "Editor":
                     col_ok, col_ko = st.columns(2)
                     with col_ok:
                         if st.button("✅ Aprobar", key=f"ok_{pid}", type="primary"):
-                            _approve(pid, user.email, {
+                            _approve(pid, user["email"], {
                                 "pregunta":    pregunta,
                                 "opcion_a":    opcion_a,
                                 "opcion_b":    opcion_b,
