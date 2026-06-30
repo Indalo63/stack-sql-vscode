@@ -108,16 +108,22 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
-## Hito inmediato — MVP B2B (horizonte 3-6 meses)
+## Hito inmediato — Refinamiento UX de la app Streamlit
 
-**[Tab Editor en Streamlit]** — herramienta interna para academia/preparador.
+**[UX Editor]** — mejorar usabilidad antes de añadir nuevas funcionalidades.
 
 | Paso | Tarea | Estado |
 |------|-------|--------|
 | 1 | Migración `024` — añadir `revisado_por` y `revisado_en` a `preguntas_test` | ✅ Ejecutada |
 | 2 | Google OAuth en Streamlit Cloud — login para editores/revisores | ✅ Configurado |
 | 3 | Tab "Editor": selector ley + nº preguntas → generar → revisar/editar/aprobar | ✅ Implementado |
-| 4 | Exportación Moodle XML / CSV — integración con LMS de la academia | ⏭️ Siguiente |
+| 3b | `max_por_articulo`: múltiples preguntas por artículo (1-5, slider en UI + flag CLI) | ✅ Implementado |
+| 4 | **Refinamiento UX**: mejorar selector de leyes + otros ajustes de usabilidad | ⏭️ Siguiente |
+| 5 | Exportación Moodle XML / CSV — integración con LMS de la academia | Pendiente (MVP) |
+
+### Banco de preguntas IA
+- 10 preguntas de LPAC generadas y guardadas en BD (sesión 30/06/2026, validación OK).
+- Pendiente: generar banco completo `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€) tras completar UX.
 
 Normas ya cargadas: 60 (ley_ids hasta 79). Pendiente baja urgencia: LCCU y PGCP (parser específico).
 El backlog completo está en `TODO.md`.

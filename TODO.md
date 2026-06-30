@@ -131,11 +131,19 @@ Se cargan **antes** de generar el banco de preguntas IA.
 - **B2C después (6-12 meses):** plataforma propia con FastAPI + frontend dedicado sobre el mismo backend IA.
 - El valor diferencial es la capa IA (generación desde BOE + Q&A semántico); la gestión de alumnos la hace el LMS de la academia en fase B2B.
 
-### En curso — MVP Tab Editor
-- [⏭️ Paso 1] Migración `024`: añadir `revisado_por VARCHAR(150)` y `revisado_en TIMESTAMP` a `normas.preguntas_test`.
-- [Paso 2] Google OAuth en Streamlit Cloud: login nativo para editores/revisores de la academia.
-- [Paso 3] Tab "Editor" en Streamlit: selector ley + nº preguntas → generar y guardar en BD → revisar/editar/aprobar con auditoría.
-- [Paso 4 — MVP] Exportación Moodle XML / CSV: integración con LMS de la academia cliente.
+### Completado en sesión 30/06/2026
+- [✅ Arquitectura] Decisión B2B primero (academias, 3-6 meses) / B2C después (6-12 meses).
+- [✅ Migración 024] `revisado_por VARCHAR(150)` + `revisado_en TIMESTAMP` en `normas.preguntas_test`.
+- [✅ Google OAuth] Configurado en Streamlit Cloud: `authlib`, `[auth.google]`, `server_metadata_url`. Login funcional con cuenta Google.
+- [✅ Tab Editor] Implementado en `app/streamlit_app.py`: tabs Generar + Revisar, auditoría completa.
+- [✅ max_por_articulo] Múltiples preguntas IA por artículo: slider 1-5 en UI, flag `--max-por-articulo` en CLI.
+- [✅ Validación banco IA] 10 preguntas de LPAC generadas y guardadas correctamente en BD.
+
+### En curso — Refinamiento UX Streamlit
+- [⏭️ Siguiente] Mejorar selector de leyes (60 leyes en lista plana, difícil de navegar).
+- Otros ajustes de usabilidad a identificar durante el uso real.
+- Una vez consolidada la UX → generar banco IA completo (`--supabase --n 50`, ~300 preguntas, ~3-4€).
+- [Paso 5 — MVP] Exportación Moodle XML / CSV: integración con LMS de la academia cliente.
 
 ### Completado en sesión 29/06/2026 (FASE 5B)
 - [✅ FASE 5B completa] LGPD (128) + LAEPD (17) + LSSF (54) + LDEP (61) + LOE (250) + LO4000 (117) + LASIL (64) + LTRANS (108) + LGUM (47) + LGT22 (158) + LEPP (42) — 1.046 artículos con embeddings (ley_ids 68–79)
@@ -167,12 +175,11 @@ Se cargan **antes** de generar el banco de preguntas IA.
 - [FASE 4 pendiente] LCCU y PGCP con parser específico (baja urgencia)
 - Generar banco IA: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€)
 
-### Hitos pendientes — Tab Editor y banco IA (MVP B2B)
-- [Paso 1] Migración `024`: `revisado_por` + `revisado_en` en `preguntas_test` (ver "En curso")
-- [Paso 2] Google OAuth Streamlit Cloud: login nativo para editores
-- [Paso 3] Tab "Editor": selector ley + nº preguntas → generar → lista de pendientes → editar campos → Aprobar (`revisada=TRUE`, graba revisor+timestamp) / Rechazar (borra registro)
-- [Paso 4 — MVP] Exportar banco aprobado a **Moodle XML** y **CSV** por convocatoria/ley
-- Generar banco IA completo: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€) — tras validar flujo con 10 preguntas de prueba
+### Hitos pendientes — UX y funcionalidad Streamlit
+- [⏭️ UX] Mejorar selector de leyes: 60 en lista plana, difícil de navegar (agrupar por categoría, buscar, mostrar stats)
+- [UX] Otros ajustes de usabilidad identificados durante uso real
+- [MVP] Exportar banco aprobado a **Moodle XML** y **CSV** por convocatoria/ley
+- Generar banco IA completo: `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€)
 - Simulacro: 100 preguntas, temporizador, puntuación A-(E/3), escala 0-50 pts (fase B2C)
 - Historial de conversación en Q&A (multi-turno con `st.session_state`)
 
