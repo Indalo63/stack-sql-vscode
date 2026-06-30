@@ -13,8 +13,28 @@ Permite a cualquier opositor: consultar su normativa en lenguaje natural (Q&A se
 La oposición de referencia es **GACE** (Cuerpo General Administrativo del Estado): su programa, banco de preguntas oficiales y supuestos prácticos son la base del sistema. La arquitectura está pensada para integrar cualquier otra oposición con mínimo esfuerzo. Audiencia: preparadores y academias de cualquier cuerpo o escala.
 
 ## Producto y audiencia
-- **Usuario final (opositor):** Q&A sobre normativa, tipo test al nivel real, supuestos prácticos, simulacros con fórmula oficial.
-- **Cliente/integrador (academias):** asistente jurídico sobre su temario, banco de ejercicios calibrado y simulacro con fórmula configurable.
+
+### Modelo de negocio
+Dos líneas que se desarrollan en paralelo:
+
+1. **B2B — Herramienta para academias y preparadores (primer cliente de pago, horizonte 3-6 meses):**
+   La academia usa Streamlit como herramienta interna de su equipo (generar, revisar, exportar preguntas). El banco aprobado se exporta a su LMS (Moodle XML / CSV) para que sus alumnos practiquen. La academia gestiona sus propios alumnos.
+
+2. **B2C — Plataforma propia para el opositor (segunda línea, horizonte 6-12 meses):**
+   El opositor se suscribe directamente. La plataforma gestiona usuarios, simulacros, estadísticas y seguimiento. Requiere frontend dedicado (FastAPI + React/Vue) sobre el mismo backend IA.
+
+### Arquitectura de referencia
+```
+[Backend IA — valor diferencial]          [LMS de la academia]
+  Streamlit admin (generación/revisión)     Moodle / TalentLMS / etc.
+  Claude + pgvector + BOE          →→→      Alumnos, simulacros, estadísticas
+  exporta Moodle XML / CSV
+```
+
+### Perfiles de usuario
+- **Editor / revisor (academia):** genera preguntas por ley, las revisa y exporta. Accede vía Streamlit con login Google.
+- **Alumno (opositor):** practica en el LMS de su academia o en la plataforma propia (fase 2).
+- **Administrador de plataforma:** gestiona leyes, convocatorias y fórmula desde BD sin tocar código.
 
 ## Entorno técnico
 - **Sistema:** Windows + WSL2 (Ubuntu 24.04 LTS). Git instalado y configurado.
@@ -71,7 +91,7 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 ### Otras tablas y migraciones
 - `normas.oposiciones` + `normas.oposicion_leyes`: distribución GACE (51/100 preguntas de nuestras 6 leyes núcleo).
 - `normas.convocatorias`: metadatos 2024 y 2025. Fórmula GACE: **A−(E/3)**, 100 preguntas, 90 min, mínimo 25/50, escala 0–50.
-- Migraciones ejecutadas: `020`, `021`, `022`, `023`.
+- Migraciones ejecutadas: `020`, `021`, `022`, `023`, `024`.
 
 ### Scripts disponibles
 | Script | Función |
@@ -88,8 +108,16 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
-## Hito inmediato
-**[Banco de preguntas IA]** FASE 5B completada (11/11 normas, 1.046 arts., ley_ids 68–79). 60 normas operativas en BD.
-- Siguiente: `build_test_bank.py --supabase --n 50` (~300 preguntas IA, ~3-4€)
-- Pendiente baja urgencia: LCCU y PGCP (parser específico)
+## Hito inmediato — MVP B2B (horizonte 3-6 meses)
+
+**[Tab Editor en Streamlit]** — herramienta interna para academia/preparador.
+
+| Paso | Tarea | Estado |
+|------|-------|--------|
+| 1 | Migración `024` — añadir `revisado_por` y `revisado_en` a `preguntas_test` | ✅ Ejecutada |
+| 2 | Google OAuth en Streamlit Cloud — login para editores/revisores | ✅ Configurado |
+| 3 | Tab "Editor": selector ley + nº preguntas → generar → revisar/editar/aprobar | ✅ Implementado |
+| 4 | Exportación Moodle XML / CSV — integración con LMS de la academia | ⏭️ Siguiente |
+
+Normas ya cargadas: 60 (ley_ids hasta 79). Pendiente baja urgencia: LCCU y PGCP (parser específico).
 El backlog completo está en `TODO.md`.

@@ -5,10 +5,18 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
+import time
+import anthropic
 import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import get_leyes_disponibles
+from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from app.db import get_connection
+from scripts.build_test_bank import (
+    _fetch_articles, _fetch_few_shots, _build_prompt,
+    _parse_and_validate, _has_numbered_paragraphs, _save,
+)
 
 st.set_page_config(
     page_title="Asistente Jurídico",
@@ -16,10 +24,10 @@ st.set_page_config(
     layout="centered",
 )
 
-st.title("⚖️ Asistente Jurídico")
-st.caption("Búsqueda semántica + Claude")
+# ── Autenticación ─────────────────────────────────────────────────────────────
+user = st.experimental_user
 
-# ── Selector de ley ────────────────────────────────────────────────────────────
+# ── Carga de leyes ────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def _cargar_leyes():
     return get_leyes_disponibles()
@@ -31,12 +39,85 @@ except Exception as e:
     st.stop()
 
 opciones = {f"{l['nombre_corto'] or l['codigo']} — {l['nombre']}": l for l in leyes}
+
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 seleccion = st.sidebar.selectbox("Ley", list(opciones.keys()))
 ley_seleccionada = opciones[seleccion]
 ley_id     = ley_seleccionada["ley_id"]
 ley_nombre = ley_seleccionada["nombre"]
 
-modo = st.sidebar.radio("Modo", ["Q&A", "Generar test"])
+modos = ["Q&A", "Generar test"]
+if user.is_logged_in:
+    modos.append("Editor")
+
+modo = st.sidebar.radio("Modo", modos)
+
+st.sidebar.markdown("---")
+if user.is_logged_in:
+    st.sidebar.markdown(f"👤 {user.email}")
+    if st.sidebar.button("Cerrar sesión"):
+        st.logout()
+else:
+    if st.sidebar.button("Acceso Editor (Google)"):
+        st.login("google")
+
+# ── Cabecera ──────────────────────────────────────────────────────────────────
+st.title("⚖️ Asistente Jurídico")
+st.caption("Búsqueda semántica + Claude")
+
+# ── Helpers BD — Editor ───────────────────────────────────────────────────────
+def _get_pending(ley_id: int) -> list[dict]:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pregunta_id, articulo, pregunta,
+                       opcion_a, opcion_b, opcion_c, opcion_d,
+                       correcta, explicacion
+                FROM normas.preguntas_test
+                WHERE ley_id   = %s
+                  AND fuente   = 'ia'
+                  AND revisada = FALSE
+                ORDER BY generada_en DESC
+            """, (ley_id,))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def _approve(pregunta_id: int, email: str, data: dict) -> None:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE normas.preguntas_test SET
+                    pregunta     = %s,
+                    opcion_a     = %s,
+                    opcion_b     = %s,
+                    opcion_c     = %s,
+                    opcion_d     = %s,
+                    correcta     = %s,
+                    explicacion  = %s,
+                    revisada     = TRUE,
+                    revisado_por = %s,
+                    revisado_en  = NOW()
+                WHERE pregunta_id = %s
+            """, (
+                data["pregunta"],
+                data["opcion_a"], data["opcion_b"],
+                data["opcion_c"], data["opcion_d"],
+                data["correcta"], data["explicacion"],
+                email, pregunta_id,
+            ))
+        conn.commit()
+
+
+def _reject(pregunta_id: int) -> None:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM normas.preguntas_test WHERE pregunta_id = %s",
+                (pregunta_id,)
+            )
+        conn.commit()
+
 
 # ── Modo Q&A ──────────────────────────────────────────────────────────────────
 if modo == "Q&A":
@@ -65,7 +146,7 @@ if modo == "Q&A":
         st.markdown(st.session_state.qa_respuesta)
 
 # ── Modo Gentest ───────────────────────────────────────────────────────────────
-else:
+elif modo == "Generar test":
     st.header("Generador de preguntas tipo test")
 
     if "gentest_preguntas" not in st.session_state:
@@ -94,3 +175,113 @@ else:
                 else:
                     st.markdown(f"{letra}) {texto}")
             st.info(f"**Explicación:** {p['explicacion']}")
+
+# ── Modo Editor ────────────────────────────────────────────────────────────────
+elif modo == "Editor":
+    if not user.is_logged_in:
+        st.warning("Esta sección requiere autenticación con Google.")
+        if st.button("Iniciar sesión con Google", type="primary"):
+            st.login("google")
+        st.stop()
+
+    st.header("Editor de preguntas")
+    st.caption(f"Sesión activa: {user.email}")
+
+    tab_gen, tab_rev = st.tabs(["Generar", "Revisar"])
+
+    # ── Tab Generar ───────────────────────────────────────────────────────────
+    with tab_gen:
+        st.subheader(f"Generar preguntas — {ley_nombre}")
+        n_gen = st.slider("Número de preguntas", min_value=1, max_value=50, value=10,
+                          key="editor_n_gen")
+
+        if st.button("Generar y guardar en BD", type="primary", key="btn_generar"):
+            arts = _fetch_articles(ley_id, n_gen)
+            if not arts:
+                st.info("No hay artículos nuevos que procesar en esta ley.")
+            else:
+                few_shots = _fetch_few_shots(ley_id)
+                client    = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+                progress  = st.progress(0, text="Iniciando generación…")
+                ok = err  = 0
+
+                for i, art in enumerate(arts, 1):
+                    tiene_apartados = _has_numbered_paragraphs(art["contenido"])
+                    try:
+                        resp = client.messages.create(
+                            model=CLAUDE_MODEL,
+                            max_tokens=800,
+                            messages=_build_prompt(
+                                art, ley_nombre,
+                                few_shots=few_shots,
+                                tiene_apartados=tiene_apartados,
+                            ),
+                        )
+                        parsed = _parse_and_validate(resp.content[0].text)
+                        _save(ley_id, art, parsed)
+                        ok += 1
+                    except Exception as e:
+                        err += 1
+                        st.warning(f"Art. {art['numero']}: {e}")
+
+                    progress.progress(i / len(arts),
+                                      text=f"Generando… {i}/{len(arts)}")
+                    if i < len(arts):
+                        time.sleep(0.5)
+
+                progress.empty()
+                if ok:
+                    st.success(f"{ok} pregunta{'s' if ok > 1 else ''} guardada{'s' if ok > 1 else ''} en BD.")
+                if err:
+                    st.error(f"{err} error{'es' if err > 1 else ''} durante la generación.")
+                st.cache_data.clear()
+
+    # ── Tab Revisar ───────────────────────────────────────────────────────────
+    with tab_rev:
+        st.subheader(f"Pendientes de revisión — {ley_nombre}")
+
+        pending = _get_pending(ley_id)
+
+        if not pending:
+            st.info("No hay preguntas pendientes de revisión para esta ley.")
+        else:
+            st.caption(f"{len(pending)} pregunta{'s' if len(pending) > 1 else ''} pendiente{'s' if len(pending) > 1 else ''}")
+
+            for p in pending:
+                pid = p["pregunta_id"]
+                with st.expander(f"Art. {p['articulo']} — {p['pregunta'][:80]}…"):
+                    pregunta    = st.text_area("Enunciado",    value=p["pregunta"],    key=f"preg_{pid}")
+                    col1, col2  = st.columns(2)
+                    with col1:
+                        opcion_a = st.text_input("a)", value=p["opcion_a"], key=f"a_{pid}")
+                        opcion_b = st.text_input("b)", value=p["opcion_b"], key=f"b_{pid}")
+                    with col2:
+                        opcion_c = st.text_input("c)", value=p["opcion_c"], key=f"c_{pid}")
+                        opcion_d = st.text_input("d)", value=p["opcion_d"], key=f"d_{pid}")
+                    correcta    = st.selectbox(
+                        "Correcta", ["a", "b", "c", "d"],
+                        index=["a", "b", "c", "d"].index(p["correcta"]),
+                        key=f"cor_{pid}",
+                    )
+                    explicacion = st.text_area("Explicación", value=p.get("explicacion", ""),
+                                               key=f"exp_{pid}")
+
+                    col_ok, col_ko = st.columns(2)
+                    with col_ok:
+                        if st.button("✅ Aprobar", key=f"ok_{pid}", type="primary"):
+                            _approve(pid, user.email, {
+                                "pregunta":    pregunta,
+                                "opcion_a":    opcion_a,
+                                "opcion_b":    opcion_b,
+                                "opcion_c":    opcion_c,
+                                "opcion_d":    opcion_d,
+                                "correcta":    correcta,
+                                "explicacion": explicacion,
+                            })
+                            st.success("Aprobada y guardada.")
+                            st.rerun()
+                    with col_ko:
+                        if st.button("❌ Rechazar", key=f"ko_{pid}"):
+                            _reject(pid)
+                            st.warning("Pregunta eliminada.")
+                            st.rerun()
