@@ -79,10 +79,10 @@ def _get_leyes(ley_id=None):
             return [{"ley_id": r[0], "nombre": r[1]} for r in cur.fetchall()]
 
 
-def _fetch_articles(ley_id, n):
+def _fetch_articles(ley_id, n, max_por_articulo=1):
     """
     Artículos candidatos para generación:
-    - Excluye artículos que ya tienen pregunta IA generada.
+    - Excluye artículos que ya tienen >= max_por_articulo preguntas IA (pendientes + aprobadas).
     - Marca con examinado=True los que aparecieron en exámenes oficiales (indicador ★).
     - Ordena por longitud de contenido ponderada aleatoriamente (cobertura uniforme).
     """
@@ -102,15 +102,15 @@ def _fetch_articles(ley_id, n):
                   AND a.tipo = 'articulo'
                   AND length(a.contenido) >= %s
                   AND a.contenido !~* '\\(derogado|sin contenido|suprimido\\)'
-                  AND NOT EXISTS (
-                      SELECT 1 FROM normas.preguntas_test p
+                  AND (
+                      SELECT COUNT(*) FROM normas.preguntas_test p
                       WHERE p.ley_id = a.ley_id
                         AND p.articulo = a.numero
                         AND p.fuente = 'ia'
-                  )
+                  ) < %s
                 ORDER BY RANDOM() * log(length(a.contenido)) DESC
                 LIMIT %s
-            """, (ley_id, MIN_LENGTH, n))
+            """, (ley_id, MIN_LENGTH, max_por_articulo, n))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
@@ -260,7 +260,7 @@ def _build_prompt(art, ley_nombre, few_shots=None, tiene_apartados=False):
 
 # ── Runner principal ──────────────────────────────────────────────────────────
 
-def run(ley_id=None, n=50, dry_run=False, delay=0.5):
+def run(ley_id=None, n=50, dry_run=False, delay=0.5, max_por_articulo=1):
     import anthropic
     from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
 
@@ -276,7 +276,7 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5):
         print(f"\n{'─' * 60}")
         print(f"Ley: {ley['nombre']}  (id={ley['ley_id']})")
 
-        arts = _fetch_articles(ley["ley_id"], n)
+        arts = _fetch_articles(ley["ley_id"], n, max_por_articulo)
         if not arts:
             print("  Sin artículos nuevos que procesar.")
             continue
@@ -369,6 +369,8 @@ if __name__ == "__main__":
                    help="Genera preguntas pero NO las guarda en BD")
     p.add_argument("--delay", type=float, default=0.5,
                    help="Segundos entre llamadas a la API (default: 0.5)")
+    p.add_argument("--max-por-articulo", type=int, default=1,
+                   help="Máximo de preguntas IA por artículo, pendientes + aprobadas (default: 1)")
     args = p.parse_args()
 
     if args.supabase:
@@ -380,4 +382,5 @@ if __name__ == "__main__":
         os.environ.setdefault("DB_USER",     "postgres")
         os.environ.setdefault("DB_PASSWORD", "postgres")
 
-    run(ley_id=args.ley_id, n=args.n, dry_run=args.dry_run, delay=args.delay)
+    run(ley_id=args.ley_id, n=args.n, dry_run=args.dry_run, delay=args.delay,
+        max_por_articulo=args.max_por_articulo)

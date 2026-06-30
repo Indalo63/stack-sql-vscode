@@ -193,11 +193,17 @@ elif modo == "Editor":
     # ── Tab Generar ───────────────────────────────────────────────────────────
     with tab_gen:
         st.subheader(f"Generar preguntas — {ley_nombre}")
-        n_gen = st.slider("Número de preguntas", min_value=1, max_value=50, value=10,
-                          key="editor_n_gen")
+        col_n, col_max = st.columns(2)
+        with col_n:
+            n_gen = st.slider("Número de preguntas", min_value=1, max_value=50, value=10,
+                              key="editor_n_gen")
+        with col_max:
+            max_por_art = st.slider("Máximo por artículo", min_value=1, max_value=5, value=1,
+                                    key="editor_max_art",
+                                    help="Cuántas preguntas IA puede tener un mismo artículo (pendientes + aprobadas)")
 
         if st.button("Generar y guardar en BD", type="primary", key="btn_generar"):
-            arts = _fetch_articles(ley_id, n_gen)
+            arts = _fetch_articles(ley_id, n_gen, max_por_art)
             if not arts:
                 st.info("No hay artículos nuevos que procesar en esta ley.")
             else:
