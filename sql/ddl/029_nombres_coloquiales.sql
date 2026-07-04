@@ -61,9 +61,9 @@ FROM (VALUES
     ('REGI',     'RD 2668/1998 — Registro Central de Personal'),
     ('ET',       'RDL 2/2015 — Estatuto de los Trabajadores'),
     ('BCPSA',    'RDL 670/1987 — Clases Pasivas del Estado'),
-    ('RRCP',     'RD 172/1988 — Reglamento de Clases Pasivas'),
+    ('RRCP',     'Orden 30/09/1988 — Pensiones Clases Pasivas'),
     ('LAEPD',    'RD 428/1993 — Agencia de Protección de Datos'),
-    ('LSSF',     'RDL 3/2000 — Seguridad Social Funcionarios'),
+    ('LSSF',     'RDLeg 3/2000 — Seguridad Social Justicia'),
     -- Bloque VI — Gestión Financiera
     ('LGP',      'Ley 47/2003 — Presupuestos Generales del Estado'),
     ('LOEPSF',   'LO 2/2012 — Estabilidad Presupuestaria'),
