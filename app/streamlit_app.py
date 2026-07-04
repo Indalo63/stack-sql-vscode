@@ -10,7 +10,7 @@ import anthropic
 import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
-from app.retrieval import get_leyes_disponibles, get_oposiciones
+from app.retrieval import get_leyes_disponibles, get_oposiciones, get_bloques_por_oposicion
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.db import get_connection
 from scripts.build_test_bank import (
@@ -34,8 +34,12 @@ def _cargar_oposiciones():
     return get_oposiciones()
 
 @st.cache_data(ttl=300)
-def _cargar_leyes(oposicion_id: int | None):
-    return get_leyes_disponibles(oposicion_id)
+def _cargar_bloques(oposicion_id: int):
+    return get_bloques_por_oposicion(oposicion_id)
+
+@st.cache_data(ttl=300)
+def _cargar_leyes(oposicion_id: int | None, bloques: tuple[str, ...] | None = None):
+    return get_leyes_disponibles(oposicion_id, bloques)
 
 try:
     oposiciones = _cargar_oposiciones()
@@ -49,8 +53,25 @@ op_seleccion = st.sidebar.selectbox("Oposición", list(ops_opciones.keys()))
 oposicion_seleccionada = ops_opciones[op_seleccion]
 oposicion_id = oposicion_seleccionada["oposicion_id"]
 
+_NOMBRES_BLOQUE = {
+    "I":   "I — Organización del Estado",
+    "II":  "II — Unión Europea",
+    "III": "III — Políticas Públicas",
+    "IV":  "IV — Derecho Administrativo",
+    "V":   "V — Recursos Humanos",
+    "VI":  "VI — Gestión Financiera",
+}
+
+bloques_disponibles = _cargar_bloques(oposicion_id)
+st.sidebar.markdown("**Bloque**")
+bloques_sel = tuple(
+    b for b in bloques_disponibles
+    if st.sidebar.checkbox(_NOMBRES_BLOQUE.get(b, b), value=True, key=f"blq_{b}")
+)
+bloques_filtro = bloques_sel if bloques_sel else None
+
 try:
-    leyes = _cargar_leyes(oposicion_id)
+    leyes = _cargar_leyes(oposicion_id, bloques_filtro)
 except Exception as e:
     st.error(f"Error al cargar las leyes: {e}")
     st.stop()

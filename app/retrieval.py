@@ -36,24 +36,49 @@ def get_oposiciones() -> list[dict]:
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def get_leyes_disponibles(oposicion_id: int | None = None) -> list[dict]:
-    """Lista las leyes activas. Si se indica oposicion_id, filtra por repertorio."""
+def get_bloques_por_oposicion(oposicion_id: int) -> list[str]:
+    """Devuelve los bloques distintos de una oposición, ordenados."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT bloque
+                FROM normas.oposicion_leyes
+                WHERE oposicion_id = %s AND bloque IS NOT NULL
+                ORDER BY bloque
+            """, (oposicion_id,))
+            return [row[0] for row in cur.fetchall()]
+
+
+def get_leyes_disponibles(oposicion_id: int | None = None,
+                          bloques: tuple[str, ...] | None = None) -> list[dict]:
+    """Lista las leyes activas. Filtra por oposición y opcionalmente por bloques."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             if oposicion_id is not None:
-                cur.execute("""
-                    SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
-                           ol.preguntas_simulacro, ol.orden
-                    FROM normas.leyes l
-                    JOIN normas.oposicion_leyes ol
-                         ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
-                    WHERE l.activa = true
-                    ORDER BY ol.orden, l.codigo
-                """, (oposicion_id,))
+                if bloques:
+                    cur.execute("""
+                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                               ol.preguntas_simulacro, ol.orden, ol.bloque
+                        FROM normas.leyes l
+                        JOIN normas.oposicion_leyes ol
+                             ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
+                        WHERE l.activa = true AND ol.bloque = ANY(%s)
+                        ORDER BY ol.bloque, ol.orden, l.codigo
+                    """, (oposicion_id, list(bloques)))
+                else:
+                    cur.execute("""
+                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                               ol.preguntas_simulacro, ol.orden, ol.bloque
+                        FROM normas.leyes l
+                        JOIN normas.oposicion_leyes ol
+                             ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
+                        WHERE l.activa = true
+                        ORDER BY ol.bloque, ol.orden, l.codigo
+                    """, (oposicion_id,))
             else:
                 cur.execute("""
                     SELECT ley_id, codigo, nombre, nombre_corto,
-                           NULL AS preguntas_simulacro, NULL AS orden
+                           NULL AS preguntas_simulacro, NULL AS orden, NULL AS bloque
                     FROM normas.leyes
                     WHERE activa = true
                     ORDER BY nombre
