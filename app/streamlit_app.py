@@ -116,7 +116,7 @@ with _cl2:
 leyes_sel = [
     l for l in leyes
     if st.sidebar.checkbox(
-        f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}",
+        l['nombre_corto'] or l['nombre'],
         value=True,
         key=f"ley_{l['ley_id']}",
     )
