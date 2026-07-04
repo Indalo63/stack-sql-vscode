@@ -76,7 +76,9 @@ FROM (VALUES
 ) AS v(codigo, etiqueta)
 WHERE l.codigo = v.codigo;
 
--- Verificación: filas actualizadas deben ser 60
+-- Verificación: 59 leyes actualizadas (LSSF excluida: RDLeg 3/2000,
+-- solo ámbito Justicia, sin contenido en normas.leyes; reservada para
+-- futuras oposiciones de Justicia con excluir_test=TRUE en GACE)
 SELECT COUNT(*) AS leyes_actualizadas
 FROM normas.leyes
 WHERE codigo IN (
@@ -86,6 +88,6 @@ WHERE codigo IN (
     'LE','LGPD','LDEP','LOE','LO4000','LASIL','LTRANS','LGUM','LGT22','LEPP',
     'LPAC','LRJSP','LCSP','LJCA','LGS','LEF','LPAP','CC','RLEF','RLGS',
     'TREBEP','RIRS','MUFACE','LMRFP','RDSA','RDRD','REGI','ET',
-    'BCPSA','RRCP','LAEPD','LSSF',
+    'BCPSA','RRCP','LAEPD',
     'LGP','LOEPSF','LTPP','LGT','LOTCU','IGAE','ACF','PLJ'
 );
