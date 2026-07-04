@@ -40,8 +40,9 @@ def _cargar_bloques(oposicion_id: int):
     return get_bloques_por_oposicion(oposicion_id)
 
 @st.cache_data(ttl=300)
-def _cargar_leyes(oposicion_id: int | None, bloques: tuple[str, ...] | None = None):
-    return get_leyes_disponibles(oposicion_id, bloques)
+def _cargar_leyes(oposicion_id: int | None, bloques: tuple[str, ...] | None = None,
+                  excluir_test: bool = False):
+    return get_leyes_disponibles(oposicion_id, bloques, excluir_test=excluir_test)
 
 try:
     oposiciones = _cargar_oposiciones()
@@ -90,7 +91,7 @@ if not bloques_sel:
 bloques_filtro = bloques_sel
 
 try:
-    leyes = _cargar_leyes(oposicion_id, bloques_filtro)
+    leyes = _cargar_leyes(oposicion_id, bloques_filtro, excluir_test=True)
 except Exception as e:
     st.error(f"Error al cargar las leyes: {e}")
     st.stop()

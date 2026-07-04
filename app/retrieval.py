@@ -76,29 +76,37 @@ def get_bloques_por_oposicion(oposicion_id: int) -> list[str]:
 
 
 def get_leyes_disponibles(oposicion_id: int | None = None,
-                          bloques: tuple[str, ...] | None = None) -> list[dict]:
-    """Lista las leyes activas. Filtra por oposición y opcionalmente por bloques."""
+                          bloques: tuple[str, ...] | None = None,
+                          excluir_test: bool = False) -> list[dict]:
+    """
+    Lista las leyes activas. Filtra por oposición y opcionalmente por bloques.
+    excluir_test=True omite las leyes marcadas como documentos de referencia
+    (no examinables), como GACE_NORM.
+    """
     with get_connection() as conn:
         with conn.cursor() as cur:
             if oposicion_id is not None:
+                filtro_ref = "AND ol.excluir_test = FALSE" if excluir_test else ""
                 if bloques:
-                    cur.execute("""
+                    cur.execute(f"""
                         SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
                                ol.preguntas_simulacro, ol.orden, ol.bloque
                         FROM normas.leyes l
                         JOIN normas.oposicion_leyes ol
                              ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
                         WHERE l.activa = true AND ol.bloque = ANY(%s)
+                        {filtro_ref}
                         ORDER BY ol.bloque, ol.orden, l.codigo
                     """, (oposicion_id, list(bloques)))
                 else:
-                    cur.execute("""
+                    cur.execute(f"""
                         SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
                                ol.preguntas_simulacro, ol.orden, ol.bloque
                         FROM normas.leyes l
                         JOIN normas.oposicion_leyes ol
                              ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
                         WHERE l.activa = true
+                        {filtro_ref}
                         ORDER BY ol.bloque, ol.orden, l.codigo
                     """, (oposicion_id,))
             else:
