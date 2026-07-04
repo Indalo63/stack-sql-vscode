@@ -36,6 +36,32 @@ def get_oposiciones() -> list[dict]:
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
+def get_preguntas_banco(oposicion_id: int,
+                        bloques: tuple[str, ...],
+                        n: int = 10,
+                        excluir_ids: tuple[int, ...] = ()) -> list[dict]:
+    """N preguntas aleatorias aprobadas, filtradas por oposición + bloques."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pt.pregunta_id, pt.articulo, pt.pregunta,
+                       pt.opcion_a, pt.opcion_b, pt.opcion_c, pt.opcion_d,
+                       pt.correcta, pt.explicacion, l.codigo AS ley_codigo
+                FROM normas.preguntas_test pt
+                JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                              AND ol.oposicion_id = %s
+                WHERE pt.revisada = TRUE
+                  AND pt.activa   = TRUE
+                  AND ol.bloque   = ANY(%s)
+                  AND NOT (pt.pregunta_id = ANY(%s::int[]))
+                ORDER BY RANDOM()
+                LIMIT %s
+            """, (oposicion_id, list(bloques), list(excluir_ids), n))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def get_bloques_por_oposicion(oposicion_id: int) -> list[str]:
     """Devuelve los bloques distintos de una oposición, ordenados."""
     with get_connection() as conn:

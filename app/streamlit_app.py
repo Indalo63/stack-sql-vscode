@@ -10,7 +10,8 @@ import anthropic
 import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
-from app.retrieval import get_leyes_disponibles, get_oposiciones, get_bloques_por_oposicion
+from app.retrieval import (get_leyes_disponibles, get_oposiciones,
+                           get_bloques_por_oposicion, get_preguntas_banco)
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.db import get_connection
 from scripts.build_test_bank import (
@@ -237,45 +238,111 @@ if modo == "Q&A":
         st.markdown("### Respuesta")
         st.markdown(st.session_state.qa_respuesta)
 
-# ── Modo Gentest ───────────────────────────────────────────────────────────────
+# ── Modo Generar test ──────────────────────────────────────────────────────────
 elif modo == "Generar test":
-    st.header("Generador de preguntas tipo test")
+    st.header("Práctica de test")
 
-    if len(leyes_sel) > 1:
-        ley_gt = st.selectbox(
-            "Ley a usar",
-            options=leyes_sel,
-            format_func=lambda l: f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}",
+    # ── Estado de la sesión de práctica ───────────────────────────────────────
+    if "quiz" not in st.session_state:
+        st.session_state.quiz = {
+            "preguntas":  [],
+            "respuestas": {},   # pregunta_id → letra elegida
+            "respondido": False,
+            "vistos":     set(),
+            "ok":         0,
+            "err":        0,
+        }
+    quiz = st.session_state.quiz
+
+    # Marcador acumulado de sesión
+    total = quiz["ok"] + quiz["err"]
+    if total > 0:
+        pct = round(quiz["ok"] / total * 100)
+        st.caption(
+            f"Sesión: **{quiz['ok']}** correctas · **{quiz['err']}** erróneas "
+            f"· {pct}% acierto · {len(quiz['vistos'])} preguntas vistas"
         )
-        ley_id     = ley_gt["ley_id"]
-        ley_nombre = ley_gt["nombre"]
 
-    if "gentest_preguntas" not in st.session_state:
-        st.session_state.gentest_preguntas = []
+    # ── Sin tanda activa: botón de inicio ─────────────────────────────────────
+    if not quiz["preguntas"]:
+        bloques_label = " + ".join(_NOMBRES_BLOQUE.get(b, b) for b in bloques_sel)
+        st.info(f"Bloque{'s' if len(bloques_sel) > 1 else ''} seleccionado{'s' if len(bloques_sel) > 1 else ''}: **{bloques_label}**")
 
-    n = st.slider("Número de preguntas", min_value=1, max_value=10, value=3)
+        if st.button("Generar 10 preguntas", type="primary"):
+            preguntas = get_preguntas_banco(
+                oposicion_id,
+                bloques_sel,
+                n=10,
+                excluir_ids=tuple(quiz["vistos"]),
+            )
+            if not preguntas:
+                st.warning("No hay más preguntas disponibles para esta selección. ¡Has visto todas!")
+            else:
+                quiz["preguntas"]  = preguntas
+                quiz["respuestas"] = {}
+                quiz["respondido"] = False
+                quiz["vistos"].update(p["pregunta_id"] for p in preguntas)
+                st.rerun()
 
-    if st.button("Generar preguntas", type="primary"):
-        with st.spinner(f"Generando {n} pregunta{'s' if n > 1 else ''}…"):
-            try:
-                st.session_state.gentest_preguntas = run_gentest(
-                    ley_id=ley_id, ley_nombre=ley_nombre, n=n
+    # ── Tanda activa ──────────────────────────────────────────────────────────
+    else:
+        for i, p in enumerate(quiz["preguntas"], 1):
+            pid     = p["pregunta_id"]
+            opciones = {
+                "a": p["opcion_a"], "b": p["opcion_b"],
+                "c": p["opcion_c"], "d": p["opcion_d"],
+            }
+            st.markdown(f"**{i}. [{p['ley_codigo']}] {p['pregunta']}**")
+
+            if not quiz["respondido"]:
+                resp = st.radio(
+                    "",
+                    options=list(opciones.keys()),
+                    format_func=lambda x, op=opciones: f"{x}) {op[x]}",
+                    key=f"q_{pid}",
+                    index=None,
+                    label_visibility="collapsed",
                 )
-            except Exception as e:
-                st.error(f"Error al generar las preguntas: {e}")
+                quiz["respuestas"][pid] = resp
+            else:
+                correcta   = p["correcta"]
+                elegida    = quiz["respuestas"].get(pid)
+                for letra, texto in opciones.items():
+                    if letra == correcta:
+                        st.markdown(f"✅ **{letra}) {texto}**")
+                    elif letra == elegida:
+                        st.markdown(f"❌ {letra}) {texto}")
+                    else:
+                        st.markdown(f"{letra}) {texto}")
+                if p.get("explicacion"):
+                    st.info(p["explicacion"])
 
-    for i, p in enumerate(st.session_state.gentest_preguntas, 1):
-        if "error" in p:
-            st.warning(f"Pregunta {i} — Art. {p.get('articulo', '?')}: {p['error']}")
-            continue
-        with st.expander(f"**Pregunta {i} — Art. {p['articulo']}**  {p['pregunta']}", expanded=True):
-            correcta = p.get("correcta", "")
-            for letra, texto in p["opciones"].items():
-                if letra == correcta:
-                    st.markdown(f"**{letra}) {texto} ✓**")
-                else:
-                    st.markdown(f"{letra}) {texto}")
-            st.info(f"**Explicación:** {p['explicacion']}")
+            st.divider()
+
+        # ── Botones de acción ─────────────────────────────────────────────────
+        if not quiz["respondido"]:
+            if st.button("Comprobar respuestas", type="primary"):
+                ok = err = 0
+                for p in quiz["preguntas"]:
+                    elegida = quiz["respuestas"].get(p["pregunta_id"])
+                    if elegida == p["correcta"]:
+                        ok += 1
+                    elif elegida is not None:
+                        err += 1
+                quiz["ok"]        += ok
+                quiz["err"]       += err
+                quiz["respondido"] = True
+                st.rerun()
+        else:
+            ok_t = sum(
+                1 for p in quiz["preguntas"]
+                if quiz["respuestas"].get(p["pregunta_id"]) == p["correcta"]
+            )
+            st.success(f"Resultado de esta tanda: **{ok_t} / {len(quiz['preguntas'])}** correctas")
+            if st.button("Nueva tanda →", type="primary"):
+                quiz["preguntas"]  = []
+                quiz["respondido"] = False
+                st.rerun()
 
 # ── Modo Editor ────────────────────────────────────────────────────────────────
 elif modo == "Editor":
