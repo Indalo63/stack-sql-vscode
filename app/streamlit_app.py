@@ -77,15 +77,26 @@ except Exception as e:
     st.stop()
 
 if not leyes:
-    st.warning("Esta oposición no tiene leyes asignadas. Ejecuta la migración 025.")
+    st.sidebar.warning("Esta oposición no tiene leyes asignadas.")
     st.stop()
 
-opciones = {f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}": l for l in leyes}
+st.sidebar.markdown("**Ley**")
+leyes_sel = [
+    l for l in leyes
+    if st.sidebar.checkbox(
+        f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}",
+        value=True,
+        key=f"ley_{l['ley_id']}",
+    )
+]
 
-seleccion = st.sidebar.selectbox("Ley", list(opciones.keys()))
-ley_seleccionada = opciones[seleccion]
-ley_id     = ley_seleccionada["ley_id"]
-ley_nombre = ley_seleccionada["nombre"]
+if not leyes_sel:
+    st.sidebar.warning("Selecciona al menos una ley.")
+    st.stop()
+
+# Alias para modos que trabajan con una sola ley (Q&A, Gentest)
+ley_id     = leyes_sel[0]["ley_id"]
+ley_nombre = leyes_sel[0]["nombre"]
 
 modos = ["Q&A", "Generar test"]
 if logged_in:
@@ -107,19 +118,21 @@ st.title("⚖️ Asistente Jurídico")
 st.caption("Búsqueda semántica + Claude")
 
 # ── Helpers BD — Editor ───────────────────────────────────────────────────────
-def _get_pending(ley_id: int) -> list[dict]:
+def _get_pending(ley_ids: list[int]) -> list[dict]:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT pregunta_id, articulo, pregunta,
-                       opcion_a, opcion_b, opcion_c, opcion_d,
-                       correcta, explicacion
-                FROM normas.preguntas_test
-                WHERE ley_id   = %s
-                  AND fuente   = 'ia'
-                  AND revisada = FALSE
-                ORDER BY generada_en DESC
-            """, (ley_id,))
+                SELECT pt.pregunta_id, pt.ley_id, l.codigo AS ley_codigo,
+                       pt.articulo, pt.pregunta,
+                       pt.opcion_a, pt.opcion_b, pt.opcion_c, pt.opcion_d,
+                       pt.correcta, pt.explicacion
+                FROM normas.preguntas_test pt
+                JOIN normas.leyes l ON l.ley_id = pt.ley_id
+                WHERE pt.ley_id = ANY(%s)
+                  AND pt.fuente   = 'ia'
+                  AND pt.revisada = FALSE
+                ORDER BY pt.ley_id, pt.generada_en DESC
+            """, (ley_ids,))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
@@ -164,6 +177,15 @@ def _reject(pregunta_id: int) -> None:
 if modo == "Q&A":
     st.header("Consulta jurídica")
 
+    if len(leyes_sel) > 1:
+        ley_qa = st.selectbox(
+            "Ley a consultar",
+            options=leyes_sel,
+            format_func=lambda l: f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}",
+        )
+        ley_id     = ley_qa["ley_id"]
+        ley_nombre = ley_qa["nombre"]
+
     for key in ("qa_respuesta", "qa_pregunta"):
         if key not in st.session_state:
             st.session_state[key] = ""
@@ -189,6 +211,15 @@ if modo == "Q&A":
 # ── Modo Gentest ───────────────────────────────────────────────────────────────
 elif modo == "Generar test":
     st.header("Generador de preguntas tipo test")
+
+    if len(leyes_sel) > 1:
+        ley_gt = st.selectbox(
+            "Ley a usar",
+            options=leyes_sel,
+            format_func=lambda l: f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}",
+        )
+        ley_id     = ley_gt["ley_id"]
+        ley_nombre = ley_gt["nombre"]
 
     if "gentest_preguntas" not in st.session_state:
         st.session_state.gentest_preguntas = []
@@ -232,10 +263,11 @@ elif modo == "Editor":
 
     # ── Tab Generar ───────────────────────────────────────────────────────────
     with tab_gen:
-        st.subheader(f"Generar preguntas — {ley_nombre}")
+        nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
+        st.subheader(f"Generar preguntas — {nombres_sel}")
         col_n, col_max = st.columns(2)
         with col_n:
-            n_gen = st.slider("Número de preguntas", min_value=1, max_value=50, value=10,
+            n_gen = st.slider("Preguntas por ley", min_value=1, max_value=50, value=10,
                               key="editor_n_gen")
         with col_max:
             max_por_art = st.slider("Máximo por artículo", min_value=1, max_value=5, value=1,
@@ -243,15 +275,17 @@ elif modo == "Editor":
                                     help="Cuántas preguntas IA puede tener un mismo artículo (pendientes + aprobadas)")
 
         if st.button("Generar y guardar en BD", type="primary", key="btn_generar"):
-            arts = _fetch_articles(ley_id, n_gen, max_por_art)
-            if not arts:
-                st.info("No hay artículos nuevos que procesar en esta ley.")
-            else:
-                few_shots = _fetch_few_shots(ley_id)
-                client    = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-                progress  = st.progress(0, text="Iniciando generación…")
-                ok = err  = 0
-
+            client  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+            ok = err = 0
+            for ley_loop in leyes_sel:
+                lid   = ley_loop["ley_id"]
+                lnomb = ley_loop["nombre"]
+                arts  = _fetch_articles(lid, n_gen, max_por_art)
+                if not arts:
+                    st.info(f"{ley_loop['codigo']}: sin artículos nuevos.")
+                    continue
+                few_shots = _fetch_few_shots(lid)
+                progress  = st.progress(0, text=f"{ley_loop['codigo']} — iniciando…")
                 for i, art in enumerate(arts, 1):
                     tiene_apartados = _has_numbered_paragraphs(art["contenido"])
                     try:
@@ -259,35 +293,35 @@ elif modo == "Editor":
                             model=CLAUDE_MODEL,
                             max_tokens=800,
                             messages=_build_prompt(
-                                art, ley_nombre,
+                                art, lnomb,
                                 few_shots=few_shots,
                                 tiene_apartados=tiene_apartados,
                             ),
                         )
                         parsed = _parse_and_validate(resp.content[0].text)
-                        _save(ley_id, art, parsed)
+                        _save(lid, art, parsed)
                         ok += 1
                     except Exception as e:
                         err += 1
-                        st.warning(f"Art. {art['numero']}: {e}")
-
+                        st.warning(f"{ley_loop['codigo']} — Art. {art['numero']}: {e}")
                     progress.progress(i / len(arts),
-                                      text=f"Generando… {i}/{len(arts)}")
+                                      text=f"{ley_loop['codigo']} — {i}/{len(arts)}")
                     if i < len(arts):
                         time.sleep(0.5)
-
                 progress.empty()
-                if ok:
-                    st.success(f"{ok} pregunta{'s' if ok > 1 else ''} guardada{'s' if ok > 1 else ''} en BD.")
-                if err:
-                    st.error(f"{err} error{'es' if err > 1 else ''} durante la generación.")
-                st.cache_data.clear()
+
+            if ok:
+                st.success(f"{ok} pregunta{'s' if ok > 1 else ''} guardada{'s' if ok > 1 else ''} en BD.")
+            if err:
+                st.error(f"{err} error{'es' if err > 1 else ''} durante la generación.")
+            st.cache_data.clear()
 
     # ── Tab Revisar ───────────────────────────────────────────────────────────
     with tab_rev:
-        st.subheader(f"Pendientes de revisión — {ley_nombre}")
+        nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
+        st.subheader(f"Pendientes de revisión — {nombres_sel}")
 
-        pending = _get_pending(ley_id)
+        pending = _get_pending([l["ley_id"] for l in leyes_sel])
 
         if not pending:
             st.info("No hay preguntas pendientes de revisión para esta ley.")
@@ -296,7 +330,7 @@ elif modo == "Editor":
 
             for p in pending:
                 pid = p["pregunta_id"]
-                with st.expander(f"Art. {p['articulo']} — {p['pregunta'][:80]}…"):
+                with st.expander(f"[{p['ley_codigo']}] Art. {p['articulo']} — {p['pregunta'][:70]}…"):
                     pregunta    = st.text_area("Enunciado",    value=p["pregunta"],    key=f"preg_{pid}")
                     col1, col2  = st.columns(2)
                     with col1:
