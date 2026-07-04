@@ -69,19 +69,19 @@ bloques_disponibles = _cargar_bloques(oposicion_id)
 st.sidebar.markdown("**Bloque**")
 _cb1, _cb2 = st.sidebar.columns(2)
 with _cb1:
-    if st.button("Todos", key="blq_todos", use_container_width=True):
+    if st.button("Selecciona al menos un bloque", key="blq_todos", use_container_width=True):
         for b in bloques_disponibles:
             st.session_state[f"blq_{b}"] = True
         st.rerun()
 with _cb2:
-    if st.button("Ninguno", key="blq_ninguno", use_container_width=True):
+    if st.button("Elimina la selección", key="blq_ninguno", use_container_width=True):
         for b in bloques_disponibles:
             st.session_state[f"blq_{b}"] = False
         st.rerun()
 
 bloques_sel = tuple(
     b for b in bloques_disponibles
-    if st.sidebar.checkbox(_NOMBRES_BLOQUE.get(b, b), value=True, key=f"blq_{b}")
+    if st.sidebar.checkbox(_NOMBRES_BLOQUE.get(b, b), value=False, key=f"blq_{b}")
 )
 
 if not bloques_sel:
@@ -103,12 +103,12 @@ if not leyes:
 st.sidebar.markdown("**Ley**")
 _cl1, _cl2 = st.sidebar.columns(2)
 with _cl1:
-    if st.button("Todas", key="ley_todas", use_container_width=True):
+    if st.button("Selecciona al menos una ley", key="ley_todas", use_container_width=True):
         for l in leyes:
             st.session_state[f"ley_{l['ley_id']}"] = True
         st.rerun()
 with _cl2:
-    if st.button("Ninguna", key="ley_ninguna", use_container_width=True):
+    if st.button("Elimina la selección", key="ley_ninguna", use_container_width=True):
         for l in leyes:
             st.session_state[f"ley_{l['ley_id']}"] = False
         st.rerun()
@@ -117,7 +117,7 @@ leyes_sel = [
     l for l in leyes
     if st.sidebar.checkbox(
         l['nombre_corto'] or l['nombre'],
-        value=True,
+        value=False,
         key=f"ley_{l['ley_id']}",
     )
 ]
