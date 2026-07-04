@@ -12,7 +12,7 @@ Backlog completo. El estado macro y el hito inmediato viven en `CLAUDE.md`.
 | 8 | TREBEP | RDL 5/2015 Estatuto Básico Empleado Público | ✅ cargada |
 | 9 | LGP | Ley 47/2003 General Presupuestaria | ✅ cargada |
 | 12 | LCSP | Ley 9/2017 Contratos Sector Público | ✅ cargada |
-| 13 | GACE_NORM | Normativa Oposición GACE (criterios + programa) | ✅ cargada |
+| 14 | GACE_NORM | Normativa Oposición GACE (criterios + programa) | ✅ cargada |
 | 15 | LODP | LO 3/1981 Defensor del Pueblo | ✅ cargada |
 | 17 | LOTC | LO 2/1979 Tribunal Constitucional | ✅ cargada |
 | 18 | LGOB | Ley 50/1997 del Gobierno | ✅ cargada |
@@ -43,10 +43,10 @@ Backlog completo. El estado macro y el hito inmediato viven en `CLAUDE.md`.
 | 49 | ET | RDLeg 2/2015 Estatuto de los Trabajadores | ✅ cargada |
 | 50 | LOIT | Ley 15/2022 Igualdad de Trato y No Discriminación | ✅ cargada |
 | 51 | LASEE | Ley 2/2014 Acción y Servicio Exterior del Estado | ✅ cargada |
-| 52 | ENI | RD 4/2010 Esquema Nacional de Interoperabilidad | ✅ cargada |
-| 56 | CC | Código Civil (RD 24 julio 1889) | ✅ cargada |
-| 57 | LPNAT | Ley 42/2007 Patrimonio Natural y Biodiversidad | ✅ cargada |
-| 58 | LE | Ley 3/2023 de Empleo | ✅ cargada |
+| 53 | ENI | RD 4/2010 Esquema Nacional de Interoperabilidad | ✅ cargada |
+| 57 | CC | Código Civil (RD 24 julio 1889) | ✅ cargada |
+| 58 | LPNAT | Ley 42/2007 Patrimonio Natural y Biodiversidad | ✅ cargada |
+| 59 | LE | Ley 3/2023 de Empleo | ✅ cargada |
 | 60 | RLEF | Reglamento de la Ley de Expropiación Forzosa (Decreto 657/1957) | ✅ cargada |
 | 61 | RLGS | Reglamento de la Ley General de Subvenciones (RD 887/2006) | ✅ cargada |
 | 62 | BCPSA | Bases comunes procesos selectivos AGE (RD 364/2017) | ✅ cargada |

@@ -10,7 +10,7 @@ import anthropic
 import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
-from app.retrieval import get_leyes_disponibles
+from app.retrieval import get_leyes_disponibles, get_oposiciones
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.db import get_connection
 from scripts.build_test_bank import (
@@ -28,20 +28,39 @@ st.set_page_config(
 user = st.user
 logged_in = "email" in user
 
-# ── Carga de leyes ────────────────────────────────────────────────────────────
+# ── Carga de datos ────────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
-def _cargar_leyes():
-    return get_leyes_disponibles()
+def _cargar_oposiciones():
+    return get_oposiciones()
+
+@st.cache_data(ttl=300)
+def _cargar_leyes(oposicion_id: int | None):
+    return get_leyes_disponibles(oposicion_id)
 
 try:
-    leyes = _cargar_leyes()
+    oposiciones = _cargar_oposiciones()
 except Exception as e:
     st.error(f"No se puede conectar a la base de datos: {e}")
     st.stop()
 
-opciones = {f"{l['nombre_corto'] or l['codigo']} — {l['nombre']}": l for l in leyes}
-
 # ── Sidebar ────────────────────────────────────────────────────────────────────
+ops_opciones = {f"{o['nombre_corto'] or o['codigo']}": o for o in oposiciones}
+op_seleccion = st.sidebar.selectbox("Oposición", list(ops_opciones.keys()))
+oposicion_seleccionada = ops_opciones[op_seleccion]
+oposicion_id = oposicion_seleccionada["oposicion_id"]
+
+try:
+    leyes = _cargar_leyes(oposicion_id)
+except Exception as e:
+    st.error(f"Error al cargar las leyes: {e}")
+    st.stop()
+
+if not leyes:
+    st.warning("Esta oposición no tiene leyes asignadas. Ejecuta la migración 025.")
+    st.stop()
+
+opciones = {f"{l['codigo']} — {l['nombre_corto'] or l['nombre']}": l for l in leyes}
+
 seleccion = st.sidebar.selectbox("Ley", list(opciones.keys()))
 ley_seleccionada = opciones[seleccion]
 ley_id     = ley_seleccionada["ley_id"]

@@ -22,16 +22,42 @@ def embed_query(text: str) -> list[float]:
     return _embedding_cache[text]
 
 
-def get_leyes_disponibles() -> list[dict]:
-    """Lista las leyes activas disponibles en la BD."""
+def get_oposiciones() -> list[dict]:
+    """Devuelve las oposiciones activas."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT ley_id, codigo, nombre, nombre_corto
-                FROM normas.leyes
+                SELECT oposicion_id, codigo, nombre, nombre_corto
+                FROM normas.oposiciones
                 WHERE activa = true
-                ORDER BY nombre
+                ORDER BY nombre_corto
             """)
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def get_leyes_disponibles(oposicion_id: int | None = None) -> list[dict]:
+    """Lista las leyes activas. Si se indica oposicion_id, filtra por repertorio."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            if oposicion_id is not None:
+                cur.execute("""
+                    SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                           ol.preguntas_simulacro, ol.orden
+                    FROM normas.leyes l
+                    JOIN normas.oposicion_leyes ol
+                         ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
+                    WHERE l.activa = true
+                    ORDER BY ol.orden, l.codigo
+                """, (oposicion_id,))
+            else:
+                cur.execute("""
+                    SELECT ley_id, codigo, nombre, nombre_corto,
+                           NULL AS preguntas_simulacro, NULL AS orden
+                    FROM normas.leyes
+                    WHERE activa = true
+                    ORDER BY nombre
+                """)
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
