@@ -299,3 +299,122 @@ def search_articles_hierarchical(vector: list[float], ley_id: int,
                 resultados = sorted(resultados, key=lambda x: -x["similitud"])[:k]
 
             return resultados
+
+
+def get_preguntas_sm2(user_id: str,
+                      oposicion_id: int,
+                      bloques: tuple[str, ...],
+                      n: int = 10) -> list[dict]:
+    """
+    Selecciona hasta n preguntas para una sesión SM-2:
+    primero las pendientes de revisión (proxima_revision <= hoy),
+    luego preguntas nuevas (sin historial) hasta completar n.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pt.pregunta_id, pt.articulo, pt.pregunta,
+                       pt.opcion_a, pt.opcion_b, pt.opcion_c, pt.opcion_d,
+                       pt.correcta, pt.explicacion, l.codigo AS ley_codigo,
+                       pu.proxima_revision, pu.total_vistas, pu.total_correctas
+                FROM normas.progreso_usuario pu
+                JOIN normas.preguntas_test pt  ON pt.pregunta_id  = pu.pregunta_id
+                JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                              AND ol.oposicion_id = %s
+                WHERE pu.user_id            = %s
+                  AND pu.proxima_revision  <= CURRENT_DATE
+                  AND pt.revisada = TRUE
+                  AND pt.activa   = TRUE
+                  AND ol.bloque   = ANY(%s)
+                ORDER BY pu.proxima_revision
+                LIMIT %s
+            """, (oposicion_id, user_id, list(bloques), n))
+            cols = [d[0] for d in cur.description]
+            pendientes = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+            restantes = n - len(pendientes)
+            if restantes <= 0:
+                return pendientes
+
+            vistos_ids = [p["pregunta_id"] for p in pendientes] or [0]
+            cur.execute("""
+                SELECT pt.pregunta_id, pt.articulo, pt.pregunta,
+                       pt.opcion_a, pt.opcion_b, pt.opcion_c, pt.opcion_d,
+                       pt.correcta, pt.explicacion, l.codigo AS ley_codigo,
+                       NULL::date AS proxima_revision,
+                       0 AS total_vistas, 0 AS total_correctas
+                FROM normas.preguntas_test pt
+                JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                              AND ol.oposicion_id = %s
+                WHERE pt.revisada = TRUE
+                  AND pt.activa   = TRUE
+                  AND ol.bloque   = ANY(%s)
+                  AND NOT EXISTS (
+                      SELECT 1 FROM normas.progreso_usuario pu
+                      WHERE pu.user_id = %s AND pu.pregunta_id = pt.pregunta_id
+                  )
+                  AND NOT (pt.pregunta_id = ANY(%s::int[]))
+                ORDER BY RANDOM()
+                LIMIT %s
+            """, (oposicion_id, list(bloques), user_id, vistos_ids, restantes))
+            cols = [d[0] for d in cur.description]
+            nuevas = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+            return pendientes + nuevas
+
+
+def update_progreso_sm2(user_id: str, pregunta_id: int, correcto: bool) -> None:
+    """Aplica SM-2 y hace upsert en progreso_usuario."""
+    q = 4 if correcto else 0
+    correcto_int = 1 if correcto else 0
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT intervalo, repeticiones, facilidad
+                FROM normas.progreso_usuario
+                WHERE user_id = %s AND pregunta_id = %s
+            """, (user_id, pregunta_id))
+            row = cur.fetchone()
+            intervalo, repeticiones, facilidad = row if row else (1, 0, 2.50)
+
+            if q >= 3:
+                if repeticiones == 0:
+                    nuevo_intervalo = 1
+                elif repeticiones == 1:
+                    nuevo_intervalo = 6
+                else:
+                    nuevo_intervalo = round(intervalo * float(facilidad))
+                repeticiones += 1
+            else:
+                nuevo_intervalo = 1
+                repeticiones = 0
+
+            nueva_facilidad = round(
+                max(1.3, float(facilidad) + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)), 2)
+
+            cur.execute("""
+                INSERT INTO normas.progreso_usuario
+                    (user_id, pregunta_id, intervalo, repeticiones, facilidad,
+                     proxima_revision, total_vistas, total_correctas,
+                     ultima_correcta, ultima_vez)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_DATE + %s, 1, %s, %s, NOW())
+                ON CONFLICT (user_id, pregunta_id) DO UPDATE SET
+                    intervalo        = %s,
+                    repeticiones     = %s,
+                    facilidad        = %s,
+                    proxima_revision = CURRENT_DATE + %s,
+                    total_vistas     = normas.progreso_usuario.total_vistas + 1,
+                    total_correctas  = normas.progreso_usuario.total_correctas + %s,
+                    ultima_correcta  = %s,
+                    ultima_vez       = NOW()
+            """, (
+                user_id, pregunta_id,
+                nuevo_intervalo, repeticiones, nueva_facilidad,
+                nuevo_intervalo, correcto_int, correcto,
+                nuevo_intervalo, repeticiones, nueva_facilidad,
+                nuevo_intervalo, correcto_int, correcto,
+            ))
+            conn.commit()

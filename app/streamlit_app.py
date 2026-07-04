@@ -11,7 +11,8 @@ import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import (get_leyes_disponibles, get_oposiciones,
-                           get_bloques_por_oposicion, get_preguntas_banco)
+                           get_bloques_por_oposicion, get_preguntas_banco,
+                           get_preguntas_sm2, update_progreso_sm2)
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.db import get_connection
 from scripts.build_test_bank import (
@@ -242,6 +243,11 @@ if modo == "Q&A":
 elif modo == "Generar test":
     st.header("Práctica de test")
 
+    if logged_in:
+        st.caption(f"Repaso adaptativo · {user['email']}")
+    else:
+        st.caption("Inicia sesión con Google para guardar tu progreso y activar el repaso adaptativo.")
+
     # ── Estado de la sesión de práctica ───────────────────────────────────────
     if "quiz" not in st.session_state:
         st.session_state.quiz = {
@@ -254,7 +260,6 @@ elif modo == "Generar test":
         }
     quiz = st.session_state.quiz
 
-    # Marcador acumulado de sesión
     total = quiz["ok"] + quiz["err"]
     if total > 0:
         pct = round(quiz["ok"] / total * 100)
@@ -268,13 +273,17 @@ elif modo == "Generar test":
         bloques_label = " + ".join(_NOMBRES_BLOQUE.get(b, b) for b in bloques_sel)
         st.info(f"Bloque{'s' if len(bloques_sel) > 1 else ''} seleccionado{'s' if len(bloques_sel) > 1 else ''}: **{bloques_label}**")
 
-        if st.button("Generar 10 preguntas", type="primary"):
-            preguntas = get_preguntas_banco(
-                oposicion_id,
-                bloques_sel,
-                n=10,
-                excluir_ids=tuple(quiz["vistos"]),
-            )
+        btn_label = "Iniciar repaso" if logged_in else "Generar 10 preguntas"
+        if st.button(btn_label, type="primary"):
+            if logged_in:
+                preguntas = get_preguntas_sm2(
+                    user["email"], oposicion_id, bloques_sel, n=10,
+                )
+            else:
+                preguntas = get_preguntas_banco(
+                    oposicion_id, bloques_sel, n=10,
+                    excluir_ids=tuple(quiz["vistos"]),
+                )
             if not preguntas:
                 st.warning("No hay más preguntas disponibles para esta selección. ¡Has visto todas!")
             else:
@@ -287,7 +296,7 @@ elif modo == "Generar test":
     # ── Tanda activa ──────────────────────────────────────────────────────────
     else:
         for i, p in enumerate(quiz["preguntas"], 1):
-            pid     = p["pregunta_id"]
+            pid      = p["pregunta_id"]
             opciones = {
                 "a": p["opcion_a"], "b": p["opcion_b"],
                 "c": p["opcion_c"], "d": p["opcion_d"],
@@ -305,8 +314,8 @@ elif modo == "Generar test":
                 )
                 quiz["respuestas"][pid] = resp
             else:
-                correcta   = p["correcta"]
-                elegida    = quiz["respuestas"].get(pid)
+                correcta = p["correcta"]
+                elegida  = quiz["respuestas"].get(pid)
                 for letra, texto in opciones.items():
                     if letra == correcta:
                         st.markdown(f"✅ **{letra}) {texto}**")
@@ -329,6 +338,15 @@ elif modo == "Generar test":
                         ok += 1
                     elif elegida is not None:
                         err += 1
+                    if logged_in and elegida is not None:
+                        try:
+                            update_progreso_sm2(
+                                user["email"],
+                                p["pregunta_id"],
+                                elegida == p["correcta"],
+                            )
+                        except Exception:
+                            pass
                 quiz["ok"]        += ok
                 quiz["err"]       += err
                 quiz["respondido"] = True
@@ -339,6 +357,8 @@ elif modo == "Generar test":
                 if quiz["respuestas"].get(p["pregunta_id"]) == p["correcta"]
             )
             st.success(f"Resultado de esta tanda: **{ok_t} / {len(quiz['preguntas'])}** correctas")
+            if logged_in:
+                st.caption("Progreso guardado. Las preguntas falladas volverán antes.")
             if st.button("Nueva tanda →", type="primary"):
                 quiz["preguntas"]  = []
                 quiz["respondido"] = False
