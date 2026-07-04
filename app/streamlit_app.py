@@ -64,11 +64,28 @@ _NOMBRES_BLOQUE = {
 
 bloques_disponibles = _cargar_bloques(oposicion_id)
 st.sidebar.markdown("**Bloque**")
+_cb1, _cb2 = st.sidebar.columns(2)
+with _cb1:
+    if st.button("Todos", key="blq_todos", use_container_width=True):
+        for b in bloques_disponibles:
+            st.session_state[f"blq_{b}"] = True
+        st.rerun()
+with _cb2:
+    if st.button("Ninguno", key="blq_ninguno", use_container_width=True):
+        for b in bloques_disponibles:
+            st.session_state[f"blq_{b}"] = False
+        st.rerun()
+
 bloques_sel = tuple(
     b for b in bloques_disponibles
     if st.sidebar.checkbox(_NOMBRES_BLOQUE.get(b, b), value=True, key=f"blq_{b}")
 )
-bloques_filtro = bloques_sel if bloques_sel else None
+
+if not bloques_sel:
+    st.sidebar.info("Selecciona al menos un bloque.")
+    st.stop()
+
+bloques_filtro = bloques_sel
 
 try:
     leyes = _cargar_leyes(oposicion_id, bloques_filtro)
@@ -81,6 +98,18 @@ if not leyes:
     st.stop()
 
 st.sidebar.markdown("**Ley**")
+_cl1, _cl2 = st.sidebar.columns(2)
+with _cl1:
+    if st.button("Todas", key="ley_todas", use_container_width=True):
+        for l in leyes:
+            st.session_state[f"ley_{l['ley_id']}"] = True
+        st.rerun()
+with _cl2:
+    if st.button("Ninguna", key="ley_ninguna", use_container_width=True):
+        for l in leyes:
+            st.session_state[f"ley_{l['ley_id']}"] = False
+        st.rerun()
+
 leyes_sel = [
     l for l in leyes
     if st.sidebar.checkbox(
@@ -91,7 +120,7 @@ leyes_sel = [
 ]
 
 if not leyes_sel:
-    st.sidebar.warning("Selecciona al menos una ley.")
+    st.sidebar.info("Selecciona al menos una ley.")
     st.stop()
 
 # Alias para modos que trabajan con una sola ley (Q&A, Gentest)
