@@ -32,8 +32,8 @@ Dos líneas que se desarrollan en paralelo:
 ```
 
 ### Perfiles de usuario
-- **Editor / revisor (academia):** genera preguntas por ley, las revisa y exporta. Accede vía Streamlit con login Google.
-- **Alumno (opositor):** practica en el LMS de su academia o en la plataforma propia (fase 2).
+- **Editor / revisor (academia):** genera preguntas por ley, las revisa y exporta. Accede vía Streamlit con login Google OAuth.
+- **Alumno (opositor):** practica en la plataforma con login email+contraseña (Supabase Auth). Accede a repaso adaptativo, simulacro personal y prueba de nivel.
 - **Administrador de plataforma:** gestiona leyes, convocatorias y fórmula desde BD sin tocar código.
 
 ## Entorno técnico
@@ -84,14 +84,20 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 *(Mapeo completo `ley_id` → código → nombre, e inventario de leyes pendientes BOE-443 con sus ELI, en `TODO.md`.)*
 
 ### Banco de preguntas (`normas.preguntas_test`)
-- **209 preguntas oficiales** cargadas (104 GACE 2024 + 105 GACE 2025), `revisada=TRUE`.
-- 79 con `ley_id` identificada; 130 con `ley_id=NULL` (leyes aún no cargadas).
+- **209 preguntas oficiales** cargadas (104 GACE 2024 + 105 GACE 2025), `revisada=TRUE`. *(Son preguntas, no exámenes completos.)*
+- 79 con `ley_id` identificada (bloques I, IV, V, VI); 130 con `ley_id=NULL` pendientes de mapeo (incluyen preguntas de bloques II y III).
 - Cobertura BOE-443: **76,6%** del examen real (TUE/TFUE 9,6% fijo; actualidad 5,7% impredecible; leyes fuera del BOE-443 6,7%).
 
 ### Otras tablas y migraciones
-- `normas.oposiciones` + `normas.oposicion_leyes`: distribución GACE (51/100 preguntas de nuestras 6 leyes núcleo).
+- `normas.oposiciones` + `normas.oposicion_leyes`: 60 leyes GACE con bloque (I–VI), excluir_test y peso en simulacro.
 - `normas.convocatorias`: metadatos 2024 y 2025. Fórmula GACE: **A−(E/3)**, 100 preguntas, 90 min, mínimo 25/50, escala 0–50.
-- Migraciones ejecutadas: `020`, `021`, `022`, `023`, `024`.
+- `normas.progreso_usuario`: historial SM-2 por alumno (intervalo, repeticiones, facilidad, proxima_revision, total_vistas, total_correctas).
+- Migraciones ejecutadas: `020`–`029`.
+  - `025`: repertorio completo GACE en oposicion_leyes (60 leyes, preguntas_simulacro≥0)
+  - `026`: columna bloque I–VI en oposicion_leyes según programa oficial GACE 2025
+  - `027`: tabla progreso_usuario (sistema repaso adaptativo SM-2)
+  - `028`: columna excluir_test (GACE_NORM y LSSF excluidas del test)
+  - `029`: nombre_corto actualizado con etiqueta coloquial para las 59 leyes GACE activas
 
 ### Scripts disponibles
 | Script | Función |
@@ -108,22 +114,42 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
-## Hito inmediato — Refinamiento UX de la app Streamlit
+## Hito inmediato — Plataforma de estudio para el alumno
 
-**[UX Editor]** — mejorar usabilidad antes de añadir nuevas funcionalidades.
+Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales.
+
+**Arquitectura aprobada:**
+- Jerarquía: Oposición → Modo (Repaso / Simulacro) → Bloque o Tema → sesión
+- Auth: Google OAuth (editor/academia) + email+contraseña Supabase Auth (alumno)
+- Prueba de nivel: 40 preguntas, dificultad creciente individual, gratuita con registro, genera informe de partida + plan de estudio
+- Mix adaptativo 4 fases (Inicio 0/40/60 · Aprendizaje 15/20/65 · Consolidación 30/25/45 · Pre-examen 40/35/25) — porcentajes: débiles/oficial/nueva
+- Bloque "estudiado" = ≥70% acierto agregado en ese bloque
+- Simulacro personal: 50 preguntas, bloques ≥70%, fórmula oficial, requiere prueba de nivel previa
+- Simulacro academia: mismas preguntas para todos, ventana temporal, sin personalización
+- Visualización en 3 momentos: panel inicio + composición tanda + resultado
 
 | Paso | Tarea | Estado |
 |------|-------|--------|
-| 1 | Migración `024` — añadir `revisado_por` y `revisado_en` a `preguntas_test` | ✅ Ejecutada |
-| 2 | Google OAuth en Streamlit Cloud — login para editores/revisores | ✅ Configurado |
-| 3 | Tab "Editor": selector ley + nº preguntas → generar → revisar/editar/aprobar | ✅ Implementado |
-| 3b | `max_por_articulo`: múltiples preguntas por artículo (1-5, slider en UI + flag CLI) | ✅ Implementado |
-| 4 | **Refinamiento UX**: mejorar selector de leyes + otros ajustes de usabilidad | ⏭️ Siguiente |
-| 5 | Exportación Moodle XML / CSV — integración con LMS de la academia | Pendiente (MVP) |
+| 1 | Migración 030: campo `dificultad` en `preguntas_test` + tabla `normas.epigrafes` | ⏭️ Siguiente |
+| 2 | Migración 031: tabla `normas.plan_estudio` | Pendiente |
+| 3 | Migración 032: tabla `normas.simulacros_academia` | Pendiente |
+| 4 | Supabase Auth: registro email+contraseña para alumnos | Pendiente |
+| 5 | `retrieval.py`: funciones stats, fase, mix adaptativo | Pendiente |
+| 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | Pendiente |
+| 7 | Visualización de progreso (3 momentos) | Pendiente |
+| 8 | Simulacro personal | Pendiente |
+| 9 | Simulacro de academia | Pendiente |
 
-### Banco de preguntas IA
-- 10 preguntas de LPAC generadas y guardadas en BD (sesión 30/06/2026, validación OK).
-- Pendiente: generar banco completo `build_test_bank.py --supabase --n 50` (~300 preguntas, ~3-4€) tras completar UX.
+### Completado — UX Refinamiento (sesiones 04-05/07/2026)
+- [✅ 025] Repertorio completo GACE en oposicion_leyes (60 leyes)
+- [✅ 026] Columna bloque I–VI en oposicion_leyes
+- [✅ 027] Tabla progreso_usuario (SM-2: intervalo, repeticiones, facilidad, proxima_revision)
+- [✅ 028] Columna excluir_test; GACE_NORM y LSSF excluidas del test GACE
+- [✅ 029] nombre_corto con etiqueta coloquial + referencia oficial para 59 leyes
+- [✅ SM-2] get_preguntas_sm2 + update_progreso_sm2 en retrieval.py
+- [✅ Generar test] Sirve desde banco aprobado; SM-2 activo para usuarios logueados
+- [✅ Sidebar] Bloques I–VI y leyes con checkboxes desmarcados por defecto; botones renombrados
+- [✅ Banco IA] 10 preguntas LPAC generadas y validadas (sesión 30/06/2026)
 
-Normas ya cargadas: 60 (ley_ids hasta 79). Pendiente baja urgencia: LCCU y PGCP (parser específico).
+Normas cargadas: 60 (ley_ids hasta 79). Pendiente baja urgencia: LCCU y PGCP (parser específico).
 El backlog completo está en `TODO.md`.
