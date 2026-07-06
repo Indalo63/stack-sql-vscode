@@ -31,6 +31,10 @@ DB_CONFIG = {
 OPENAI_API_KEY  = _get("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = _get("ANTHROPIC_API_KEY")
 
+# Supabase Auth (registro email+contraseña del alumno; distinto de la BD directa)
+SUPABASE_URL      = _get("SUPABASE_URL")
+SUPABASE_ANON_KEY = _get("SUPABASE_ANON_KEY")
+
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 CLAUDE_MODEL           = "claude-sonnet-4-6"
 

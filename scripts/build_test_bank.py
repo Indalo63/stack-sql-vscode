@@ -90,7 +90,7 @@ def _fetch_articles(ley_id, n, max_por_articulo=1):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT a.numero, a.titulo_id, a.contenido,
+                SELECT a.numero, a.titulo_id, a.contenido, t.denominacion AS titulo_nombre,
                        EXISTS (
                            SELECT 1 FROM normas.preguntas_test p
                            WHERE p.ley_id = a.ley_id
@@ -98,6 +98,7 @@ def _fetch_articles(ley_id, n, max_por_articulo=1):
                              AND p.fuente IN ('oficial_2024', 'oficial_2025')
                        ) AS examinado
                 FROM normas.articulos a
+                LEFT JOIN normas.titulos t ON t.titulo_id = a.titulo_id
                 WHERE a.ley_id = %s
                   AND a.tipo = 'articulo'
                   AND length(a.contenido) >= %s
@@ -149,7 +150,7 @@ def _fetch_few_shots(ley_id, n=2):
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def _save(ley_id, art, parsed):
+def _save(ley_id, art, parsed, epigrafe_id=None):
     from app.db import get_connection
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -157,8 +158,8 @@ def _save(ley_id, art, parsed):
                 INSERT INTO normas.preguntas_test
                     (ley_id, titulo_id, articulo, pregunta,
                      opcion_a, opcion_b, opcion_c, opcion_d,
-                     correcta, explicacion, fuente)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'ia')
+                     correcta, explicacion, fuente, epigrafe_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'ia', %s)
             """, (
                 ley_id,
                 art.get("titulo_id"),
@@ -170,6 +171,7 @@ def _save(ley_id, art, parsed):
                 parsed["opciones"]["d"],
                 parsed["correcta"],
                 parsed.get("explicacion", ""),
+                epigrafe_id,
             ))
         conn.commit()
 
@@ -200,7 +202,7 @@ def _format_few_shot(fs):
     )
 
 
-def _build_prompt(art, ley_nombre, few_shots=None, tiene_apartados=False):
+def _build_prompt(art, ley_nombre, few_shots=None, tiene_apartados=False, epigrafes=None):
 
     # Bloque de few-shot
     few_shots_block = ""
@@ -236,7 +238,27 @@ def _build_prompt(art, ley_nombre, few_shots=None, tiene_apartados=False):
         "O parafrasearla con otras palabras (ambos estilos aparecen en exámenes "
         "oficiales GACE). Lo importante es que sea inequívocamente correcta."
     )
+    if epigrafes:
+        reglas.append(
+            "Indica en el campo \"tema\" el número del tema del temario oficial "
+            "(listado más abajo) al que pertenece esta pregunta, según el artículo "
+            "concreto sobre el que trata."
+        )
     reglas_txt = "\n".join(f"{i}. {r}" for i, r in enumerate(reglas, 1))
+
+    temas_block = ""
+    tema_campo = ""
+    if epigrafes:
+        temas_txt = "\n".join(f"{e['tema']}. {e['titulo']}" for e in epigrafes)
+        titulo_ctx = (
+            f"El artículo pertenece al Título \"{art['titulo_nombre']}\" de {ley_nombre}.\n"
+            if art.get("titulo_nombre") else ""
+        )
+        temas_block = (
+            f"\n{titulo_ctx}"
+            f"TEMAS DEL BLOQUE (temario oficial de la oposición):\n{temas_txt}\n"
+        )
+        tema_campo = ',"tema":N'
 
     return [{
         "role": "user",
@@ -249,20 +271,22 @@ def _build_prompt(art, ley_nombre, few_shots=None, tiene_apartados=False):
             f"{few_shots_block}"
             f"REGLAS DE ESTILO OBLIGATORIAS:\n"
             f"{reglas_txt}\n"
-            f"\nARTÍCULO {art['numero']}:\n{art['contenido']}\n\n"
+            f"\nARTÍCULO {art['numero']}:\n{art['contenido']}\n"
+            f"{temas_block}\n"
             f"Responde SOLO con JSON válido, sin texto adicional:\n"
             f'{{"articulo":"{art["numero"]}","pregunta":"...","opciones":'
             f'{{"a":"...","b":"...","c":"...","d":"..."}},'
-            f'"correcta":"a","explicacion":"..."}}'
+            f'"correcta":"a","explicacion":"..."{tema_campo}}}'
         ),
     }]
 
 
 # ── Runner principal ──────────────────────────────────────────────────────────
 
-def run(ley_id=None, n=50, dry_run=False, delay=0.5, max_por_articulo=1):
+def run(ley_id=None, n=50, dry_run=False, delay=0.5, max_por_articulo=1, oposicion="GACE"):
     import anthropic
     from app.config import CLAUDE_MODEL, ANTHROPIC_API_KEY
+    from app.retrieval import get_bloque_y_epigrafes
 
     leyes = _get_leyes(ley_id)
     if not leyes:
@@ -286,10 +310,16 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5, max_por_articulo=1):
         except Exception as e:
             print(f"  AVISO: no se pudieron cargar few-shots ({e}). Se continúa sin ellos.")
             few_shots = []
+
+        bloque, epigrafes = get_bloque_y_epigrafes(ley["ley_id"], oposicion_codigo=oposicion)
+        temas_validos = {e["tema"] for e in epigrafes} if epigrafes else None
+
         examinados = sum(1 for a in arts if a.get("examinado"))
         print(f"  Artículos a generar : {len(arts)}  "
               f"(examinados en GACE: {examinados})")
         print(f"  Few-shot examples   : {len(few_shots)}")
+        print(f"  Bloque / epígrafes  : {bloque or '(sin bloque asignado)'} "
+              f"({len(epigrafes)} temas)")
 
         ok = err = 0
         for i, art in enumerate(arts, 1):
@@ -300,18 +330,26 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5, max_por_articulo=1):
                     max_tokens=800,
                     messages=_build_prompt(art, ley["nombre"],
                                           few_shots=few_shots,
-                                          tiene_apartados=tiene_apartados),
+                                          tiene_apartados=tiene_apartados,
+                                          epigrafes=epigrafes),
                 )
-                parsed = _parse_and_validate(resp.content[0].text)
+                parsed = _parse_and_validate(resp.content[0].text, temas_validos=temas_validos)
+
+                epigrafe_id = None
+                if epigrafes and "tema" in parsed:
+                    epigrafe_id = next(
+                        e["epigrafe_id"] for e in epigrafes if e["tema"] == parsed["tema"]
+                    )
 
                 if not dry_run:
-                    _save(ley["ley_id"], art, parsed)
+                    _save(ley["ley_id"], art, parsed, epigrafe_id=epigrafe_id)
 
                 ok += 1
                 tag = "[DRY]" if dry_run else "[OK] "
                 examen_tag = " ★" if art.get("examinado") else ""
                 apart_tag  = " [apt]" if tiene_apartados else ""
-                print(f"  {tag} [{i:>3}/{len(arts)}] Art. {art['numero']}{examen_tag}{apart_tag}")
+                tema_tag = f" -> {bloque}.{parsed['tema']}" if epigrafe_id else ""
+                print(f"  {tag} [{i:>3}/{len(arts)}] Art. {art['numero']}{examen_tag}{apart_tag}{tema_tag}")
             except Exception as e:
                 err += 1
                 print(f"  [ERR] [{i:>3}/{len(arts)}] Art. {art['numero']} — {e}")
@@ -332,7 +370,7 @@ def run(ley_id=None, n=50, dry_run=False, delay=0.5, max_por_articulo=1):
 
 # ── Validación del JSON generado ─────────────────────────────────────────────
 
-def _parse_and_validate(raw):
+def _parse_and_validate(raw, temas_validos=None):
     m = re.search(r'\{.*\}', raw, re.DOTALL)
     if not m:
         raise ValueError("No se encontró JSON en la respuesta")
@@ -351,6 +389,15 @@ def _parse_and_validate(raw):
 
     if not parsed.get("pregunta"):
         raise ValueError("Campo 'pregunta' vacío")
+
+    if temas_validos is not None:
+        try:
+            tema = int(parsed.get("tema"))
+        except (TypeError, ValueError):
+            raise ValueError(f"Valor de 'tema' inválido: {parsed.get('tema')!r}")
+        if tema not in temas_validos:
+            raise ValueError(f"Tema {tema} no pertenece al bloque (válidos: {sorted(temas_validos)})")
+        parsed["tema"] = tema
 
     return parsed
 
@@ -371,6 +418,8 @@ if __name__ == "__main__":
                    help="Segundos entre llamadas a la API (default: 0.5)")
     p.add_argument("--max-por-articulo", type=int, default=1,
                    help="Máximo de preguntas IA por artículo, pendientes + aprobadas (default: 1)")
+    p.add_argument("--oposicion", default="GACE",
+                   help="Código de la oposición, para resolver bloque/epígrafes (default: GACE)")
     args = p.parse_args()
 
     if args.supabase:
@@ -383,4 +432,4 @@ if __name__ == "__main__":
         os.environ.setdefault("DB_PASSWORD", "postgres")
 
     run(ley_id=args.ley_id, n=args.n, dry_run=args.dry_run, delay=args.delay,
-        max_por_articulo=args.max_por_articulo)
+        max_por_articulo=args.max_por_articulo, oposicion=args.oposicion)

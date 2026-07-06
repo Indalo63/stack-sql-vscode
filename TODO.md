@@ -134,12 +134,12 @@ Arquitectura completa definida y aprobada. Implementación en 9 pasos.
 
 | Paso | Tarea | Estado |
 |------|-------|--------|
-| 1 | Migración 030: campo `dificultad` (1-3) en `preguntas_test` + tabla `normas.epigrafes` | ⏭️ Siguiente |
-| 2 | Migración 031: tabla `normas.plan_estudio` (ficticio con alumnos de prueba) | Pendiente |
-| 3 | Migración 032: tabla `normas.simulacros_academia` | Pendiente |
-| 4 | Supabase Auth: registro email+contraseña para alumnos | Pendiente |
-| 5 | `retrieval.py`: `get_fase_alumno`, `get_stats_alumno`, `get_preguntas_adaptativo`, `get_preguntas_simulacro_personal`, `get_preguntas_simulacro_academia` | Pendiente |
-| 6 | `streamlit_app.py`: reestructura jerarquía navegación + prueba de nivel | Pendiente |
+| 1 | Migración 030: campo `dificultad` (1-3) en `preguntas_test` + tabla `normas.epigrafes` | ✅ Completado |
+| 2 | Migración 031: tabla `normas.plan_estudio` (ficticio con alumnos de prueba) | ✅ Completado |
+| 3 | Migración 032: tabla `normas.simulacros_academia` | ✅ Completado |
+| 4 | Supabase Auth: registro email+contraseña para alumnos | ✅ Completado |
+| 5 | `retrieval.py`: `get_fase_alumno`, `get_stats_alumno`, `get_preguntas_adaptativo`, `get_preguntas_simulacro_personal`, `get_preguntas_simulacro_academia` | ✅ Completado |
+| 6 | `streamlit_app.py`: reestructura jerarquía navegación + prueba de nivel | ⏭️ Siguiente |
 | 7 | Visualización progreso: panel inicio + composición tanda + resultado tanda | Pendiente |
 | 8 | Simulacro personal (50 preguntas, fórmula GACE, bloques ≥70% acierto) | Pendiente |
 | 9 | Simulacro academia (mismas preguntas para todos, ventana temporal) | Pendiente |
@@ -159,6 +159,52 @@ Arquitectura completa definida y aprobada. Implementación en 9 pasos.
 | Dificultad preguntas | Campo `dificultad` (1-fácil / 2-media / 3-difícil) en `preguntas_test`; editor asigna en revisión |
 | Visualización | 3 momentos: panel inicio (fase+%+barras) · composición tanda · resultado tanda |
 | LSSF | Sin contenido en normas.leyes · excluir_test=TRUE en GACE · reservada para oposiciones Justicia |
+
+### Completado — Paso 5: retrieval.py, mix adaptativo (06/07/2026)
+- [✅ `get_fase_alumno`] Calcula fase por cobertura de épigrafes + % acierto agregado; UPSERT en `plan_estudio`. Probado en vivo.
+- [✅ `get_stats_alumno`] Progreso por bloque (desde `plan_estudio`) + "próxima acción" por regla simple + actividad reciente. Probado (incluye caso alumno nuevo → sugiere prueba de nivel).
+- [✅ `get_preguntas_adaptativo`] Mix débiles/oficial/nueva por fase, con relleno automático cuando un tramo no tiene suficientes preguntas (hoy no hay preguntas `fuente='ia'` en ningún bloque — el relleno lo compensa; se resolverá al generar banco IA a escala). Probado: débiles se seleccionan correctamente, sin duplicados.
+- [✅ `get_preguntas_simulacro_personal`] Reparto proporcional por peso oficial (`oposicion_leyes.preguntas_simulacro`) solo entre bloques "estudiado"; bloquea si falta prueba de nivel o si no hay bloques estudiados. Probado los 3 escenarios.
+- [✅ `get_preguntas_simulacro_academia`] Lee la lista congelada de `simulacro_academia_preguntas`; bloquea si no existe o no está `autorizado`. Probado los 3 escenarios.
+- [ℹ️ Nota] La fórmula de corrección A-(E/3) se aplica al calificar respuestas, no en la selección de preguntas — queda para el Paso 8 (implementación real del simulacro).
+- [✅ Decisión] Umbral de fase = % de cobertura del bloque (temas distintos con ≥1 pregunta vista / total de épigrafes del bloque), no por preguntas_simulacro (evita inflar la fase artificialmente).
+- [✅ Decisión] `débiles/oficial/nueva`: débiles = falladas (cualquier fuente, prioridad primero); oficial = `fuente LIKE 'oficial_%'`; nueva = `fuente='ia'`. Se completa débiles primero, y el resto se reparte oficial/nueva excluyendo ya elegidas.
+- [✅ `app/retrieval.py`] `get_bloque_y_epigrafes(ley_id, oposicion_codigo="GACE")` — resuelve bloque+épigrafes sin hardcodear la oposición (reutilizable para futuras oposiciones).
+- [✅ `scripts/asignar_epigrafes.py`] Backfill de clasificación de preguntas contra el temario oficial vía Claude. Reutilizable como herramienta de resincronización si el temario cambia de estructura en el futuro.
+- [✅ `scripts/build_test_bank.py`] Ahora asigna `epigrafe_id` en la misma llamada de generación (sin coste extra de API); añade contexto del Título de la ley al prompt (corrige ambigüedades de clasificación, ver bug abajo).
+- [✅ Backfill ejecutado] 89/89 preguntas con `ley_id` ya asignado, clasificadas correctamente contra `normas.epigrafes`.
+- [✅ Gap preexistente resuelto] `scripts/asignar_leyes.py` (nuevo, mismo patrón): resuelve `ley_id` de preguntas oficiales sin mapear comparando el nombre de norma citado en el enunciado contra el catálogo de 60 leyes cargadas (o "NINGUNA" si no corresponde a ninguna cargada). De las 130 preguntas con `ley_id=NULL`: **78 resueltas** (LO4000, LODP, LOTC, TUE/TFUE, LOCE, LOPJ, TREBEP, CC, LGOB, LGP, LJCA, LEF, LGT, LOTCU, RIRS, MUFACE, LMRFP, RDSA, BCPSA, RRCP, LSSF, LOEPSF, LGUM, LGS, LPAP, CE...), **52 sin coincidencia** (actualidad/órdenes/normas no cargadas — correcto dejarlas en NULL). Encadenado con `asignar_epigrafes.py` sobre las 78 recién resueltas: **78/78 clasificadas**.
+- [✅ Estado final banco] 167/219 preguntas (76%) con `ley_id` + `epigrafe_id` completos. Las 52 restantes son de actualidad/normas no cargadas — no es un error, no deberían tener epígrafe.
+- [ℹ️ Bug corregido] `asignar_epigrafes.py` no encontraba el Título de la ley para artículos con sub-apartado (p. ej. "11.3") porque el JOIN comparaba contra `normas.articulos.numero` exacto; corregido con `split_part(articulo, '.', 1)`.
+- [ℹ️ Pendiente] Punto 4 de Paso 5 (campos exactos de `get_stats_alumno`) — aplazado hasta resolver 1 y 2, ya resueltos; retomar antes de escribir `get_fase_alumno`/`get_stats_alumno`.
+
+### Completado — Paso 4: Supabase Auth alumno (06/07/2026)
+- [✅ `app/auth_alumno.py`] Cliente Supabase + `registrar_alumno()` / `login_alumno()` (sign_up / sign_in_with_password).
+- [✅ `app/config.py`] `SUPABASE_URL` / `SUPABASE_ANON_KEY`.
+- [✅ `streamlit_app.py`] Sección "Acceso Alumno" en el sidebar (registro/login independiente del login Google del editor), sesión en `st.session_state.alumno`.
+- [✅ Dependencia] `supabase>=2.9.0` en `requirements.txt`, instalada.
+- [✅ Verificado en vivo] Servidor arranca sin errores; registro+login real contra Supabase Auth probado end-to-end (confirmación de email desactivada, como se decidió). Sin captura visual del formulario (entorno sin Chromium headless funcional) — verificación por llamada directa a las funciones que usa el sidebar, suficiente dado que usan componentes estándar de Streamlit ya usados en el mismo archivo.
+- [ℹ️ Pendiente] Conectar esta sesión de alumno al repaso adaptativo SM-2 (hoy sigue gateado por el login Google del editor) — se hace en el Paso 6 al reestructurar la navegación.
+- [ℹ️ Aviso] Queda un usuario de prueba (`alumno.prueba.claude+...@example.com`) en `auth.users` de Supabase; borrar desde el dashboard si se desea.
+
+### Completado — Migración 032 (06/07/2026)
+- [✅ `normas.simulacros_academia`] Simulacro con preguntas fijas para todos los alumnos de una academia, ventana temporal (`fecha_inicio`/`fecha_fin`), flujo `estado` generado→autorizado. Campo `academia` (TEXT, nullable) preparado para futuro multi-tenant.
+- [✅ `normas.simulacro_academia_preguntas`] Lista fija y ordenada de preguntas por simulacro.
+- [ℹ️ Regla de negocio] La academia nunca genera preguntas (modelo: venta de lotes); solo lee y autoriza el simulacro generado automáticamente.
+- [ℹ️ Diferido] Tabla de resoluciones/respuestas de alumnos → Paso 9. Propuestas de corrección de la academia → sin diseñar, ver memoria del proyecto.
+
+### Completado — Migración 031 (06/07/2026)
+- [✅ `normas.plan_estudio`] Estado vivo del alumno por bloque (6 filas/alumno): `fase`, `preguntas_vistas`, `preguntas_correctas`, `porcentaje_acierto`, `estudiado`. UNIQUE(user_id, oposicion_id, bloque).
+- [ℹ️ Decisión diferida] Umbral de transición de fase (Inicio→Aprendizaje→Consolidación→Pre-examen) por preguntas vistas: **aún sin definir**. `fase` queda en default `'inicio'` hasta implementar la lógica en el Paso 5 (`retrieval.py`).
+- [ℹ️ Decisión] Actualización del estado vivo se hace desde una función Python en `retrieval.py` (no trigger de BD), en línea con el patrón ya usado para SM-2.
+- [ℹ️ Pendiente] Alumnos de prueba (3, con criterios a definir) — ver memoria del proyecto; se crearán al llegar a la fase de testing (Paso 5+).
+
+### Completado — Migración 030 (06/07/2026)
+- [✅ `normas.epigrafes`] 58 temas oficiales del programa GACE (Anexo VII), verificados carácter a carácter contra el PDF: I=11, II=6, III=10, IV=13, V=10, VI=8.
+- [✅ `preguntas_test.dificultad`] SMALLINT (1-3), default 2; 219 preguntas existentes clasificadas como "media" pendiente de reclasificar.
+- [✅ `preguntas_test.epigrafe_id`] FK nullable a `normas.epigrafes`, aún sin mapear preguntas existentes.
+- [✅ Correcciones detectadas] Tema I.1 faltante (parser lo había omitido); artefacto OCR "DE FUNCION PÚBLICA" en I.11/IV.1/V.9; texto incompleto en I.8 ("servicios comunes de los ministerios. Órganos territoriales"); nombres de Bloque IV ("Derecho administrativo general") y Bloque V ("Administración de recursos humanos") mal etiquetados en `scripts/load_convocatoria.py` — corregidos en el script.
+- [ℹ️ Pendiente] `normas.articulos` de `GACE_NORM` sigue con los artefactos/errores originales (no se tocó, fuera de alcance de esta migración); reclasificación de `dificultad` real y mapeo `epigrafe_id` en preguntas existentes quedan para más adelante.
 
 ---
 

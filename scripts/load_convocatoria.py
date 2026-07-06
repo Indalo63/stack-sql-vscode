@@ -38,8 +38,8 @@ BLOQUES = {
     "I":   "Organización del Estado y de la Administración Pública",
     "II":  "Unión Europea",
     "III": "Políticas públicas",
-    "IV":  "Organización y gestión de recursos humanos",
-    "V":   "Régimen jurídico del personal al servicio de la Administración",
+    "IV":  "Derecho administrativo general",
+    "V":   "Administración de recursos humanos",
     "VI":  "Gestión financiera y Seguridad Social",
 }
 

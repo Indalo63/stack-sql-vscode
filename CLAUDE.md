@@ -85,14 +85,17 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 
 ### Banco de preguntas (`normas.preguntas_test`)
 - **209 preguntas oficiales** cargadas (104 GACE 2024 + 105 GACE 2025), `revisada=TRUE`. *(Son preguntas, no exámenes completos.)*
-- 79 con `ley_id` identificada (bloques I, IV, V, VI); 130 con `ley_id=NULL` pendientes de mapeo (incluyen preguntas de bloques II y III).
+- 167 con `ley_id` + `epigrafe_id` identificados (76%); 52 con `ley_id=NULL` correctamente (actualidad/normas no cargadas — no es un gap, ver `scripts/asignar_leyes.py`).
 - Cobertura BOE-443: **76,6%** del examen real (TUE/TFUE 9,6% fijo; actualidad 5,7% impredecible; leyes fuera del BOE-443 6,7%).
 
 ### Otras tablas y migraciones
 - `normas.oposiciones` + `normas.oposicion_leyes`: 60 leyes GACE con bloque (I–VI), excluir_test y peso en simulacro.
 - `normas.convocatorias`: metadatos 2024 y 2025. Fórmula GACE: **A−(E/3)**, 100 preguntas, 90 min, mínimo 25/50, escala 0–50.
 - `normas.progreso_usuario`: historial SM-2 por alumno (intervalo, repeticiones, facilidad, proxima_revision, total_vistas, total_correctas).
-- Migraciones ejecutadas: `020`–`029`.
+- `normas.epigrafes`: 58 temas oficiales GACE (Anexo VII) por bloque, verificados contra el PDF fuente.
+- `normas.plan_estudio`: estado vivo del alumno por bloque (fase, % acierto, estudiado) — se actualiza vía `get_fase_alumno`.
+- `normas.simulacros_academia` + `simulacro_academia_preguntas`: simulacro de academia con preguntas fijas y ventana temporal.
+- Migraciones ejecutadas: `020`–`032`.
   - `025`: repertorio completo GACE en oposicion_leyes (60 leyes, preguntas_simulacro≥0)
   - `026`: columna bloque I–VI en oposicion_leyes según programa oficial GACE 2025
   - `027`: tabla progreso_usuario (sistema repaso adaptativo SM-2)
@@ -110,6 +113,8 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 | `parse_official_exams.py` | Parsea PDFs de exámenes oficiales GACE y los carga |
 | `load_convocatoria.py` | Carga criterios + programa GACE como ley para Q&A |
 | `parse_eurlex.py` | Parsea HTML de EUR-Lex (TUE/TFUE) a JSON para `load_ley.py` |
+| `asignar_leyes.py` | Resuelve `ley_id` de preguntas oficiales sin mapear, comparando el nombre de norma citado contra el catálogo de leyes cargadas |
+| `asignar_epigrafes.py` | Clasifica preguntas contra el temario oficial (`normas.epigrafes`) vía Claude; reutilizable si el temario cambia |
 
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
@@ -130,15 +135,32 @@ Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales
 
 | Paso | Tarea | Estado |
 |------|-------|--------|
-| 1 | Migración 030: campo `dificultad` en `preguntas_test` + tabla `normas.epigrafes` | ⏭️ Siguiente |
-| 2 | Migración 031: tabla `normas.plan_estudio` | Pendiente |
-| 3 | Migración 032: tabla `normas.simulacros_academia` | Pendiente |
-| 4 | Supabase Auth: registro email+contraseña para alumnos | Pendiente |
-| 5 | `retrieval.py`: funciones stats, fase, mix adaptativo | Pendiente |
-| 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | Pendiente |
+| 1 | Migración 030: campo `dificultad` en `preguntas_test` + tabla `normas.epigrafes` | ✅ Completado |
+| 2 | Migración 031: tabla `normas.plan_estudio` | ✅ Completado |
+| 3 | Migración 032: tabla `normas.simulacros_academia` | ✅ Completado |
+| 4 | Supabase Auth: registro email+contraseña para alumnos | ✅ Completado |
+| 5 | `retrieval.py`: funciones stats, fase, mix adaptativo | ✅ Completado |
+| 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | ⏭️ Siguiente |
 | 7 | Visualización de progreso (3 momentos) | Pendiente |
 | 8 | Simulacro personal | Pendiente |
 | 9 | Simulacro de academia | Pendiente |
+
+### Completado — Paso 5: retrieval.py, mix adaptativo (06/07/2026)
+- [✅ 05] `get_fase_alumno` (fase por cobertura de épigrafes + UPSERT `plan_estudio`), `get_stats_alumno` (panel), `get_preguntas_adaptativo` (mix débiles/oficial/nueva), `get_preguntas_simulacro_personal` (reparto proporcional, bloques ≥70%), `get_preguntas_simulacro_academia` (lee lista congelada). Las 5 probadas en vivo contra Supabase.
+- [✅ Gap resuelto] 167/219 preguntas (76%) con `ley_id`+`epigrafe_id`; `scripts/asignar_leyes.py` (nuevo) + `scripts/asignar_epigrafes.py` reutilizables para futuras cargas.
+
+### Completado — Paso 4: Supabase Auth alumno (06/07/2026)
+- [✅ 04] `app/auth_alumno.py` + sección "Acceso Alumno" en sidebar (registro/login email+contraseña, independiente del Google del editor). Verificado en vivo contra Supabase Auth real. Pendiente conectar al SM-2 en el Paso 6.
+
+### Completado — Migración 032 (06/07/2026)
+- [✅ 032] `normas.simulacros_academia` + `simulacro_academia_preguntas`: simulacro con preguntas fijas por ventana temporal, flujo generado→autorizado (la academia nunca genera preguntas, solo autoriza).
+
+### Completado — Migración 031 (06/07/2026)
+- [✅ 031] `normas.plan_estudio`: estado vivo del alumno por bloque (fase, preguntas vistas/correctas, % acierto, estudiado). Umbral de fase resuelto en el Paso 5: % cobertura de épigrafes del bloque.
+
+### Completado — Migración 030 (06/07/2026)
+- [✅ 030] `normas.epigrafes` con los 58 temas oficiales GACE (Anexo VII), verificados 100% contra el PDF; `preguntas_test.dificultad` (1-3, default 2) y `preguntas_test.epigrafe_id` (FK nullable)
+- [✅ Correcciones] Tema I.1 recuperado, artefactos OCR eliminados, texto I.8 completado, nombres de Bloque IV/V corregidos en `load_convocatoria.py`
 
 ### Completado — UX Refinamiento (sesiones 04-05/07/2026)
 - [✅ 025] Repertorio completo GACE en oposicion_leyes (60 leyes)

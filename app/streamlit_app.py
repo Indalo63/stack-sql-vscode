@@ -14,6 +14,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_bloques_por_oposicion, get_preguntas_banco,
                            get_preguntas_sm2, update_progreso_sm2)
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from app.auth_alumno import registrar_alumno, login_alumno
 from app.db import get_connection
 from scripts.build_test_bank import (
     _fetch_articles, _fetch_few_shots, _build_prompt,
@@ -144,6 +145,37 @@ if logged_in:
 else:
     if st.sidebar.button("Acceso Editor (Google)"):
         st.login("google")
+
+# ── Acceso Alumno (Supabase Auth, email+contraseña) ───────────────────────────
+# Sesión independiente del login de editor. Aún no conectada al repaso adaptativo
+# (eso se conecta en el Paso 6 al reestructurar la navegación).
+if "alumno" not in st.session_state:
+    st.session_state.alumno = None
+
+if st.session_state.alumno:
+    st.sidebar.markdown(f"🎓 {st.session_state.alumno['email']}")
+    if st.sidebar.button("Cerrar sesión (alumno)"):
+        st.session_state.alumno = None
+        st.rerun()
+else:
+    with st.sidebar.expander("Acceso Alumno"):
+        accion = st.radio(
+            "Acceso alumno", ["Iniciar sesión", "Registrarse"],
+            horizontal=True, label_visibility="collapsed",
+        )
+        email = st.text_input("Email", key="alumno_email")
+        password = st.text_input("Contraseña", type="password", key="alumno_password")
+        if st.button("Continuar", key="alumno_submit"):
+            try:
+                if accion == "Registrarse":
+                    datos = registrar_alumno(email, password)
+                    st.success("Registro completado.")
+                else:
+                    datos = login_alumno(email, password)
+                st.session_state.alumno = datos
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 # ── Cabecera ──────────────────────────────────────────────────────────────────
 st.title("⚖️ Asistente Jurídico")

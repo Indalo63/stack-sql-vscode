@@ -7,6 +7,7 @@ Capa de recuperación semántica sobre normas.*:
 """
 
 import os
+import random
 from openai import OpenAI
 from app.config import OPENAI_EMBEDDING_MODEL, TOP_K_ARTICLES, SIMILARITY_THRESHOLD, OPENAI_API_KEY
 from app.db import get_connection
@@ -73,6 +74,36 @@ def get_bloques_por_oposicion(oposicion_id: int) -> list[str]:
                 ORDER BY bloque
             """, (oposicion_id,))
             return [row[0] for row in cur.fetchall()]
+
+
+def get_bloque_y_epigrafes(ley_id: int, oposicion_codigo: str = "GACE") -> tuple[str | None, list[dict]]:
+    """
+    Bloque y epígrafes (temario oficial) de una ley dentro de una oposición.
+    No asume una oposición fija por código: `oposicion_codigo` es un parámetro,
+    para que una oposición nueva funcione sin tocar código.
+    Devuelve (None, []) si la ley no pertenece a esa oposición o no tiene bloque asignado.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT ol.bloque
+                FROM normas.oposicion_leyes ol
+                JOIN normas.oposiciones o ON o.oposicion_id = ol.oposicion_id
+                WHERE o.codigo = %s AND ol.ley_id = %s
+            """, (oposicion_codigo, ley_id))
+            row = cur.fetchone()
+            if not row or not row[0]:
+                return None, []
+            bloque = row[0]
+            cur.execute("""
+                SELECT e.epigrafe_id, e.tema, e.titulo
+                FROM normas.epigrafes e
+                JOIN normas.oposiciones o ON o.oposicion_id = e.oposicion_id
+                WHERE o.codigo = %s AND e.bloque = %s
+                ORDER BY e.tema
+            """, (oposicion_codigo, bloque))
+            epigrafes = [{"epigrafe_id": r[0], "tema": r[1], "titulo": r[2]} for r in cur.fetchall()]
+            return bloque, epigrafes
 
 
 def get_leyes_disponibles(oposicion_id: int | None = None,
@@ -426,3 +457,374 @@ def update_progreso_sm2(user_id: str, pregunta_id: int, correcto: bool) -> None:
                 nuevo_intervalo, correcto_int, correcto,
             ))
             conn.commit()
+
+
+def _fase_por_cobertura(cobertura: float) -> str:
+    """Umbral de fase por % de épigrafes del bloque con al menos 1 pregunta vista."""
+    if cobertura < 0.25:
+        return "inicio"
+    if cobertura < 0.60:
+        return "aprendizaje"
+    if cobertura < 0.90:
+        return "consolidacion"
+    return "preexamen"
+
+
+def get_fase_alumno(user_id: str, oposicion_id: int, bloque: str) -> dict:
+    """
+    Calcula el estado vivo del alumno en un bloque (fase por cobertura de
+    épigrafes, preguntas vistas/correctas, % acierto agregado, "estudiado")
+    y lo persiste en normas.plan_estudio (UPSERT) para lectura rápida desde
+    get_stats_alumno. No se recalcula fase por trigger: se llama tras cada
+    tanda de preguntas (junto a update_progreso_sm2).
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*) FROM normas.epigrafes
+                WHERE oposicion_id = %s AND bloque = %s
+            """, (oposicion_id, bloque))
+            total_epigrafes = cur.fetchone()[0]
+
+            cur.execute("""
+                SELECT COUNT(DISTINCT pt.epigrafe_id),
+                       COALESCE(SUM(pu.total_vistas), 0),
+                       COALESCE(SUM(pu.total_correctas), 0)
+                FROM normas.progreso_usuario pu
+                JOIN normas.preguntas_test pt ON pt.pregunta_id = pu.pregunta_id
+                WHERE pu.user_id = %s
+                  AND pt.epigrafe_id IN (
+                      SELECT epigrafe_id FROM normas.epigrafes
+                      WHERE oposicion_id = %s AND bloque = %s
+                  )
+            """, (user_id, oposicion_id, bloque))
+            epigrafes_cubiertos, vistas, correctas = cur.fetchone()
+
+            cobertura = (epigrafes_cubiertos / total_epigrafes) if total_epigrafes else 0.0
+            fase = _fase_por_cobertura(cobertura)
+            porcentaje = round(100 * correctas / vistas, 2) if vistas else 0.0
+            estudiado = porcentaje >= 70.0
+
+            cur.execute("""
+                INSERT INTO normas.plan_estudio
+                    (user_id, oposicion_id, bloque, fase, preguntas_vistas,
+                     preguntas_correctas, porcentaje_acierto, estudiado, actualizado_en)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (user_id, oposicion_id, bloque) DO UPDATE SET
+                    fase                = EXCLUDED.fase,
+                    preguntas_vistas    = EXCLUDED.preguntas_vistas,
+                    preguntas_correctas = EXCLUDED.preguntas_correctas,
+                    porcentaje_acierto  = EXCLUDED.porcentaje_acierto,
+                    estudiado           = EXCLUDED.estudiado,
+                    actualizado_en      = NOW()
+            """, (user_id, oposicion_id, bloque, fase, vistas, correctas, porcentaje, estudiado))
+        conn.commit()
+
+    return {
+        "bloque": bloque,
+        "fase": fase,
+        "cobertura_pct": round(cobertura * 100, 1),
+        "preguntas_vistas": vistas,
+        "preguntas_correctas": correctas,
+        "porcentaje_acierto": porcentaje,
+        "estudiado": estudiado,
+    }
+
+
+def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
+    """
+    Datos para el panel de inicio del alumno:
+      - bloques: progreso por bloque, leído de normas.plan_estudio (estado
+        cacheado, actualizado por get_fase_alumno tras cada tanda)
+      - proxima_accion: recomendación por regla simple (no IA) — el bloque
+        no estudiado con menor % de acierto, o simulacro personal si todos
+        están estudiados, o prueba de nivel si aún no hay datos
+      - actividad_reciente: últimas preguntas respondidas (SM-2)
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT bloque, fase, preguntas_vistas, preguntas_correctas,
+                       porcentaje_acierto, estudiado, actualizado_en
+                FROM normas.plan_estudio
+                WHERE user_id = %s AND oposicion_id = %s
+                ORDER BY bloque
+            """, (user_id, oposicion_id))
+            cols = [d[0] for d in cur.description]
+            bloques = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+            cur.execute("""
+                SELECT p.pregunta_id, p.ultima_vez, p.ultima_correcta,
+                       pt.ley_id, l.nombre AS ley_nombre
+                FROM normas.progreso_usuario p
+                JOIN normas.preguntas_test pt ON pt.pregunta_id = p.pregunta_id
+                JOIN normas.leyes l           ON l.ley_id       = pt.ley_id
+                WHERE p.user_id = %s
+                ORDER BY p.ultima_vez DESC NULLS LAST
+                LIMIT 10
+            """, (user_id,))
+            cols2 = [d[0] for d in cur.description]
+            actividad_reciente = [dict(zip(cols2, row)) for row in cur.fetchall()]
+
+    if not bloques:
+        proxima_accion = {
+            "tipo": "prueba_nivel",
+            "motivo": "Aún no has hecho la prueba de nivel.",
+        }
+    else:
+        pendientes = [b for b in bloques if not b["estudiado"]]
+        if pendientes:
+            objetivo = min(pendientes, key=lambda b: b["porcentaje_acierto"])
+            proxima_accion = {
+                "tipo": "practicar_bloque",
+                "bloque": objetivo["bloque"],
+                "motivo": (
+                    f"Bloque {objetivo['bloque']} con {objetivo['porcentaje_acierto']}% "
+                    f"de acierto, aún no estudiado (≥70%)."
+                ),
+            }
+        else:
+            proxima_accion = {
+                "tipo": "simulacro_personal",
+                "motivo": "Todos los bloques están estudiados (≥70% de acierto).",
+            }
+
+    return {
+        "bloques": bloques,
+        "proxima_accion": proxima_accion,
+        "actividad_reciente": actividad_reciente,
+    }
+
+
+# Porcentajes débiles/oficial/nueva por fase (diseño aprobado 05/07/2026)
+FASES_MIX = {
+    "inicio":        {"debiles": 0.00, "oficial": 0.40, "nueva": 0.60},
+    "aprendizaje":   {"debiles": 0.15, "oficial": 0.20, "nueva": 0.65},
+    "consolidacion": {"debiles": 0.30, "oficial": 0.25, "nueva": 0.45},
+    "preexamen":     {"debiles": 0.40, "oficial": 0.35, "nueva": 0.25},
+}
+
+_COLUMNAS_PREGUNTA = """
+    pt.pregunta_id, pt.articulo, pt.pregunta,
+    pt.opcion_a, pt.opcion_b, pt.opcion_c, pt.opcion_d,
+    pt.correcta, pt.explicacion, l.codigo AS ley_codigo
+"""
+
+
+def _fetch_debiles(cur, user_id, oposicion_id, bloque, limite):
+    if limite <= 0:
+        return []
+    cur.execute(f"""
+        SELECT {_COLUMNAS_PREGUNTA}
+        FROM normas.progreso_usuario pu
+        JOIN normas.preguntas_test pt ON pt.pregunta_id = pu.pregunta_id
+        JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+        JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                       AND ol.oposicion_id = %s
+        WHERE pu.user_id = %s AND pu.ultima_correcta = FALSE
+          AND ol.bloque = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+        ORDER BY RANDOM()
+        LIMIT %s
+    """, (oposicion_id, user_id, bloque, limite))
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def _fetch_por_fuente(cur, oposicion_id, bloque, fuente_filtro, excluir_ids, limite):
+    if limite <= 0:
+        return []
+    excluir_ids = excluir_ids or [0]
+    cur.execute(f"""
+        SELECT {_COLUMNAS_PREGUNTA}
+        FROM normas.preguntas_test pt
+        JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+        JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                       AND ol.oposicion_id = %s
+        WHERE ol.bloque = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+          AND ({fuente_filtro})
+          AND NOT (pt.pregunta_id = ANY(%s::int[]))
+        ORDER BY RANDOM()
+        LIMIT %s
+    """, (oposicion_id, bloque, excluir_ids, limite))
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def get_preguntas_adaptativo(user_id: str, oposicion_id: int, bloque: str, n: int = 10) -> list[dict]:
+    """
+    Tanda de práctica mezclando débiles/oficial/nueva según la fase actual
+    del alumno en ese bloque (normas.plan_estudio; 'inicio' si aún no hay
+    estado). Prioridad: se completa primero el % de débiles (preguntas con
+    ultima_correcta=FALSE, cualquier fuente); el resto se reparte
+    proporcionalmente entre oficial (fuente oficial_*) y nueva (fuente='ia'),
+    excluyendo las ya elegidas. Si un tramo no tiene suficientes preguntas,
+    el hueco se rellena con el resto para no devolver una tanda incompleta.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT fase FROM normas.plan_estudio
+                WHERE user_id = %s AND oposicion_id = %s AND bloque = %s
+            """, (user_id, oposicion_id, bloque))
+            row = cur.fetchone()
+            fase = row[0] if row else "inicio"
+            mix = FASES_MIX[fase]
+
+            n_debiles = round(n * mix["debiles"])
+            debiles = _fetch_debiles(cur, user_id, oposicion_id, bloque, n_debiles)
+
+            restantes = n - len(debiles)
+            total_pct_resto = mix["oficial"] + mix["nueva"]
+            n_oficial = round(restantes * mix["oficial"] / total_pct_resto) if total_pct_resto > 0 else 0
+            n_nueva = restantes - n_oficial
+
+            excluir = [p["pregunta_id"] for p in debiles]
+            oficial = _fetch_por_fuente(
+                cur, oposicion_id, bloque, "pt.fuente LIKE 'oficial_%%'", excluir, n_oficial
+            )
+            excluir += [p["pregunta_id"] for p in oficial]
+            nueva = _fetch_por_fuente(
+                cur, oposicion_id, bloque, "pt.fuente = 'ia'", excluir, n_nueva
+            )
+
+            faltan = n - len(debiles) - len(oficial) - len(nueva)
+            if faltan > 0:
+                excluir += [p["pregunta_id"] for p in nueva]
+                relleno = _fetch_por_fuente(
+                    cur, oposicion_id, bloque,
+                    "pt.fuente LIKE 'oficial_%%' OR pt.fuente = 'ia'", excluir, faltan
+                )
+                nueva += relleno
+
+    tanda = debiles + oficial + nueva
+    random.shuffle(tanda)
+    return tanda
+
+
+def get_preguntas_simulacro_personal(user_id: str, oposicion_id: int, n: int = 50) -> dict:
+    """
+    Simulacro personal: n preguntas repartidas proporcionalmente (según el
+    peso oficial oposicion_leyes.preguntas_simulacro) entre los bloques ya
+    "estudiado" (>=70% acierto agregado) del alumno. Requiere que el alumno
+    tenga plan_estudio en todos los bloques de la oposición (proxy de
+    "prueba de nivel ya hecha"); si no, o si no tiene ningún bloque
+    estudiado, devuelve disponible=False con el motivo.
+
+    La fórmula oficial de corrección (A-(E/3)) se aplica al calificar las
+    respuestas del alumno, no aquí — esta función solo selecciona preguntas.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT bloque FROM normas.oposicion_leyes
+                WHERE oposicion_id = %s AND bloque IS NOT NULL
+            """, (oposicion_id,))
+            bloques_oposicion = {r[0] for r in cur.fetchall()}
+
+            cur.execute("""
+                SELECT bloque, estudiado FROM normas.plan_estudio
+                WHERE user_id = %s AND oposicion_id = %s
+            """, (user_id, oposicion_id))
+            plan = {r[0]: r[1] for r in cur.fetchall()}
+
+            if not bloques_oposicion.issubset(plan.keys()):
+                return {
+                    "disponible": False,
+                    "motivo": "Debes completar la prueba de nivel (todos los bloques) antes del simulacro personal.",
+                    "preguntas": [],
+                }
+
+            bloques_estudiados = sorted(b for b, ok in plan.items() if ok)
+            if not bloques_estudiados:
+                return {
+                    "disponible": False,
+                    "motivo": "Aún no tienes ningún bloque estudiado (≥70% de acierto agregado).",
+                    "preguntas": [],
+                }
+
+            cur.execute("""
+                SELECT bloque, SUM(preguntas_simulacro) AS peso
+                FROM normas.oposicion_leyes
+                WHERE oposicion_id = %s AND bloque = ANY(%s)
+                GROUP BY bloque
+            """, (oposicion_id, bloques_estudiados))
+            pesos = {r[0]: r[1] for r in cur.fetchall()}
+            total_peso = sum(pesos.values())
+
+            reparto, asignadas = {}, 0
+            for i, b in enumerate(bloques_estudiados):
+                if i == len(bloques_estudiados) - 1:
+                    cantidad = n - asignadas  # el último bloque absorbe el redondeo
+                else:
+                    cantidad = round(n * pesos[b] / total_peso)
+                reparto[b] = cantidad
+                asignadas += cantidad
+
+            preguntas = []
+            for b, cantidad in reparto.items():
+                if cantidad <= 0:
+                    continue
+                cur.execute(f"""
+                    SELECT {_COLUMNAS_PREGUNTA}
+                    FROM normas.preguntas_test pt
+                    JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                    JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                                   AND ol.oposicion_id = %s
+                    WHERE ol.bloque = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+                    ORDER BY RANDOM()
+                    LIMIT %s
+                """, (oposicion_id, b, cantidad))
+                cols = [d[0] for d in cur.description]
+                preguntas += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    random.shuffle(preguntas)
+    return {"disponible": True, "motivo": None, "preguntas": preguntas}
+
+
+def get_preguntas_simulacro_academia(simulacro_id: int) -> dict:
+    """
+    Simulacro de academia: lee la lista ya fijada y ordenada en
+    normas.simulacro_academia_preguntas (mismo simulacro para todos los
+    alumnos). No genera ni personaliza nada — solo sirve lo ya autorizado.
+    Devuelve disponible=False si el simulacro no existe o no está
+    autorizado todavía (estado='generado', pendiente de que la academia
+    lo apruebe).
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT nombre, estado, fecha_inicio, fecha_fin
+                FROM normas.simulacros_academia
+                WHERE simulacro_id = %s
+            """, (simulacro_id,))
+            row = cur.fetchone()
+            if not row:
+                return {"disponible": False, "motivo": "Simulacro no encontrado.", "preguntas": []}
+
+            nombre, estado, fecha_inicio, fecha_fin = row
+            if estado != "autorizado":
+                return {
+                    "disponible": False,
+                    "motivo": "Este simulacro aún no ha sido autorizado por la academia.",
+                    "preguntas": [],
+                }
+
+            cur.execute(f"""
+                SELECT {_COLUMNAS_PREGUNTA}, sap.orden
+                FROM normas.simulacro_academia_preguntas sap
+                JOIN normas.preguntas_test pt ON pt.pregunta_id = sap.pregunta_id
+                JOIN normas.leyes l           ON l.ley_id       = pt.ley_id
+                WHERE sap.simulacro_id = %s
+                ORDER BY sap.orden
+            """, (simulacro_id,))
+            cols = [d[0] for d in cur.description]
+            preguntas = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    return {
+        "disponible": True,
+        "motivo": None,
+        "nombre": nombre,
+        "fecha_inicio": fecha_inicio,
+        "fecha_fin": fecha_fin,
+        "preguntas": preguntas,
+    }
