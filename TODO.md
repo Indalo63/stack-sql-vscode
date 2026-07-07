@@ -139,8 +139,8 @@ Arquitectura completa definida y aprobada. Implementación en 9 pasos.
 | 3 | Migración 032: tabla `normas.simulacros_academia` | ✅ Completado |
 | 4 | Supabase Auth: registro email+contraseña para alumnos | ✅ Completado |
 | 5 | `retrieval.py`: `get_fase_alumno`, `get_stats_alumno`, `get_preguntas_adaptativo`, `get_preguntas_simulacro_personal`, `get_preguntas_simulacro_academia` | ✅ Completado |
-| 6 | `streamlit_app.py`: reestructura jerarquía navegación + prueba de nivel | ⏭️ Siguiente |
-| 7 | Visualización progreso: panel inicio + composición tanda + resultado tanda | Pendiente |
+| 6 | `streamlit_app.py`: reestructura jerarquía navegación + prueba de nivel | ✅ Completado |
+| 7 | Visualización progreso: panel inicio + composición tanda + resultado tanda | ⏭️ Siguiente |
 | 8 | Simulacro personal (50 preguntas, fórmula GACE, bloques ≥70% acierto) | Pendiente |
 | 9 | Simulacro academia (mismas preguntas para todos, ventana temporal) | Pendiente |
 
@@ -159,6 +159,14 @@ Arquitectura completa definida y aprobada. Implementación en 9 pasos.
 | Dificultad preguntas | Campo `dificultad` (1-fácil / 2-media / 3-difícil) en `preguntas_test`; editor asigna en revisión |
 | Visualización | 3 momentos: panel inicio (fase+%+barras) · composición tanda · resultado tanda |
 | LSSF | Sin contenido en normas.leyes · excluir_test=TRUE en GACE · reservada para oposiciones Justicia |
+
+### Completado — Paso 6: navegación alumno + prueba de nivel (07/07/2026)
+- [✅ `retrieval.get_preguntas_prueba_nivel`] 40 preguntas repartidas proporcionalmente por peso oficial entre los 6 bloques de la oposición (a diferencia del simulacro personal, no exige bloques "estudiado"), orden por dificultad creciente. Nota: casi todas las preguntas tienen `dificultad=2` (default, pendiente de reclasificar), así que el orden creciente aún tiene efecto práctico limitado.
+- [✅ `streamlit_app.py`] Alumno logueado (Supabase Auth) tiene flujo propio: Oposición → Modo (Prueba de nivel / Repaso) → Bloque → sesión, separado del flujo editor (Q&A/Generar test/Editor, Google OAuth, sin cambios). Onboarding de bienvenida si el alumno no tiene ningún bloque en `plan_estudio` todavía. Mensajes de error específicos en login/registro (email duplicado, credenciales incorrectas, contraseña corta) en vez del error crudo de Supabase.
+- [✅ Verificación visual, Playwright headless] Instaladas dependencias de Chromium (`libnspr4`, `libnss3`, etc.) tras bloqueo inicial por falta de sudo. Flujo completo probado contra Supabase real: registro → prueba de nivel (40 preguntas) → comprobar respuestas → informe de partida (% y fase por bloque) → botón "Ir a Repaso" cambia de modo → cerrar sesión y volver a entrar detecta que ya no es alumno nuevo y preselecciona Repaso con el bloque recomendado → tanda adaptativa cargada. 0 errores de consola. Datos de prueba borrados de `plan_estudio`/`progreso_usuario` al terminar.
+- [⚠️ Pendiente manual] Quedan 3 usuarios en Supabase Auth de las pruebas (`alumno.prueba.claude.paso6*@example.com`, `...paso6b...`, `...paso6c...`) — no se pueden borrar con la clave anon; eliminar desde el dashboard de Supabase (Authentication → Users) cuando se pueda.
+- [✅ Bug encontrado y corregido] `.streamlit/secrets.toml`: `SUPABASE_URL`/`SUPABASE_ANON_KEY` estaban físicamente después de `[auth.google]`, por lo que TOML las anidaba dentro de esa tabla en vez de dejarlas a nivel superior — el registro de alumno fallaba con "SUPABASE_URL / SUPABASE_ANON_KEY no configurados". Reordenadas antes de `[auth]`. **Pendiente de revisar el mismo problema en los Secrets de Streamlit Cloud** (producción) antes de dar acceso a los alumnos reales — mismo fix, mover esas dos líneas por encima de `[auth]` en el editor de Secrets.
+- [✅ Mejora en Q&A, no prevista en el plan de 9 pasos] El modo Q&A no distinguía capítulo dentro de un título (solo título completo o agregados estructurales), así que "lista los artículos del Título I Capítulo II" respondía que no tenía ese desglose. Añadidas `get_capitulos_db`/`get_articulos_por_capitulo` en `retrieval.py` y `_extraer_capitulo_id` en `qa_pipeline.py`; `_responder_resumen` ahora acota al capítulo cuando la pregunta lo menciona (si no, sigue trayendo el título entero como antes). Verificado en vivo: devuelve los 25 artículos correctos (14-38) del Título I Capítulo II de la CE.
 
 ### Completado — Paso 5: retrieval.py, mix adaptativo (06/07/2026)
 - [✅ `get_fase_alumno`] Calcula fase por cobertura de épigrafes + % acierto agregado; UPSERT en `plan_estudio`. Probado en vivo.

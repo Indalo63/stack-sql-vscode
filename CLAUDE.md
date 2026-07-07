@@ -140,10 +140,18 @@ Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales
 | 3 | Migración 032: tabla `normas.simulacros_academia` | ✅ Completado |
 | 4 | Supabase Auth: registro email+contraseña para alumnos | ✅ Completado |
 | 5 | `retrieval.py`: funciones stats, fase, mix adaptativo | ✅ Completado |
-| 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | ⏭️ Siguiente |
-| 7 | Visualización de progreso (3 momentos) | Pendiente |
+| 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | ✅ Completado |
+| 7 | Visualización de progreso (3 momentos) | ⏭️ Siguiente |
 | 8 | Simulacro personal | Pendiente |
 | 9 | Simulacro de academia | Pendiente |
+
+### Completado — Paso 6: navegación alumno + prueba de nivel (07/07/2026)
+- [✅ `retrieval.get_preguntas_prueba_nivel`] Reparto proporcional por peso oficial entre los 6 bloques (todos, no solo "estudiado"), orden por dificultad creciente.
+- [✅ `streamlit_app.py`] Cuando hay alumno logueado (Supabase Auth), flujo propio separado del editor: jerarquía Oposición → Modo (Prueba de nivel / Repaso) → Bloque → sesión. Onboarding de bienvenida para alumnos nuevos; mensajes de error claros en login/registro (email ya registrado, credenciales incorrectas, contraseña corta). El flujo Q&A/Generar test/Editor (Google OAuth) queda intacto.
+- [✅ Verificado en vivo, navegador real] Playwright headless contra Supabase real vía Session Pooler: registro → prueba de nivel (40 preguntas reales) → corrección → informe de partida por bloque → cambio automático a "Repaso" → re-login detecta alumno no-nuevo y preselecciona Repaso con el bloque más débil → tanda adaptativa cargada. Sin errores de consola. Datos de prueba (`plan_estudio`/`progreso_usuario`) borrados tras la verificación.
+- [⚠️ Pendiente manual] 3 usuarios de prueba (`alumno.prueba.claude.paso6*@example.com`) quedan en Supabase Auth (no borrables con la clave anon) — eliminar desde el dashboard cuando se pueda.
+- [✅ Bug corregido, `.streamlit/secrets.toml`] `SUPABASE_URL`/`SUPABASE_ANON_KEY` estaban después de `[auth.google]`, así que TOML las anidaba en esa tabla y el registro de alumno fallaba con "no configurados". Movidas antes de `[auth]`. **Revisar el mismo orden en los Secrets de Streamlit Cloud (producción)** antes de dar acceso a alumnos reales.
+- [✅ Mejora Q&A, fuera del plan de 9 pasos] `qa_pipeline.py`/`retrieval.py`: el modo Q&A no sabía listar/resumir artículos a nivel de **capítulo** (solo título completo o agregados). Añadidas `get_capitulos_db`/`get_articulos_por_capitulo` + `_extraer_capitulo_id`; `_responder_resumen` ahora resuelve capítulo cuando la pregunta lo menciona. Verificado en vivo: "lista los artículos del Título I Capítulo II" → 25 artículos correctos (14-38).
 
 ### Completado — Paso 5: retrieval.py, mix adaptativo (06/07/2026)
 - [✅ 05] `get_fase_alumno` (fase por cobertura de épigrafes + UPSERT `plan_estudio`), `get_stats_alumno` (panel), `get_preguntas_adaptativo` (mix débiles/oficial/nueva), `get_preguntas_simulacro_personal` (reparto proporcional, bloques ≥70%), `get_preguntas_simulacro_academia` (lee lista congelada). Las 5 probadas en vivo contra Supabase.

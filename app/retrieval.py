@@ -196,6 +196,34 @@ def get_articulos_por_titulo(titulo_id: int) -> list[dict]:
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
+def get_capitulos_db(titulo_id: int) -> list[dict]:
+    """Devuelve la lista de capítulos de un título."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT capitulo_id, numero, denominacion
+                FROM normas.capitulos
+                WHERE titulo_id = %s
+                ORDER BY orden
+            """, (titulo_id,))
+            return [{"capitulo_id": r[0], "numero": r[1], "denominacion": r[2]}
+                    for r in cur.fetchall()]
+
+
+def get_articulos_por_capitulo(capitulo_id: int) -> list[dict]:
+    """Recupera todos los artículos de un capítulo ordenados por posición."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT numero, tipo, contenido
+                FROM normas.articulos
+                WHERE capitulo_id = %s AND tipo = 'articulo'
+                ORDER BY orden_global
+            """, (capitulo_id,))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def get_estructura_db(ley_id: int) -> dict:
     """
     Extrae metadatos estructurales de una ley directamente desde la BD.
@@ -779,6 +807,59 @@ def get_preguntas_simulacro_personal(user_id: str, oposicion_id: int, n: int = 5
 
     random.shuffle(preguntas)
     return {"disponible": True, "motivo": None, "preguntas": preguntas}
+
+
+def get_preguntas_prueba_nivel(oposicion_id: int, n: int = 40) -> list[dict]:
+    """
+    Prueba de nivel: n preguntas repartidas proporcionalmente por el peso
+    oficial (oposicion_leyes.preguntas_simulacro) entre TODOS los bloques de
+    la oposición — a diferencia del simulacro personal, no exige bloques
+    "estudiado" (es la primera prueba del alumno, plan_estudio aún vacío).
+    Ordenadas por dificultad creciente (fácil → difícil) para calibrar el
+    nivel progresivamente. Nota: hoy casi todas las preguntas tienen
+    dificultad=2 (default, pendiente de reclasificación — ver TODO.md), así
+    que el efecto práctico del orden es limitado hasta reclasificar el banco.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT bloque, SUM(preguntas_simulacro) AS peso
+                FROM normas.oposicion_leyes
+                WHERE oposicion_id = %s AND bloque IS NOT NULL
+                GROUP BY bloque
+            """, (oposicion_id,))
+            pesos = {r[0]: r[1] for r in cur.fetchall()}
+            total_peso = sum(pesos.values())
+
+            bloques = sorted(pesos)
+            reparto, asignadas = {}, 0
+            for i, b in enumerate(bloques):
+                if i == len(bloques) - 1:
+                    cantidad = n - asignadas  # el último bloque absorbe el redondeo
+                else:
+                    cantidad = round(n * pesos[b] / total_peso)
+                reparto[b] = cantidad
+                asignadas += cantidad
+
+            preguntas = []
+            for b, cantidad in reparto.items():
+                if cantidad <= 0:
+                    continue
+                cur.execute(f"""
+                    SELECT {_COLUMNAS_PREGUNTA}, pt.dificultad
+                    FROM normas.preguntas_test pt
+                    JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                    JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                                   AND ol.oposicion_id = %s
+                    WHERE ol.bloque = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+                    ORDER BY pt.dificultad ASC, RANDOM()
+                    LIMIT %s
+                """, (oposicion_id, b, cantidad))
+                cols = [d[0] for d in cur.description]
+                preguntas += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    preguntas.sort(key=lambda p: p["dificultad"])
+    return preguntas
 
 
 def get_preguntas_simulacro_academia(simulacro_id: int) -> dict:

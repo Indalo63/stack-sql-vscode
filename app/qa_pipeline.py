@@ -14,6 +14,7 @@ from app.config import SIMILARITY_THRESHOLD, TOKEN_THRESHOLD_HIERARCHICAL
 from app.retrieval import (
     embed_query, search_articles, search_articles_hierarchical,
     get_estructura_db, get_titulos_db, get_articulos_por_titulo, get_ley_info,
+    get_capitulos_db, get_articulos_por_capitulo,
 )
 
 
@@ -36,10 +37,12 @@ def _clasificar_pregunta(pregunta: str, ley_nombre: str,
                 "- ESTRUCTURAL: pregunta solo por cantidades o nombres de elementos. "
                 "Ejemplos: '¿Cuántos títulos tiene?', '¿Cuántos artículos hay?', "
                 "'¿Qué títulos existen?', '¿Cuántos capítulos tiene el Título I?'\n\n"
-                "- RESUMEN: pide resumir, describir o explicar el contenido completo "
-                "de un título o capítulo entero. "
+                "- RESUMEN: pide resumir, describir, explicar o LISTAR el contenido "
+                "completo de un título o capítulo entero. "
                 "Ejemplos: 'Resume el Título I', '¿Qué regula el Título VIII?', "
-                "'Explica el contenido del Título II', '¿De qué trata el Título X?'\n\n"
+                "'Explica el contenido del Título II', '¿De qué trata el Título X?', "
+                "'Lista los artículos del Título I Capítulo II', "
+                "'¿Qué artículos tiene el Capítulo III del Título IV?'\n\n"
                 "- CONTENIDO: pregunta jurídica concreta sobre derechos, instituciones, "
                 "procedimientos o lo que dice un artículo específico. "
                 "Ejemplos: '¿Qué dice el artículo 14?', '¿Cómo se aprueba una ley?', "
@@ -86,22 +89,74 @@ def _extraer_titulo_id(pregunta: str, ley_id: int, ley_nombre: str,
     return int(match.group()) if match else None
 
 
+def _extraer_capitulo_id(pregunta: str, titulo_id: int, ley_nombre: str,
+                          client: anthropic.Anthropic) -> int | None:
+    """
+    Extrae el capitulo_id de la BD a partir de la mención en la pregunta,
+    dentro del título ya resuelto. Devuelve None si la pregunta no menciona
+    un capítulo concreto (se entiende que se pide el título entero).
+    """
+    capitulos = get_capitulos_db(titulo_id)
+    if not capitulos:
+        return None
+    lista = "\n".join(
+        f"  capitulo_id={c['capitulo_id']} → Capítulo {c['numero']}: {c['denominacion']}"
+        for c in capitulos
+    )
+    response = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=10,
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Dada la siguiente lista de capítulos de un título de {ley_nombre}:\n"
+                f"{lista}\n\n"
+                "¿Qué capitulo_id corresponde al capítulo mencionado en esta pregunta? "
+                "Si la pregunta NO menciona ningún capítulo concreto (pide el título entero), "
+                "responde ÚNICAMENTE con NINGUNO.\n"
+                "Si sí lo menciona, responde ÚNICAMENTE con el número entero del capitulo_id, "
+                "sin texto adicional.\n"
+                f"Pregunta: {pregunta}"
+            ),
+        }],
+    )
+    texto = response.content[0].text.strip().upper()
+    if "NINGUNO" in texto:
+        return None
+    match = re.search(r"\d+", texto)
+    return int(match.group()) if match else None
+
+
 def _responder_resumen(pregunta: str, ley_id: int, ley_nombre: str,
                         client: anthropic.Anthropic) -> str:
     """
-    Recupera TODOS los artículos del título mencionado y genera un resumen completo.
+    Recupera TODOS los artículos del título (o del capítulo, si la pregunta
+    lo acota) mencionado y genera un resumen o listado completo.
     """
     titulo_id = _extraer_titulo_id(pregunta, ley_id, ley_nombre, client)
     if titulo_id is None:
         return _responder_contenido(pregunta, ley_id, ley_nombre, client)
 
-    titulos   = {t["titulo_id"]: t for t in get_titulos_db(ley_id)}
-    articulos = get_articulos_por_titulo(titulo_id)
+    titulos     = {t["titulo_id"]: t for t in get_titulos_db(ley_id)}
+    titulo_info = titulos.get(titulo_id, {})
+
+    capitulo_id = _extraer_capitulo_id(pregunta, titulo_id, ley_nombre, client)
+    if capitulo_id is not None:
+        capitulos    = {c["capitulo_id"]: c for c in get_capitulos_db(titulo_id)}
+        capitulo_info = capitulos.get(capitulo_id, {})
+        articulos    = get_articulos_por_capitulo(capitulo_id)
+        ambito = (
+            f"Capítulo {capitulo_info.get('numero', '')} — "
+            f"{capitulo_info.get('denominacion', '')} "
+            f"(Título {titulo_info.get('numero', '')} — {titulo_info.get('denominacion', '')})"
+        )
+    else:
+        articulos = get_articulos_por_titulo(titulo_id)
+        ambito = f"Título {titulo_info.get('numero', '')} — {titulo_info.get('denominacion', '')}"
 
     if not articulos:
         return _responder_contenido(pregunta, ley_id, ley_nombre, client)
 
-    titulo_info = titulos.get(titulo_id, {})
     contexto = "\n\n".join(
         f"[Artículo {a['numero']}]\n{a['contenido']}"
         for a in articulos
@@ -114,14 +169,14 @@ def _responder_resumen(pregunta: str, ley_id: int, ley_nombre: str,
             "role": "user",
             "content": (
                 f"Eres un asistente jurídico especializado en {ley_nombre}.\n"
-                f"A continuación tienes el texto íntegro del "
-                f"Título {titulo_info.get('numero', '')} — "
-                f"{titulo_info.get('denominacion', '')} "
+                f"A continuación tienes el texto íntegro del {ambito} "
                 f"({len(articulos)} artículos).\n"
-                "Elabora un resumen estructurado que explique qué regula este título, "
-                "sus principales bloques temáticos y los derechos o instituciones más relevantes. "
-                "Cita los artículos clave al mencionar cada bloque.\n\n"
-                f"TEXTO DEL TÍTULO:\n{contexto}\n\n"
+                "Si la pregunta pide un LISTADO de artículos, responde con la lista de "
+                "números de artículo (uno por línea), añadiendo una etiqueta breve de "
+                "su contenido. Si pide un RESUMEN, elabora un resumen estructurado que "
+                "explique qué regula, sus principales bloques temáticos y los derechos "
+                "o instituciones más relevantes, citando los artículos clave.\n\n"
+                f"TEXTO:\n{contexto}\n\n"
                 f"PREGUNTA: {pregunta}"
             ),
         }],

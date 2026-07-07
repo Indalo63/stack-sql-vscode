@@ -12,7 +12,9 @@ from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_bloques_por_oposicion, get_preguntas_banco,
-                           get_preguntas_sm2, update_progreso_sm2)
+                           get_preguntas_sm2, update_progreso_sm2,
+                           get_fase_alumno, get_stats_alumno,
+                           get_preguntas_adaptativo, get_preguntas_prueba_nivel)
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.auth_alumno import registrar_alumno, login_alumno
 from app.db import get_connection
@@ -26,6 +28,15 @@ st.set_page_config(
     page_icon="⚖️",
     layout="centered",
 )
+
+_NOMBRES_BLOQUE = {
+    "I":   "I — Organización del Estado",
+    "II":  "II — Unión Europea",
+    "III": "III — Políticas Públicas",
+    "IV":  "IV — Derecho Administrativo",
+    "V":   "V — Recursos Humanos",
+    "VI":  "VI — Gestión Financiera",
+}
 
 # ── Autenticación ─────────────────────────────────────────────────────────────
 user = st.user
@@ -51,21 +62,260 @@ except Exception as e:
     st.error(f"No se puede conectar a la base de datos: {e}")
     st.stop()
 
+# ── Flujo Alumno (Supabase Auth) ───────────────────────────────────────────────
+def _mensaje_error_alumno(e: Exception, accion: str) -> str:
+    texto = str(e).lower()
+    if "already registered" in texto or "already exists" in texto or "already been" in texto:
+        return "Este email ya tiene una cuenta. Prueba a iniciar sesión."
+    if "invalid login credentials" in texto or "invalid_credentials" in texto:
+        return "Email o contraseña incorrectos."
+    if "password" in texto and ("short" in texto or "at least" in texto or "6 characters" in texto):
+        return "La contraseña es demasiado corta (mínimo 6 caracteres)."
+    accion_txt = "registro" if accion == "Registrarse" else "inicio de sesión"
+    return f"No se pudo completar el {accion_txt}: {e}"
+
+
+def _render_preguntas(preguntas: list[dict], respuestas: dict, key_prefix: str,
+                      respondido: bool) -> None:
+    """Renderiza una tanda de preguntas a/b/c/d; si `respondido`, muestra corrección."""
+    for i, p in enumerate(preguntas, 1):
+        pid      = p["pregunta_id"]
+        opciones = {
+            "a": p["opcion_a"], "b": p["opcion_b"],
+            "c": p["opcion_c"], "d": p["opcion_d"],
+        }
+        st.markdown(f"**{i}. [{p['ley_codigo']}] {p['pregunta']}**")
+
+        if not respondido:
+            resp = st.radio(
+                "",
+                options=list(opciones.keys()),
+                format_func=lambda x, op=opciones: f"{x}) {op[x]}",
+                key=f"{key_prefix}_{pid}",
+                index=None,
+                label_visibility="collapsed",
+            )
+            respuestas[pid] = resp
+        else:
+            correcta = p["correcta"]
+            elegida  = respuestas.get(pid)
+            for letra, texto in opciones.items():
+                if letra == correcta:
+                    st.markdown(f"✅ **{letra}) {texto}**")
+                elif letra == elegida:
+                    st.markdown(f"❌ {letra}) {texto}")
+                else:
+                    st.markdown(f"{letra}) {texto}")
+            if p.get("explicacion"):
+                st.info(p["explicacion"])
+        st.divider()
+
+
+def _modo_prueba_nivel(oposicion_id: int, user_id: str) -> None:
+    st.header("Prueba de nivel")
+    st.caption(
+        "40 preguntas repartidas según el peso oficial de cada bloque, en "
+        "dificultad creciente. Al terminar verás tu informe de partida."
+    )
+
+    if "nivel" not in st.session_state:
+        st.session_state.nivel = {"preguntas": [], "respuestas": {}, "respondido": False}
+    nivel = st.session_state.nivel
+
+    if not nivel["preguntas"]:
+        if st.button("Empezar prueba de nivel", type="primary"):
+            preguntas = get_preguntas_prueba_nivel(oposicion_id, n=40)
+            if not preguntas:
+                st.warning(
+                    "Todavía no hay preguntas suficientes en el banco para "
+                    "hacer la prueba de nivel de esta oposición."
+                )
+            else:
+                nivel["preguntas"]  = preguntas
+                nivel["respuestas"] = {}
+                nivel["respondido"] = False
+                st.rerun()
+        return
+
+    if not nivel["respondido"]:
+        _render_preguntas(nivel["preguntas"], nivel["respuestas"], "nivel", respondido=False)
+        respondidas = sum(1 for v in nivel["respuestas"].values() if v is not None)
+        st.caption(f"{respondidas} / {len(nivel['preguntas'])} respondidas")
+        if st.button("Comprobar respuestas", type="primary"):
+            for p in nivel["preguntas"]:
+                elegida = nivel["respuestas"].get(p["pregunta_id"])
+                if elegida is not None:
+                    update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
+            for bloque in get_bloques_por_oposicion(oposicion_id):
+                get_fase_alumno(user_id, oposicion_id, bloque)
+            nivel["respondido"] = True
+            st.rerun()
+    else:
+        _render_preguntas(nivel["preguntas"], nivel["respuestas"], "nivel", respondido=True)
+        ok = sum(
+            1 for p in nivel["preguntas"]
+            if nivel["respuestas"].get(p["pregunta_id"]) == p["correcta"]
+        )
+        st.success(f"Resultado: **{ok} / {len(nivel['preguntas'])}** correctas")
+
+        st.subheader("Informe de partida")
+        stats = get_stats_alumno(user_id, oposicion_id)
+        for b in stats["bloques"]:
+            nombre = _NOMBRES_BLOQUE.get(b["bloque"], b["bloque"])
+            st.markdown(
+                f"**{nombre}** — {b['porcentaje_acierto']}% de acierto "
+                f"(fase: {b['fase']})"
+            )
+        st.info(stats["proxima_accion"]["motivo"])
+
+        if st.button("Ir a Repaso →", type="primary"):
+            st.session_state.nivel = {"preguntas": [], "respuestas": {}, "respondido": False}
+            st.session_state.modo_alumno_radio = "Repaso"
+            st.rerun()
+
+
+def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
+    st.header("Repaso adaptativo")
+
+    bloques_disponibles = get_bloques_por_oposicion(oposicion_id)
+    if not bloques_disponibles:
+        st.warning("Esta oposición no tiene bloques configurados.")
+        return
+
+    accion = stats["proxima_accion"]
+    bloque_recomendado = (
+        accion["bloque"] if accion["tipo"] == "practicar_bloque" else bloques_disponibles[0]
+    )
+    if "repaso_bloque" not in st.session_state:
+        st.session_state.repaso_bloque = bloque_recomendado
+
+    bloque_sel = st.selectbox(
+        "Bloque", bloques_disponibles,
+        format_func=lambda b: _NOMBRES_BLOQUE.get(b, b),
+        key="repaso_bloque",
+    )
+    if accion["tipo"] == "practicar_bloque" and accion["bloque"] == bloque_sel:
+        st.caption(f"💡 {accion['motivo']}")
+
+    if "repaso" not in st.session_state:
+        st.session_state.repaso = {
+            "preguntas": [], "respuestas": {}, "respondido": False, "bloque": None,
+        }
+    repaso = st.session_state.repaso
+
+    if not repaso["preguntas"]:
+        if st.button("Iniciar repaso", type="primary"):
+            preguntas = get_preguntas_adaptativo(user_id, oposicion_id, bloque_sel, n=10)
+            if not preguntas:
+                st.warning("No hay preguntas disponibles para este bloque todavía.")
+            else:
+                repaso.update(
+                    preguntas=preguntas, respuestas={}, respondido=False, bloque=bloque_sel,
+                )
+                st.rerun()
+        return
+
+    if not repaso["respondido"]:
+        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso", respondido=False)
+        if st.button("Comprobar respuestas", type="primary"):
+            for p in repaso["preguntas"]:
+                elegida = repaso["respuestas"].get(p["pregunta_id"])
+                if elegida is not None:
+                    update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
+            get_fase_alumno(user_id, oposicion_id, repaso["bloque"])
+            repaso["respondido"] = True
+            st.rerun()
+    else:
+        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso", respondido=True)
+        ok = sum(
+            1 for p in repaso["preguntas"]
+            if repaso["respuestas"].get(p["pregunta_id"]) == p["correcta"]
+        )
+        st.success(f"Resultado de esta tanda: **{ok} / {len(repaso['preguntas'])}** correctas")
+        if st.button("Nueva tanda →", type="primary"):
+            repaso.update(preguntas=[], respondido=False)
+            st.rerun()
+
+
+def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
+    user_id = alumno["user_id"]
+    stats   = get_stats_alumno(user_id, oposicion_id)
+    es_nuevo = not stats["bloques"]
+
+    st.title("🎓 Tu preparación")
+    st.caption(f"{alumno['email']}")
+
+    if es_nuevo:
+        st.info(
+            "**¡Bienvenido/a!** Esta plataforma te ayuda a preparar la oposición "
+            "con preguntas tipo test adaptadas a tu nivel.\n\n"
+            "Para empezar, te recomendamos hacer la **prueba de nivel**: 40 "
+            "preguntas que nos permiten calibrar en qué bloques necesitas "
+            "reforzar más. Si tienes cualquier problema, dínoslo directamente."
+        )
+
+    if "modo_alumno_radio" not in st.session_state:
+        st.session_state.modo_alumno_radio = "Prueba de nivel" if es_nuevo else "Repaso"
+
+    modo_alumno = st.radio(
+        "¿Qué quieres hacer?", ["Prueba de nivel", "Repaso"],
+        key="modo_alumno_radio", horizontal=True,
+    )
+    st.divider()
+
+    if modo_alumno == "Prueba de nivel":
+        _modo_prueba_nivel(oposicion_id, user_id)
+    else:
+        _modo_repaso(oposicion_id, user_id, stats)
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 ops_opciones = {f"{o['nombre_corto'] or o['codigo']}": o for o in oposiciones}
 op_seleccion = st.sidebar.selectbox("Oposición", list(ops_opciones.keys()))
 oposicion_seleccionada = ops_opciones[op_seleccion]
 oposicion_id = oposicion_seleccionada["oposicion_id"]
 
-_NOMBRES_BLOQUE = {
-    "I":   "I — Organización del Estado",
-    "II":  "II — Unión Europea",
-    "III": "III — Políticas Públicas",
-    "IV":  "IV — Derecho Administrativo",
-    "V":   "V — Recursos Humanos",
-    "VI":  "VI — Gestión Financiera",
-}
+# ── Acceso Alumno (Supabase Auth, email+contraseña) ───────────────────────────
+# Sesión independiente del login de editor (Google). Si hay alumno logueado,
+# el resto del script (bloque/ley/Q&A/Generar test/Editor) no se ejecuta:
+# el alumno tiene su propio flujo (prueba de nivel + repaso adaptativo).
+if "alumno" not in st.session_state:
+    st.session_state.alumno = None
 
+if st.session_state.alumno:
+    st.sidebar.markdown(f"🎓 {st.session_state.alumno['email']}")
+    if st.sidebar.button("Cerrar sesión (alumno)"):
+        st.session_state.alumno = None
+        st.rerun()
+else:
+    with st.sidebar.expander("Acceso Alumno"):
+        accion_alumno = st.radio(
+            "Acceso alumno", ["Iniciar sesión", "Registrarse"],
+            horizontal=True, label_visibility="collapsed",
+        )
+        email_alumno = st.text_input("Email", key="alumno_email")
+        password_alumno = st.text_input("Contraseña", type="password", key="alumno_password")
+        if st.button("Continuar", key="alumno_submit"):
+            try:
+                if accion_alumno == "Registrarse":
+                    datos = registrar_alumno(email_alumno, password_alumno)
+                    st.success("Registro completado.")
+                else:
+                    datos = login_alumno(email_alumno, password_alumno)
+                st.session_state.alumno = datos
+                st.rerun()
+            except Exception as e:
+                st.error(_mensaje_error_alumno(e, accion_alumno))
+
+if st.session_state.alumno:
+    _flujo_alumno(oposicion_id, st.session_state.alumno)
+    st.stop()
+
+st.sidebar.markdown("---")
+
+# ══════════════════════════════════════════════════════════════════════════
+# A partir de aquí: flujo Editor/Q&A (login Google o uso anónimo). Sin cambios
+# respecto al comportamiento previo al Paso 6.
+# ══════════════════════════════════════════════════════════════════════════
 bloques_disponibles = _cargar_bloques(oposicion_id)
 st.sidebar.markdown("**Bloque**")
 _cb1, _cb2 = st.sidebar.columns(2)
@@ -145,37 +395,6 @@ if logged_in:
 else:
     if st.sidebar.button("Acceso Editor (Google)"):
         st.login("google")
-
-# ── Acceso Alumno (Supabase Auth, email+contraseña) ───────────────────────────
-# Sesión independiente del login de editor. Aún no conectada al repaso adaptativo
-# (eso se conecta en el Paso 6 al reestructurar la navegación).
-if "alumno" not in st.session_state:
-    st.session_state.alumno = None
-
-if st.session_state.alumno:
-    st.sidebar.markdown(f"🎓 {st.session_state.alumno['email']}")
-    if st.sidebar.button("Cerrar sesión (alumno)"):
-        st.session_state.alumno = None
-        st.rerun()
-else:
-    with st.sidebar.expander("Acceso Alumno"):
-        accion = st.radio(
-            "Acceso alumno", ["Iniciar sesión", "Registrarse"],
-            horizontal=True, label_visibility="collapsed",
-        )
-        email = st.text_input("Email", key="alumno_email")
-        password = st.text_input("Contraseña", type="password", key="alumno_password")
-        if st.button("Continuar", key="alumno_submit"):
-            try:
-                if accion == "Registrarse":
-                    datos = registrar_alumno(email, password)
-                    st.success("Registro completado.")
-                else:
-                    datos = login_alumno(email, password)
-                st.session_state.alumno = datos
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
 
 # ── Cabecera ──────────────────────────────────────────────────────────────────
 st.title("⚖️ Asistente Jurídico")
