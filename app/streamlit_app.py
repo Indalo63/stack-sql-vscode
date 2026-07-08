@@ -11,7 +11,7 @@ import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import (get_leyes_disponibles, get_oposiciones,
-                           get_bloques_por_oposicion, get_preguntas_banco,
+                           get_bloques_por_oposicion,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_prueba_nivel)
@@ -268,59 +268,110 @@ def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
     else:
         _modo_repaso(oposicion_id, user_id, stats)
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
+# ── Sidebar: Oposición ────────────────────────────────────────────────────────
 ops_opciones = {f"{o['nombre_corto'] or o['codigo']}": o for o in oposiciones}
 op_seleccion = st.sidebar.selectbox("Oposición", list(ops_opciones.keys()))
 oposicion_seleccionada = ops_opciones[op_seleccion]
 oposicion_id = oposicion_seleccionada["oposicion_id"]
 
-# ── Acceso Alumno (Supabase Auth, email+contraseña) ───────────────────────────
-# Sesión independiente del login de editor (Google). Si hay alumno logueado,
-# el resto del script (bloque/ley/Q&A/Generar test/Editor) no se ejecuta:
-# el alumno tiene su propio flujo (prueba de nivel + repaso adaptativo).
-if "alumno" not in st.session_state:
-    st.session_state.alumno = None
+st.sidebar.markdown("---")
 
-if st.session_state.alumno:
-    st.sidebar.markdown(f"🎓 {st.session_state.alumno['email']}")
-    if st.sidebar.button("Cerrar sesión (alumno)"):
-        st.session_state.alumno = None
+# ── Sidebar: Acceso ────────────────────────────────────────────────────────────
+# Único punto de bifurcación: Administración (Google OAuth → Editor/Q&A/Generar
+# test) o Alumno (Supabase Auth → prueba de nivel/repaso adaptativo). Sin
+# acceso anónimo: hasta elegir uno de los dos no se muestra ningún contenido.
+if "acceso" not in st.session_state:
+    st.session_state.acceso = None
+
+st.sidebar.markdown("**Acceso**")
+_cacc1, _cacc2 = st.sidebar.columns(2)
+with _cacc1:
+    if st.button("Administración", key="acceso_administracion", use_container_width=True):
+        st.session_state.acceso = "administracion"
         st.rerun()
-else:
-    with st.sidebar.expander("Acceso Alumno"):
-        accion_alumno = st.radio(
-            "Acceso alumno", ["Iniciar sesión", "Registrarse"],
-            horizontal=True, label_visibility="collapsed",
-        )
-        email_alumno = st.text_input("Email", key="alumno_email")
-        password_alumno = st.text_input("Contraseña", type="password", key="alumno_password")
-        if st.button("Continuar", key="alumno_submit"):
-            try:
-                if accion_alumno == "Registrarse":
-                    datos = registrar_alumno(email_alumno, password_alumno)
-                    st.success("Registro completado.")
-                else:
-                    datos = login_alumno(email_alumno, password_alumno)
-                st.session_state.alumno = datos
-                st.rerun()
-            except Exception as e:
-                st.error(_mensaje_error_alumno(e, accion_alumno))
+with _cacc2:
+    if st.button("Alumno", key="acceso_alumno", use_container_width=True):
+        st.session_state.acceso = "alumno"
+        st.rerun()
 
-if st.session_state.alumno:
-    _flujo_alumno(oposicion_id, st.session_state.alumno)
+if st.session_state.acceso:
+    st.sidebar.caption(f"Acceso actual: **{st.session_state.acceso.capitalize()}**")
+    if st.sidebar.button("← Cambiar acceso", key="acceso_reset"):
+        st.session_state.acceso = None
+        st.rerun()
+
+if st.session_state.acceso is None:
+    st.title("⚖️ Asistente Jurídico")
+    st.info("Elige un tipo de acceso en la barra lateral: **Administración** o **Alumno**.")
     st.stop()
 
 st.sidebar.markdown("---")
 
 # ══════════════════════════════════════════════════════════════════════════
-# A partir de aquí: flujo Editor/Q&A (login Google o uso anónimo). Sin cambios
-# respecto al comportamiento previo al Paso 6.
+# Camino Alumno (Supabase Auth, email+contraseña)
 # ══════════════════════════════════════════════════════════════════════════
+if st.session_state.acceso == "alumno":
+    if "alumno" not in st.session_state:
+        st.session_state.alumno = None
+
+    if st.session_state.alumno:
+        st.sidebar.markdown(f"🎓 {st.session_state.alumno['email']}")
+        if st.sidebar.button("Cerrar sesión (alumno)"):
+            st.session_state.alumno = None
+            st.rerun()
+        _flujo_alumno(oposicion_id, st.session_state.alumno)
+        st.stop()
+
+    st.sidebar.markdown("**Acceso Alumno**")
+    accion_alumno = st.sidebar.radio(
+        "Acceso alumno", ["Iniciar sesión", "Registrarse"],
+        horizontal=True, label_visibility="collapsed",
+    )
+    email_alumno = st.sidebar.text_input("Email", key="alumno_email")
+    password_alumno = st.sidebar.text_input("Contraseña", type="password", key="alumno_password")
+    if st.sidebar.button("Continuar", key="alumno_submit"):
+        try:
+            if accion_alumno == "Registrarse":
+                datos = registrar_alumno(email_alumno, password_alumno)
+                st.success("Registro completado.")
+            else:
+                datos = login_alumno(email_alumno, password_alumno)
+            st.session_state.alumno = datos
+            st.rerun()
+        except Exception as e:
+            st.error(_mensaje_error_alumno(e, accion_alumno))
+
+    st.title("🎓 Acceso Alumno")
+    st.info("Inicia sesión o regístrate en la barra lateral para continuar.")
+    st.stop()
+
+# ══════════════════════════════════════════════════════════════════════════
+# Camino Administración (Google OAuth) — Editor, Q&A y Generar test
+# ══════════════════════════════════════════════════════════════════════════
+if not logged_in:
+    st.sidebar.markdown("**Acceso Administración**")
+    st.sidebar.caption("Requiere cuenta Google autorizada (editor/academia).")
+    if st.sidebar.button("Iniciar sesión con Google", key="admin_login", type="primary"):
+        st.login("google")
+
+    st.title("⚖️ Área de Administración")
+    st.info(
+        "Inicia sesión con tu cuenta Google en la barra lateral para acceder "
+        "al editor de preguntas, Q&A y generación de test."
+    )
+    st.stop()
+
+st.sidebar.markdown(f"👤 {user['email']}")
+if st.sidebar.button("Cerrar sesión"):
+    st.logout()
+
+st.sidebar.markdown("---")
+
 bloques_disponibles = _cargar_bloques(oposicion_id)
 st.sidebar.markdown("**Bloque**")
 _cb1, _cb2 = st.sidebar.columns(2)
 with _cb1:
-    if st.button("Selecciona al menos un bloque", key="blq_todos", use_container_width=True):
+    if st.button("Seleccionar todo", key="blq_todos", use_container_width=True):
         for b in bloques_disponibles:
             st.session_state[f"blq_{b}"] = True
         st.rerun()
@@ -354,7 +405,7 @@ if not leyes:
 st.sidebar.markdown("**Ley**")
 _cl1, _cl2 = st.sidebar.columns(2)
 with _cl1:
-    if st.button("Selecciona al menos una ley", key="ley_todas", use_container_width=True):
+    if st.button("Seleccionar todo", key="ley_todas", use_container_width=True):
         for l in leyes:
             st.session_state[f"ley_{l['ley_id']}"] = True
         st.rerun()
@@ -381,20 +432,7 @@ if not leyes_sel:
 ley_id     = leyes_sel[0]["ley_id"]
 ley_nombre = leyes_sel[0]["nombre"]
 
-modos = ["Q&A", "Generar test"]
-if logged_in:
-    modos.append("Editor")
-
-modo = st.sidebar.radio("Modo", modos)
-
-st.sidebar.markdown("---")
-if logged_in:
-    st.sidebar.markdown(f"👤 {user["email"]}")
-    if st.sidebar.button("Cerrar sesión"):
-        st.logout()
-else:
-    if st.sidebar.button("Acceso Editor (Google)"):
-        st.login("google")
+modo = st.sidebar.radio("Modo", ["Q&A", "Generar test", "Editor"])
 
 # ── Cabecera ──────────────────────────────────────────────────────────────────
 st.title("⚖️ Asistente Jurídico")
@@ -494,11 +532,7 @@ if modo == "Q&A":
 # ── Modo Generar test ──────────────────────────────────────────────────────────
 elif modo == "Generar test":
     st.header("Práctica de test")
-
-    if logged_in:
-        st.caption(f"Repaso adaptativo · {user['email']}")
-    else:
-        st.caption("Inicia sesión con Google para guardar tu progreso y activar el repaso adaptativo.")
+    st.caption(f"Repaso adaptativo · {user['email']}")
 
     # ── Estado de la sesión de práctica ───────────────────────────────────────
     if "quiz" not in st.session_state:
@@ -525,17 +559,10 @@ elif modo == "Generar test":
         bloques_label = " + ".join(_NOMBRES_BLOQUE.get(b, b) for b in bloques_sel)
         st.info(f"Bloque{'s' if len(bloques_sel) > 1 else ''} seleccionado{'s' if len(bloques_sel) > 1 else ''}: **{bloques_label}**")
 
-        btn_label = "Iniciar repaso" if logged_in else "Generar 10 preguntas"
-        if st.button(btn_label, type="primary"):
-            if logged_in:
-                preguntas = get_preguntas_sm2(
-                    user["email"], oposicion_id, bloques_sel, n=10,
-                )
-            else:
-                preguntas = get_preguntas_banco(
-                    oposicion_id, bloques_sel, n=10,
-                    excluir_ids=tuple(quiz["vistos"]),
-                )
+        if st.button("Iniciar repaso", type="primary"):
+            preguntas = get_preguntas_sm2(
+                user["email"], oposicion_id, bloques_sel, n=10,
+            )
             if not preguntas:
                 st.warning("No hay más preguntas disponibles para esta selección. ¡Has visto todas!")
             else:
@@ -590,7 +617,7 @@ elif modo == "Generar test":
                         ok += 1
                     elif elegida is not None:
                         err += 1
-                    if logged_in and elegida is not None:
+                    if elegida is not None:
                         try:
                             update_progreso_sm2(
                                 user["email"],
@@ -609,8 +636,7 @@ elif modo == "Generar test":
                 if quiz["respuestas"].get(p["pregunta_id"]) == p["correcta"]
             )
             st.success(f"Resultado de esta tanda: **{ok_t} / {len(quiz['preguntas'])}** correctas")
-            if logged_in:
-                st.caption("Progreso guardado. Las preguntas falladas volverán antes.")
+            st.caption("Progreso guardado. Las preguntas falladas volverán antes.")
             if st.button("Nueva tanda →", type="primary"):
                 quiz["preguntas"]  = []
                 quiz["respondido"] = False
@@ -618,12 +644,6 @@ elif modo == "Generar test":
 
 # ── Modo Editor ────────────────────────────────────────────────────────────────
 elif modo == "Editor":
-    if not logged_in:
-        st.warning("Esta sección requiere autenticación con Google.")
-        if st.button("Iniciar sesión con Google", type="primary"):
-            st.login("google")
-        st.stop()
-
     st.header("Editor de preguntas")
     st.caption(f"Sesión activa: {user["email"]}")
 

@@ -141,9 +141,25 @@ Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales
 | 4 | Supabase Auth: registro email+contraseña para alumnos | ✅ Completado |
 | 5 | `retrieval.py`: funciones stats, fase, mix adaptativo | ✅ Completado |
 | 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | ✅ Completado |
-| 7 | Visualización de progreso (3 momentos) | ⏭️ Siguiente |
+| 7 | Visualización de progreso (3 momentos) | ⏭️ Siguiente — alcance acordado, ver nota abajo |
 | 8 | Simulacro personal | Pendiente |
 | 9 | Simulacro de academia | Pendiente |
+
+### Alcance acordado — Paso 7: visualización de progreso (08/07/2026)
+Diseño en 3 momentos, a implementar en `_modo_repaso`/`_flujo_alumno` de `streamlit_app.py`, reutilizando `get_stats_alumno`/`get_preguntas_adaptativo` (sin migraciones nuevas):
+1. **Panel de inicio** (al entrar en Repaso): estado actual por bloque (`get_stats_alumno`).
+2. **Composición de la tanda** (antes de responder): mensaje genérico de personalización (p.ej. "Tanda personalizada según tu progreso en este bloque") — **sin desglose numérico ni categorías** (ver regla siguiente).
+3. **Resultado** (al terminar): aciertos/fallos de la tanda + cómo queda el % de acierto del bloque.
+
+**Regla de producto:** prohibido mostrar al alumno el desglose débiles/oficial/nueva o la fase (inicio/aprendizaje/consolidación/pre-examen) de una tanda — es dato reservado para el futuro análisis de la academia sobre sus alumnos (B2B), no para el alumno (B2C).
+
+### Completado — Rediseño sidebar: bifurcación Acceso (08/07/2026)
+- [✅ `streamlit_app.py`] Sidebar reestructurado: Oposición (primera selección, sin cambios) → **Acceso** (dos botones: Administración / Alumno) → cada camino despliega su flujo. Sin acceso anónimo: hasta elegir un tipo de acceso no se muestra ningún contenido.
+  - **Administración** (Google OAuth): panel intermedio con botón "Iniciar sesión con Google" (no redirige automáticamente); una vez logueado, ve Editor + Q&A + Generar test, igual que antes.
+  - **Alumno** (Supabase Auth): mismo flujo de siempre (login/registro → prueba de nivel/repaso).
+  - Limpiados los condicionales `if logged_in` que quedaban muertos en "Generar test"/"Editor" (ese tramo del script ya solo se ejecuta con sesión Google activa) y el import sin uso de `get_preguntas_banco`.
+  - Botones "Selecciona al menos un bloque"/"Selecciona al menos una ley" renombrados a "Seleccionar todo" (su acción real siempre fue marcar todos, el texto anterior confundía con el aviso de validación).
+- [✅ Verificado] Playwright headless con la carga de oposiciones mockeada (este entorno de desarrollo no tiene salida IPv6 y no llega a Supabase directo ni al pooler): las 3 pantallas (inicio con bifurcación, Administración sin login, Alumno) renderizan correctamente sin errores de consola. **Pendiente probar con BD real y login Google/Supabase real** desde WSL2.
 
 ### Completado — Paso 6: navegación alumno + prueba de nivel (07/07/2026)
 - [✅ `retrieval.get_preguntas_prueba_nivel`] Reparto proporcional por peso oficial entre los 6 bloques (todos, no solo "estudiado"), orden por dificultad creciente.
