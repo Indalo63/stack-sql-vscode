@@ -33,6 +33,15 @@ Los documentos actuales de esta carpeta son:
 - `07-project-prompt-template.md`
   Proporciona una plantilla reutilizable para redactar prompts de trabajo más claros y consistentes.
 
+- `08-qa-app-architecture.md`
+  Detalla la arquitectura del pipeline Q&A y de generación de tests.
+
+- `09-business-logic.md`
+  Resume la lógica de negocio: modelo B2B/B2C, reglas de generación de test, fórmula de corrección y arquitectura de la app del alumno.
+
+- `10-replication-and-domains.md`
+  Explica cómo replicar el stack para otras oposiciones o dominios.
+
 ## Reading order
 
 El orden recomendado de lectura es el siguiente:

@@ -909,3 +909,79 @@ def get_preguntas_simulacro_academia(simulacro_id: int) -> dict:
         "fecha_fin": fecha_fin,
         "preguntas": preguntas,
     }
+
+
+def calificar_simulacro(oposicion_id: int, aciertos: int, errores: int, blancos: int,
+                        n_preguntas: int) -> dict:
+    """
+    Aplica la fórmula oficial de la convocatoria vigente (año más reciente)
+    a un resultado de simulacro ya cerrado, extrapolando aciertos/errores/
+    blancos de n_preguntas al num_preguntas oficial para que la nota quede
+    en la escala real (comparable a nota_minima/pct_aprobado). No persiste
+    nada: solo calcula.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT num_preguntas, valor_acierto, penalizacion_error,
+                       penalizacion_blanco, escala_min, escala_max, nota_minima
+                FROM normas.convocatorias
+                WHERE oposicion_id = %s
+                ORDER BY año DESC
+                LIMIT 1
+            """, (oposicion_id,))
+            row = cur.fetchone()
+
+    if row is None:
+        return {"disponible": False, "motivo": "No hay convocatoria configurada para esta oposición."}
+
+    (num_oficial, valor_acierto, pen_error, pen_blanco,
+     escala_min, escala_max, nota_minima) = row
+
+    factor = num_oficial / n_preguntas
+    a_ext, e_ext, b_ext = aciertos * factor, errores * factor, blancos * factor
+    nota = a_ext * float(valor_acierto) - e_ext * float(pen_error) - b_ext * float(pen_blanco)
+    nota = max(float(escala_min), min(float(escala_max), nota))
+
+    return {
+        "disponible": True,
+        "nota": round(nota, 2),
+        "escala_max": float(escala_max),
+        "nota_minima": float(nota_minima),
+        "aprobado": nota >= float(nota_minima),
+        "aciertos": aciertos, "errores": errores, "blancos": blancos,
+    }
+
+
+def guardar_resultado_simulacro(user_id: str, oposicion_id: int, tipo: str, n_preguntas: int,
+                                aciertos: int, errores: int, blancos: int, nota: float,
+                                aprobado: bool, simulacro_academia_id: int | None = None) -> None:
+    """Inserta un intento cerrado de simulacro en normas.historial_simulacros."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO normas.historial_simulacros
+                    (user_id, oposicion_id, tipo, simulacro_academia_id, n_preguntas,
+                     aciertos, errores, blancos, nota, aprobado)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, oposicion_id, tipo, simulacro_academia_id, n_preguntas,
+                  aciertos, errores, blancos, nota, aprobado))
+        conn.commit()
+
+
+def get_historial_simulacros(user_id: str, oposicion_id: int) -> list[dict]:
+    """
+    Historial de intentos de simulacro del alumno (personal y academia),
+    para la sección "Mi progreso". Ordenado del más reciente al más antiguo.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT tipo, n_preguntas, aciertos, errores, blancos, nota,
+                       aprobado, realizado_en
+                FROM normas.historial_simulacros
+                WHERE user_id = %s AND oposicion_id = %s
+                ORDER BY realizado_en DESC
+            """, (user_id, oposicion_id))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]

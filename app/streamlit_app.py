@@ -14,7 +14,9 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_bloques_por_oposicion,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
-                           get_preguntas_adaptativo, get_preguntas_prueba_nivel)
+                           get_preguntas_adaptativo, get_preguntas_prueba_nivel,
+                           get_preguntas_simulacro_personal, calificar_simulacro,
+                           guardar_resultado_simulacro, get_historial_simulacros)
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.auth_alumno import registrar_alumno, login_alumno
 from app.db import get_connection
@@ -174,6 +176,17 @@ def _modo_prueba_nivel(oposicion_id: int, user_id: str) -> None:
             st.rerun()
 
 
+def _panel_estado_bloques(stats: dict) -> None:
+    """Momento 1: estado actual por bloque (sin desglose débiles/oficial/nueva ni fase)."""
+    if not stats["bloques"]:
+        st.caption("Todavía no tienes datos de progreso. Empieza una tanda para ver tu evolución.")
+        return
+    for b in stats["bloques"]:
+        nombre = _NOMBRES_BLOQUE.get(b["bloque"], b["bloque"])
+        estado = "✅ estudiado" if b["estudiado"] else "en progreso"
+        st.markdown(f"**{nombre}** — {b['porcentaje_acierto']}% de acierto ({estado})")
+
+
 def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
     st.header("Repaso adaptativo")
 
@@ -181,6 +194,15 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
     if not bloques_disponibles:
         st.warning("Esta oposición no tiene bloques configurados.")
         return
+
+    if "repaso" not in st.session_state:
+        st.session_state.repaso = {
+            "preguntas": [], "respuestas": {}, "respondido": False, "bloque": None,
+        }
+    repaso = st.session_state.repaso
+
+    with st.expander("📊 Tu estado actual por bloque", expanded=not repaso["preguntas"]):
+        _panel_estado_bloques(stats)
 
     accion = stats["proxima_accion"]
     bloque_recomendado = (
@@ -197,12 +219,6 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
     if accion["tipo"] == "practicar_bloque" and accion["bloque"] == bloque_sel:
         st.caption(f"💡 {accion['motivo']}")
 
-    if "repaso" not in st.session_state:
-        st.session_state.repaso = {
-            "preguntas": [], "respuestas": {}, "respondido": False, "bloque": None,
-        }
-    repaso = st.session_state.repaso
-
     if not repaso["preguntas"]:
         if st.button("Iniciar repaso", type="primary"):
             preguntas = get_preguntas_adaptativo(user_id, oposicion_id, bloque_sel, n=10)
@@ -216,6 +232,8 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
         return
 
     if not repaso["respondido"]:
+        # Momento 2: composición de la tanda — mensaje genérico, sin desglose.
+        st.caption("🎯 Tanda personalizada según tu progreso en este bloque.")
         _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso", respondido=False)
         if st.button("Comprobar respuestas", type="primary"):
             for p in repaso["preguntas"]:
@@ -231,10 +249,124 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
             1 for p in repaso["preguntas"]
             if repaso["respuestas"].get(p["pregunta_id"]) == p["correcta"]
         )
-        st.success(f"Resultado de esta tanda: **{ok} / {len(repaso['preguntas'])}** correctas")
+        fallos = len(repaso["preguntas"]) - ok
+        st.success(
+            f"Resultado de esta tanda: **{ok} / {len(repaso['preguntas'])}** correctas "
+            f"({fallos} fallos)"
+        )
+
+        # Momento 3: cómo queda el % de acierto del bloque tras esta tanda.
+        stats_actualizado = get_stats_alumno(user_id, oposicion_id)
+        bloque_actualizado = next(
+            (b for b in stats_actualizado["bloques"] if b["bloque"] == repaso["bloque"]), None
+        )
+        if bloque_actualizado:
+            nombre = _NOMBRES_BLOQUE.get(repaso["bloque"], repaso["bloque"])
+            st.info(
+                f"**{nombre}** queda en **{bloque_actualizado['porcentaje_acierto']}%** "
+                f"de acierto."
+            )
+
         if st.button("Nueva tanda →", type="primary"):
             repaso.update(preguntas=[], respondido=False)
             st.rerun()
+
+
+def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
+    st.header("Simulacro personal")
+    st.caption(
+        "50 preguntas de los bloques que ya tienes estudiados (≥70% de acierto), "
+        "corregidas con la fórmula oficial. Este resultado no afecta a tu progreso "
+        "de repaso: es una prueba de examen completo aparte, que se guarda en "
+        "\"Mi progreso\"."
+    )
+
+    if "simulacro" not in st.session_state:
+        st.session_state.simulacro = {
+            "preguntas": [], "respuestas": {}, "respondido": False, "guardado": False,
+        }
+    simulacro = st.session_state.simulacro
+
+    if not simulacro["preguntas"]:
+        if st.button("Empezar simulacro personal", type="primary"):
+            resultado = get_preguntas_simulacro_personal(user_id, oposicion_id, n=50)
+            if not resultado["disponible"]:
+                st.warning(resultado["motivo"])
+            else:
+                simulacro.update(
+                    preguntas=resultado["preguntas"], respuestas={},
+                    respondido=False, guardado=False,
+                )
+                st.rerun()
+        return
+
+    if not simulacro["respondido"]:
+        _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro", respondido=False)
+        respondidas = sum(1 for v in simulacro["respuestas"].values() if v is not None)
+        st.caption(f"{respondidas} / {len(simulacro['preguntas'])} respondidas")
+        if st.button("Comprobar respuestas", type="primary"):
+            simulacro["respondido"] = True
+            st.rerun()
+    else:
+        _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro", respondido=True)
+        preguntas = simulacro["preguntas"]
+        aciertos = sum(
+            1 for p in preguntas if simulacro["respuestas"].get(p["pregunta_id"]) == p["correcta"]
+        )
+        blancos = sum(1 for p in preguntas if simulacro["respuestas"].get(p["pregunta_id"]) is None)
+        errores = len(preguntas) - aciertos - blancos
+
+        resultado = calificar_simulacro(oposicion_id, aciertos, errores, blancos, len(preguntas))
+        if resultado["disponible"]:
+            if not simulacro["guardado"]:
+                guardar_resultado_simulacro(
+                    user_id, oposicion_id, "personal", len(preguntas),
+                    aciertos, errores, blancos, resultado["nota"], resultado["aprobado"],
+                )
+                simulacro["guardado"] = True
+
+            st.success(
+                f"**{aciertos} / {len(preguntas)}** correctas · {errores} fallos · "
+                f"{blancos} en blanco"
+            )
+            veredicto = "✅ Aprobado" if resultado["aprobado"] else "❌ No alcanza la nota mínima"
+            st.info(
+                f"Nota estimada (extrapolada a examen completo): "
+                f"**{resultado['nota']} / {resultado['escala_max']}** — {veredicto} "
+                f"(mínimo {resultado['nota_minima']})"
+            )
+            st.caption("Este resultado no afecta a tu progreso de repaso.")
+        else:
+            st.warning(resultado["motivo"])
+
+        if st.button("Nuevo simulacro →", type="primary"):
+            st.session_state.simulacro = {
+                "preguntas": [], "respuestas": {}, "respondido": False, "guardado": False,
+            }
+            st.rerun()
+
+
+def _modo_mi_progreso(oposicion_id: int, user_id: str) -> None:
+    st.header("Mi progreso")
+    historial = get_historial_simulacros(user_id, oposicion_id)
+
+    if not historial:
+        st.caption(
+            "Todavía no has hecho ningún simulacro. Prueba el Simulacro personal "
+            "para ver aquí tu evolución."
+        )
+        return
+
+    for h in historial:
+        tipo_label = "Personal" if h["tipo"] == "personal" else "Academia"
+        fecha = h["realizado_en"].strftime("%d/%m/%Y %H:%M")
+        veredicto = "✅ Aprobado" if h["aprobado"] else "❌ No aprobado"
+        st.markdown(
+            f"**{fecha}** — {tipo_label} ({h['n_preguntas']} preguntas) — "
+            f"nota **{h['nota']}** — {veredicto}"
+        )
+        st.caption(f"{h['aciertos']} aciertos · {h['errores']} fallos · {h['blancos']} en blanco")
+        st.divider()
 
 
 def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
@@ -258,15 +390,20 @@ def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
         st.session_state.modo_alumno_radio = "Prueba de nivel" if es_nuevo else "Repaso"
 
     modo_alumno = st.radio(
-        "¿Qué quieres hacer?", ["Prueba de nivel", "Repaso"],
+        "¿Qué quieres hacer?",
+        ["Prueba de nivel", "Repaso", "Simulacro personal", "Mi progreso"],
         key="modo_alumno_radio", horizontal=True,
     )
     st.divider()
 
     if modo_alumno == "Prueba de nivel":
         _modo_prueba_nivel(oposicion_id, user_id)
-    else:
+    elif modo_alumno == "Repaso":
         _modo_repaso(oposicion_id, user_id, stats)
+    elif modo_alumno == "Simulacro personal":
+        _modo_simulacro_personal(oposicion_id, user_id)
+    else:
+        _modo_mi_progreso(oposicion_id, user_id)
 
 # ── Sidebar: Oposición ────────────────────────────────────────────────────────
 ops_opciones = {f"{o['nombre_corto'] or o['codigo']}": o for o in oposiciones}

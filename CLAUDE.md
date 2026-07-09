@@ -95,7 +95,8 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 - `normas.epigrafes`: 58 temas oficiales GACE (Anexo VII) por bloque, verificados contra el PDF fuente.
 - `normas.plan_estudio`: estado vivo del alumno por bloque (fase, % acierto, estudiado) — se actualiza vía `get_fase_alumno`.
 - `normas.simulacros_academia` + `simulacro_academia_preguntas`: simulacro de academia con preguntas fijas y ventana temporal.
-- Migraciones ejecutadas: `020`–`032`.
+- `normas.historial_simulacros`: registro de cada intento de simulacro (personal/academia) con su nota, para "Mi progreso" del alumno.
+- Migraciones ejecutadas: `020`–`033`.
   - `025`: repertorio completo GACE en oposicion_leyes (60 leyes, preguntas_simulacro≥0)
   - `026`: columna bloque I–VI en oposicion_leyes según programa oficial GACE 2025
   - `027`: tabla progreso_usuario (sistema repaso adaptativo SM-2)
@@ -141,17 +142,30 @@ Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales
 | 4 | Supabase Auth: registro email+contraseña para alumnos | ✅ Completado |
 | 5 | `retrieval.py`: funciones stats, fase, mix adaptativo | ✅ Completado |
 | 6 | `streamlit_app.py`: reestructura navegación + prueba de nivel | ✅ Completado |
-| 7 | Visualización de progreso (3 momentos) | ⏭️ Siguiente — alcance acordado, ver nota abajo |
-| 8 | Simulacro personal | Pendiente |
-| 9 | Simulacro de academia | Pendiente |
+| 7 | Visualización de progreso (3 momentos) | ✅ Completado |
+| 8 | Simulacro personal | ✅ Completado |
+| 9 | Simulacro de academia | ⏭️ Siguiente |
 
-### Alcance acordado — Paso 7: visualización de progreso (08/07/2026)
-Diseño en 3 momentos, a implementar en `_modo_repaso`/`_flujo_alumno` de `streamlit_app.py`, reutilizando `get_stats_alumno`/`get_preguntas_adaptativo` (sin migraciones nuevas):
-1. **Panel de inicio** (al entrar en Repaso): estado actual por bloque (`get_stats_alumno`).
-2. **Composición de la tanda** (antes de responder): mensaje genérico de personalización (p.ej. "Tanda personalizada según tu progreso en este bloque") — **sin desglose numérico ni categorías** (ver regla siguiente).
-3. **Resultado** (al terminar): aciertos/fallos de la tanda + cómo queda el % de acierto del bloque.
+### Completado — Paso 8: simulacro personal + historial (08/07/2026)
+Amplía el alcance original (solo simulacro personal) a petición del usuario: el resultado no debe afectar al progreso de repaso, pero sí debe quedar histórico de notas de simulacro (personal y, más adelante, academia) para un informe general.
+
+- [✅ Migración 033, `sql/ddl/033_historial_simulacros.sql`] Tabla `normas.historial_simulacros` (user_id, oposicion_id, tipo `personal`/`academia`, `simulacro_academia_id` nullable con FK a `simulacros_academia`, n_preguntas, aciertos, errores, blancos, nota, aprobado, realizado_en). Diseñada para que el Paso 9 escriba en la misma tabla sin cambios de esquema. Aplicada en Supabase vía Session Pooler.
+- [✅ `retrieval.py`] `calificar_simulacro`: lee la convocatoria vigente (año más reciente) de `normas.convocatorias` y aplica su fórmula extrapolando aciertos/errores/blancos de n_preguntas al `num_preguntas` oficial (100), para que la nota quede en la escala real 0-50 comparable a `nota_minima`/`pct_aprobado` — decisión explícita del usuario frente a dejar la nota en una escala reducida a la mitad. `guardar_resultado_simulacro` inserta el intento en `historial_simulacros`. `get_historial_simulacros` lo lista para "Mi progreso".
+- [✅ `streamlit_app.py`] Radio `¿Qué quieres hacer?` pasa a 4 opciones: Prueba de nivel / Repaso / **Simulacro personal** / **Mi progreso**.
+  - `_modo_simulacro_personal`: 50 preguntas de `get_preguntas_simulacro_personal` (bloques ≥70%, ya construida en el Paso 5); bloquea con el motivo si falta prueba de nivel o no hay bloque estudiado. Al corregir, **no** llama a `update_progreso_sm2`/`get_fase_alumno` (simulacro aislado, decisión explícita del usuario) — solo calcula la nota y la guarda una vez (`session_state["guardado"]` evita duplicados en reruns).
+  - `_modo_mi_progreso`: lista los intentos de `get_historial_simulacros` con fecha, tipo, nota y aprobado/no aprobado; la rama "Academia" queda sin datos hasta el Paso 9 pero el diseño ya la contempla.
+  - Sin cronómetro en esta versión (decisión explícita del usuario, queda para una iteración posterior).
+- [✅ Verificado en vivo, navegador real] Playwright headless contra Supabase real vía Session Pooler: (1) simulacro bloqueado antes de la prueba de nivel, mensaje correcto; (2) "Mi progreso" vacío con mensaje correcto; (3) con `plan_estudio` sembrado para simular un bloque estudiado, flujo completo del simulacro (18 preguntas disponibles en el bloque de prueba, no 50 — el reparto respeta lo que hay en banco) → nota extrapolada correcta (6 aciertos/12 fallos sobre 18 → nota 11,11, fórmula A−(E/3) verificada a mano) → intento guardado y visible en "Mi progreso" con dos intentos en orden descendente. Confirmado que `progreso_usuario` no recibe filas nuevas del simulacro (0 borrados en la limpieza, frente a las 6 filas de `plan_estudio` sembradas para la prueba). Sin errores de consola. Datos de prueba borrados tras la verificación.
+
+### Completado — Paso 7: visualización de progreso (08/07/2026)
+Diseño en 3 momentos, implementado en `_modo_repaso`/`_panel_estado_bloques` de `streamlit_app.py`, reutilizando `get_stats_alumno`/`get_preguntas_adaptativo` (sin migraciones nuevas):
+1. **Panel de inicio** (al entrar en Repaso): expander "Tu estado actual por bloque" (expandido si no hay tanda en curso, colapsable después) con % de acierto y estado (estudiado/en progreso) por bloque, vía `get_stats_alumno`.
+2. **Composición de la tanda** (antes de responder): mensaje genérico "🎯 Tanda personalizada según tu progreso en este bloque." — **sin desglose numérico ni categorías** (ver regla siguiente).
+3. **Resultado** (al terminar): aciertos/fallos de la tanda + cómo queda el % de acierto del bloque (nueva llamada a `get_stats_alumno` tras `update_progreso_sm2`/`get_fase_alumno`).
 
 **Regla de producto:** prohibido mostrar al alumno el desglose débiles/oficial/nueva o la fase (inicio/aprendizaje/consolidación/pre-examen) de una tanda — es dato reservado para el futuro análisis de la academia sobre sus alumnos (B2B), no para el alumno (B2C).
+
+[✅ Verificado en vivo, navegador real] Playwright headless contra Supabase real vía Session Pooler: alumno de prueba registrado → Repaso → los 3 momentos renderizan con los datos reales (10,00% de acierto en el panel de inicio, mensaje genérico sin desglose en la composición de la tanda, resultado "2/10 correctas (8 fallos)" y bloque actualizado a 15,00% en el momento 3). Sin errores de consola. Datos de prueba (`progreso_usuario`/`plan_estudio`) borrados tras la verificación; el usuario `alumno.prueba.claude.paso7@example.com` queda en Supabase Auth (mismo pendiente de limpieza manual que en el Paso 6).
 
 ### Completado — Rediseño sidebar: bifurcación Acceso (08/07/2026)
 - [✅ `streamlit_app.py`] Sidebar reestructurado: Oposición (primera selección, sin cambios) → **Acceso** (dos botones: Administración / Alumno) → cada camino despliega su flujo. Sin acceso anónimo: hasta elegir un tipo de acceso no se muestra ningún contenido.
