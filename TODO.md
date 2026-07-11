@@ -154,8 +154,8 @@ Arquitectura completa definida y aprobada. Implementación en 9 pasos.
 | Autenticación editor/academia | Google OAuth (ya implementado) |
 | Prueba de nivel | 40 preguntas · peso oficial por bloque · dificultad creciente individual · gratuita con registro · genera informe de partida + plan de estudio |
 | Mix adaptativo | Opción C — 4 fases por preguntas vistas: Inicio (0/40/60) · Aprendizaje (15/20/65) · Consolidación (30/25/45) · Pre-examen (40/35/25) — porcentajes: débiles/oficial/nueva |
-| Puntos débiles | Solo del bloque seleccionado |
-| Bloque "estudiado" | Acierto agregado ≥70% en todas las preguntas vistas del bloque |
+| Puntos débiles | Del tema seleccionado (o de todo el bloque si se elige esa opción) — actualizado 11/07/2026, ver CLAUDE.md |
+| Bloque "estudiado" | Todos sus temas con preguntas vistas ≥70% (progreso trackeado por tema, no por bloque) — actualizado 11/07/2026, ver CLAUDE.md |
 | Simulacro personal | 50 preguntas · solo bloques ≥70% · fórmula A−(E/3) · requiere prueba de nivel previa |
 | Simulacro academia | Mismas preguntas para todos · sin personalización · ventana temporal fijada por academia |
 | Dificultad preguntas | Campo `dificultad` (1-fácil / 2-media / 3-difícil) en `preguntas_test`; editor asigna en revisión |

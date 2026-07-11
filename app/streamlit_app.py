@@ -12,10 +12,12 @@ import streamlit as st
 from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import (get_leyes_disponibles, get_oposiciones,
-                           get_bloques_por_oposicion,
+                           get_bloques_por_oposicion, get_temas_por_bloque,
+                           get_temas_por_bloques,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
-                           get_preguntas_adaptativo, get_preguntas_prueba_nivel,
+                           get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
+                           get_preguntas_prueba_nivel,
                            get_preguntas_simulacro_personal, calificar_simulacro,
                            guardar_resultado_simulacro, get_historial_simulacros,
                            get_preguntas_simulacro_academia,
@@ -60,8 +62,8 @@ def _cargar_bloques(oposicion_id: int):
 
 @st.cache_data(ttl=300)
 def _cargar_leyes(oposicion_id: int | None, bloques: tuple[str, ...] | None = None,
-                  excluir_test: bool = False):
-    return get_leyes_disponibles(oposicion_id, bloques, excluir_test=excluir_test)
+                  excluir_test: bool = False, temas: tuple[int, ...] | None = None):
+    return get_leyes_disponibles(oposicion_id, bloques, excluir_test=excluir_test, temas=temas)
 
 try:
     oposiciones = _cargar_oposiciones()
@@ -149,12 +151,15 @@ def _modo_prueba_nivel(oposicion_id: int, user_id: str) -> None:
         respondidas = sum(1 for v in nivel["respuestas"].values() if v is not None)
         st.caption(f"{respondidas} / {len(nivel['preguntas'])} respondidas")
         if st.button("Comprobar respuestas", type="primary"):
+            temas_tocados = set()
             for p in nivel["preguntas"]:
                 elegida = nivel["respuestas"].get(p["pregunta_id"])
                 if elegida is not None:
                     update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
-            for bloque in get_bloques_por_oposicion(oposicion_id):
-                get_fase_alumno(user_id, oposicion_id, bloque)
+                    if p.get("epigrafe_id"):
+                        temas_tocados.add(p["epigrafe_id"])
+            for epigrafe_id in temas_tocados:
+                get_fase_alumno(user_id, oposicion_id, epigrafe_id)
             nivel["respondido"] = True
             st.rerun()
     else:
@@ -169,20 +174,20 @@ def _modo_prueba_nivel(oposicion_id: int, user_id: str) -> None:
         stats = get_stats_alumno(user_id, oposicion_id)
         for b in stats["bloques"]:
             nombre = _NOMBRES_BLOQUE.get(b["bloque"], b["bloque"])
-            st.markdown(
-                f"**{nombre}** — {b['porcentaje_acierto']}% de acierto "
-                f"(fase: {b['fase']})"
-            )
+            st.markdown(f"**{nombre}** — {b['porcentaje_acierto']}% de acierto")
         st.info(stats["proxima_accion"]["motivo"])
 
         if st.button("Ir a Repaso →", type="primary"):
             st.session_state.nivel = {"preguntas": [], "respuestas": {}, "respondido": False}
-            st.session_state.modo_alumno_radio = "Repaso"
+            st.session_state["_forzar_modo_alumno"] = "Repaso"
             st.rerun()
 
 
+_TEMA_TODO_BLOQUE = "__todo_bloque__"
+
+
 def _panel_estado_bloques(stats: dict) -> None:
-    """Momento 1: estado actual por bloque (sin desglose débiles/oficial/nueva ni fase)."""
+    """Momento 1: estado actual por bloque y, dentro, por cada tema oficial."""
     if not stats["bloques"]:
         st.caption("Todavía no tienes datos de progreso. Empieza una tanda para ver tu evolución.")
         return
@@ -190,6 +195,11 @@ def _panel_estado_bloques(stats: dict) -> None:
         nombre = _NOMBRES_BLOQUE.get(b["bloque"], b["bloque"])
         estado = "✅ estudiado" if b["estudiado"] else "en progreso"
         st.markdown(f"**{nombre}** — {b['porcentaje_acierto']}% de acierto ({estado})")
+        for t in b["temas"]:
+            marca = "✅" if t["estudiado"] else ("· " if t["preguntas_vistas"] > 0 else "—")
+            titulo_corto = t["titulo"] if len(t["titulo"]) <= 70 else t["titulo"][:70] + "…"
+            st.caption(f"{marca} Tema {t['tema']}: {titulo_corto} — {t['porcentaje_acierto']}%")
+        st.markdown("")
 
 
 def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
@@ -202,16 +212,17 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
 
     if "repaso" not in st.session_state:
         st.session_state.repaso = {
-            "preguntas": [], "respuestas": {}, "respondido": False, "bloque": None,
+            "preguntas": [], "respuestas": {}, "respondido": False,
+            "bloque": None, "epigrafe_id": None, "tema_label": None,
         }
     repaso = st.session_state.repaso
 
-    with st.expander("📊 Tu estado actual por bloque", expanded=not repaso["preguntas"]):
+    with st.expander("📊 Tu estado actual por bloque y tema", expanded=not repaso["preguntas"]):
         _panel_estado_bloques(stats)
 
     accion = stats["proxima_accion"]
     bloque_recomendado = (
-        accion["bloque"] if accion["tipo"] == "practicar_bloque" else bloques_disponibles[0]
+        accion["bloque"] if accion["tipo"] == "practicar_tema" else bloques_disponibles[0]
     )
     if "repaso_bloque" not in st.session_state:
         st.session_state.repaso_bloque = bloque_recomendado
@@ -221,31 +232,59 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
         format_func=lambda b: _NOMBRES_BLOQUE.get(b, b),
         key="repaso_bloque",
     )
-    if accion["tipo"] == "practicar_bloque" and accion["bloque"] == bloque_sel:
+
+    temas_bloque = get_temas_por_bloque(oposicion_id, bloque_sel)
+    opciones_tema = {_TEMA_TODO_BLOQUE: "Todo el bloque"}
+    for t in temas_bloque:
+        titulo_corto = t["titulo"] if len(t["titulo"]) <= 70 else t["titulo"][:70] + "…"
+        opciones_tema[t["epigrafe_id"]] = f"Tema {t['tema']}: {titulo_corto}"
+
+    tema_key = f"repaso_tema_{bloque_sel}"
+    if tema_key not in st.session_state:
+        if accion["tipo"] == "practicar_tema" and accion["bloque"] == bloque_sel:
+            st.session_state[tema_key] = accion["epigrafe_id"]
+        else:
+            st.session_state[tema_key] = _TEMA_TODO_BLOQUE
+
+    tema_sel = st.selectbox(
+        "Tema", list(opciones_tema.keys()),
+        format_func=lambda k: opciones_tema[k],
+        key=tema_key,
+    )
+    if accion["tipo"] == "practicar_tema" and accion["bloque"] == bloque_sel:
         st.caption(f"💡 {accion['motivo']}")
 
     if not repaso["preguntas"]:
         if st.button("Iniciar repaso", type="primary"):
-            preguntas = get_preguntas_adaptativo(user_id, oposicion_id, bloque_sel, n=10)
+            if tema_sel == _TEMA_TODO_BLOQUE:
+                preguntas = get_preguntas_adaptativo(user_id, oposicion_id, bloque_sel, n=10)
+            else:
+                preguntas = get_preguntas_adaptativo_tema(user_id, oposicion_id, tema_sel, n=10)
             if not preguntas:
-                st.warning("No hay preguntas disponibles para este bloque todavía.")
+                st.warning("No hay preguntas disponibles todavía para esta selección.")
             else:
                 repaso.update(
                     preguntas=preguntas, respuestas={}, respondido=False, bloque=bloque_sel,
+                    epigrafe_id=(None if tema_sel == _TEMA_TODO_BLOQUE else tema_sel),
+                    tema_label=opciones_tema[tema_sel],
                 )
                 st.rerun()
         return
 
     if not repaso["respondido"]:
         # Momento 2: composición de la tanda — mensaje genérico, sin desglose.
-        st.caption("🎯 Tanda personalizada según tu progreso en este bloque.")
+        st.caption(f"🎯 Tanda personalizada según tu progreso — {repaso['tema_label']}.")
         _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso", respondido=False)
         if st.button("Comprobar respuestas", type="primary"):
+            temas_tocados = set()
             for p in repaso["preguntas"]:
                 elegida = repaso["respuestas"].get(p["pregunta_id"])
                 if elegida is not None:
                     update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
-            get_fase_alumno(user_id, oposicion_id, repaso["bloque"])
+                    if p.get("epigrafe_id"):
+                        temas_tocados.add(p["epigrafe_id"])
+            for epigrafe_id in temas_tocados:
+                get_fase_alumno(user_id, oposicion_id, epigrafe_id)
             repaso["respondido"] = True
             st.rerun()
     else:
@@ -260,7 +299,7 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
             f"({fallos} fallos)"
         )
 
-        # Momento 3: cómo queda el % de acierto del bloque tras esta tanda.
+        # Momento 3: cómo queda el % de acierto del bloque (y del tema, si aplica) tras esta tanda.
         stats_actualizado = get_stats_alumno(user_id, oposicion_id)
         bloque_actualizado = next(
             (b for b in stats_actualizado["bloques"] if b["bloque"] == repaso["bloque"]), None
@@ -271,6 +310,16 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
                 f"**{nombre}** queda en **{bloque_actualizado['porcentaje_acierto']}%** "
                 f"de acierto."
             )
+            if repaso["epigrafe_id"]:
+                tema_actualizado = next(
+                    (t for t in bloque_actualizado["temas"] if t["epigrafe_id"] == repaso["epigrafe_id"]),
+                    None,
+                )
+                if tema_actualizado:
+                    st.caption(
+                        f"Tema {tema_actualizado['tema']}: "
+                        f"{tema_actualizado['porcentaje_acierto']}% de acierto."
+                    )
 
         if st.button("Nueva tanda →", type="primary"):
             repaso.update(preguntas=[], respondido=False)
@@ -477,6 +526,10 @@ def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
 
     if "modo_alumno_radio" not in st.session_state:
         st.session_state.modo_alumno_radio = "Prueba de nivel" if es_nuevo else "Repaso"
+    if "_forzar_modo_alumno" in st.session_state:
+        # No se puede reasignar la key de un widget ya instanciado en el mismo
+        # rerun (StreamlitAPIException) — se consume ANTES de crear el radio.
+        st.session_state.modo_alumno_radio = st.session_state.pop("_forzar_modo_alumno")
 
     modo_alumno = st.radio(
         "¿Qué quieres hacer?",
@@ -620,14 +673,40 @@ if not bloques_sel:
 
 bloques_filtro = bloques_sel
 
+temas_disponibles = get_temas_por_bloques(oposicion_id, bloques_sel)
+st.sidebar.markdown("**Tema**")
+_ct1, _ct2 = st.sidebar.columns(2)
+with _ct1:
+    if st.button("Seleccionar todo", key="tema_todos", use_container_width=True):
+        for t in temas_disponibles:
+            st.session_state[f"tema_{t['epigrafe_id']}"] = True
+        st.rerun()
+with _ct2:
+    if st.button("Elimina la selección", key="tema_ninguno", use_container_width=True):
+        for t in temas_disponibles:
+            st.session_state[f"tema_{t['epigrafe_id']}"] = False
+        st.rerun()
+
+temas_sel = tuple(
+    t["epigrafe_id"] for t in temas_disponibles
+    if st.sidebar.checkbox(
+        f"{t['bloque']}.{t['tema']}: {t['titulo'][:50]}{'…' if len(t['titulo']) > 50 else ''}",
+        value=False, key=f"tema_{t['epigrafe_id']}",
+    )
+)
+
+if not temas_sel:
+    st.sidebar.info("Selecciona al menos un tema.")
+    st.stop()
+
 try:
-    leyes = _cargar_leyes(oposicion_id, bloques_filtro, excluir_test=True)
+    leyes = _cargar_leyes(oposicion_id, bloques_filtro, excluir_test=True, temas=temas_sel)
 except Exception as e:
     st.error(f"Error al cargar las leyes: {e}")
     st.stop()
 
 if not leyes:
-    st.sidebar.warning("Esta oposición no tiene leyes asignadas.")
+    st.sidebar.warning("Ninguna ley cargada está asociada todavía a los temas seleccionados.")
     st.stop()
 
 st.sidebar.markdown("**Ley**")

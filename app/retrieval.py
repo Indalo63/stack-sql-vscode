@@ -76,6 +76,36 @@ def get_bloques_por_oposicion(oposicion_id: int) -> list[str]:
             return [row[0] for row in cur.fetchall()]
 
 
+def get_temas_por_bloque(oposicion_id: int, bloque: str) -> list[dict]:
+    """Temas oficiales (epígrafes) de un bloque, para que el alumno elija qué repasar."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT epigrafe_id, tema, titulo, orden
+                FROM normas.epigrafes
+                WHERE oposicion_id = %s AND bloque = %s
+                ORDER BY orden
+            """, (oposicion_id, bloque))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def get_temas_por_bloques(oposicion_id: int, bloques: tuple[str, ...]) -> list[dict]:
+    """Temas oficiales (epígrafes) de varios bloques a la vez, para el sidebar de Administración."""
+    if not bloques:
+        return []
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT epigrafe_id, bloque, tema, titulo, orden
+                FROM normas.epigrafes
+                WHERE oposicion_id = %s AND bloque = ANY(%s)
+                ORDER BY bloque, orden
+            """, (oposicion_id, list(bloques)))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def get_bloque_y_epigrafes(ley_id: int, oposicion_codigo: str = "GACE") -> tuple[str | None, list[dict]]:
     """
     Bloque y epígrafes (temario oficial) de una ley dentro de una oposición.
@@ -108,9 +138,13 @@ def get_bloque_y_epigrafes(ley_id: int, oposicion_codigo: str = "GACE") -> tuple
 
 def get_leyes_disponibles(oposicion_id: int | None = None,
                           bloques: tuple[str, ...] | None = None,
-                          excluir_test: bool = False) -> list[dict]:
+                          excluir_test: bool = False,
+                          temas: tuple[int, ...] | None = None) -> list[dict]:
     """
-    Lista las leyes activas. Filtra por oposición y opcionalmente por bloques.
+    Lista las leyes activas. Filtra por oposición y opcionalmente por bloques
+    y por temas (epigrafe_id, vía normas.epigrafe_leyes — relación curada por
+    scripts/asignar_epigrafe_leyes.py, no limitada al bloque del tema: una ley
+    puede ser relevante para un tema archivado en otro bloque del programa).
     excluir_test=True omite las leyes marcadas como documentos de referencia
     (no examinables), como GACE_NORM.
     """
@@ -118,17 +152,39 @@ def get_leyes_disponibles(oposicion_id: int | None = None,
         with conn.cursor() as cur:
             if oposicion_id is not None:
                 filtro_ref = "AND ol.excluir_test = FALSE" if excluir_test else ""
-                if bloques:
+                if temas:
+                    # El filtro por tema manda: una ley relevante para el tema
+                    # puede estar archivada en otro bloque del programa (p. ej.
+                    # LRJSP es del bloque IV pero es la ley correcta para el
+                    # tema I.9 "sector público institucional"), así que NO se
+                    # exige además ol.bloque = ANY(bloques) — eso descartaría
+                    # justo los cruces entre bloques que epigrafe_leyes existe
+                    # para capturar.
                     cur.execute(f"""
                         SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
                                ol.preguntas_simulacro, ol.orden, ol.bloque
                         FROM normas.leyes l
                         JOIN normas.oposicion_leyes ol
-                             ON l.ley_id = ol.ley_id AND ol.oposicion_id = %s
-                        WHERE l.activa = true AND ol.bloque = ANY(%s)
+                             ON l.ley_id = ol.ley_id AND ol.oposicion_id = %(oposicion_id)s
+                        WHERE l.activa = true
+                          AND EXISTS (
+                              SELECT 1 FROM normas.epigrafe_leyes el
+                              WHERE el.ley_id = l.ley_id AND el.epigrafe_id = ANY(%(temas)s)
+                          )
                         {filtro_ref}
                         ORDER BY ol.bloque, ol.orden, l.codigo
-                    """, (oposicion_id, list(bloques)))
+                    """, {"oposicion_id": oposicion_id, "temas": list(temas)})
+                elif bloques:
+                    cur.execute(f"""
+                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                               ol.preguntas_simulacro, ol.orden, ol.bloque
+                        FROM normas.leyes l
+                        JOIN normas.oposicion_leyes ol
+                             ON l.ley_id = ol.ley_id AND ol.oposicion_id = %(oposicion_id)s
+                        WHERE l.activa = true AND ol.bloque = ANY(%(bloques)s)
+                        {filtro_ref}
+                        ORDER BY ol.bloque, ol.orden, l.codigo
+                    """, {"oposicion_id": oposicion_id, "bloques": list(bloques)})
                 else:
                     cur.execute(f"""
                         SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
@@ -487,71 +543,67 @@ def update_progreso_sm2(user_id: str, pregunta_id: int, correcto: bool) -> None:
             conn.commit()
 
 
-def _fase_por_cobertura(cobertura: float) -> str:
-    """Umbral de fase por % de épigrafes del bloque con al menos 1 pregunta vista."""
-    if cobertura < 0.25:
+def _fase_por_vistas(vistas: int) -> str:
+    """Umbral de fase por número de preguntas vistas EN EL TEMA (diseño confirmado 11/07/2026)."""
+    if vistas < 5:
         return "inicio"
-    if cobertura < 0.60:
+    if vistas < 15:
         return "aprendizaje"
-    if cobertura < 0.90:
+    if vistas < 30:
         return "consolidacion"
     return "preexamen"
 
 
-def get_fase_alumno(user_id: str, oposicion_id: int, bloque: str) -> dict:
+def get_fase_alumno(user_id: str, oposicion_id: int, epigrafe_id: int) -> dict:
     """
-    Calcula el estado vivo del alumno en un bloque (fase por cobertura de
-    épigrafes, preguntas vistas/correctas, % acierto agregado, "estudiado")
-    y lo persiste en normas.plan_estudio (UPSERT) para lectura rápida desde
-    get_stats_alumno. No se recalcula fase por trigger: se llama tras cada
-    tanda de preguntas (junto a update_progreso_sm2).
+    Calcula el estado vivo del alumno en un tema oficial (epígrafe): fase por
+    preguntas vistas, preguntas vistas/correctas, % acierto agregado y si el
+    tema está "estudiado" (≥70%). Lo persiste en normas.plan_estudio (UPSERT,
+    una fila por tema) para lectura rápida desde get_stats_alumno. No se
+    recalcula por trigger: se llama tras cada tanda de preguntas, una vez por
+    cada tema tocado en esa tanda (junto a update_progreso_sm2).
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT COUNT(*) FROM normas.epigrafes
-                WHERE oposicion_id = %s AND bloque = %s
-            """, (oposicion_id, bloque))
-            total_epigrafes = cur.fetchone()[0]
+                SELECT bloque FROM normas.epigrafes WHERE epigrafe_id = %s
+            """, (epigrafe_id,))
+            row = cur.fetchone()
+            bloque = row[0] if row else None
 
             cur.execute("""
-                SELECT COUNT(DISTINCT pt.epigrafe_id),
-                       COALESCE(SUM(pu.total_vistas), 0),
+                SELECT COALESCE(SUM(pu.total_vistas), 0),
                        COALESCE(SUM(pu.total_correctas), 0)
                 FROM normas.progreso_usuario pu
                 JOIN normas.preguntas_test pt ON pt.pregunta_id = pu.pregunta_id
-                WHERE pu.user_id = %s
-                  AND pt.epigrafe_id IN (
-                      SELECT epigrafe_id FROM normas.epigrafes
-                      WHERE oposicion_id = %s AND bloque = %s
-                  )
-            """, (user_id, oposicion_id, bloque))
-            epigrafes_cubiertos, vistas, correctas = cur.fetchone()
+                WHERE pu.user_id = %s AND pt.epigrafe_id = %s
+            """, (user_id, epigrafe_id))
+            vistas, correctas = cur.fetchone()
 
-            cobertura = (epigrafes_cubiertos / total_epigrafes) if total_epigrafes else 0.0
-            fase = _fase_por_cobertura(cobertura)
+            fase = _fase_por_vistas(vistas)
             porcentaje = round(100 * correctas / vistas, 2) if vistas else 0.0
-            estudiado = porcentaje >= 70.0
+            estudiado = vistas > 0 and porcentaje >= 70.0
 
             cur.execute("""
                 INSERT INTO normas.plan_estudio
-                    (user_id, oposicion_id, bloque, fase, preguntas_vistas,
+                    (user_id, oposicion_id, bloque, epigrafe_id, fase, preguntas_vistas,
                      preguntas_correctas, porcentaje_acierto, estudiado, actualizado_en)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
-                ON CONFLICT (user_id, oposicion_id, bloque) DO UPDATE SET
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (user_id, oposicion_id, epigrafe_id) DO UPDATE SET
+                    bloque              = EXCLUDED.bloque,
                     fase                = EXCLUDED.fase,
                     preguntas_vistas    = EXCLUDED.preguntas_vistas,
                     preguntas_correctas = EXCLUDED.preguntas_correctas,
                     porcentaje_acierto  = EXCLUDED.porcentaje_acierto,
                     estudiado           = EXCLUDED.estudiado,
                     actualizado_en      = NOW()
-            """, (user_id, oposicion_id, bloque, fase, vistas, correctas, porcentaje, estudiado))
+            """, (user_id, oposicion_id, bloque, epigrafe_id, fase, vistas, correctas, porcentaje, estudiado))
         conn.commit()
 
     return {
+        "epigrafe_id": epigrafe_id,
         "bloque": bloque,
         "fase": fase,
-        "cobertura_pct": round(cobertura * 100, 1),
         "preguntas_vistas": vistas,
         "preguntas_correctas": correctas,
         "porcentaje_acierto": porcentaje,
@@ -559,27 +611,49 @@ def get_fase_alumno(user_id: str, oposicion_id: int, bloque: str) -> dict:
     }
 
 
+def _fase_bloque(cur, user_id: str, oposicion_id: int, bloque: str) -> str:
+    """Fase agregada del bloque completo (modo "Todo el bloque"): vistas medias por tema."""
+    cur.execute("""
+        SELECT COALESCE(AVG(COALESCE(pe.preguntas_vistas, 0)), 0)
+        FROM normas.epigrafes e
+        LEFT JOIN normas.plan_estudio pe
+               ON pe.epigrafe_id = e.epigrafe_id AND pe.user_id = %s AND pe.oposicion_id = %s
+        WHERE e.oposicion_id = %s AND e.bloque = %s
+    """, (user_id, oposicion_id, oposicion_id, bloque))
+    avg_vistas = cur.fetchone()[0]
+    return _fase_por_vistas(round(float(avg_vistas)))
+
+
 def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
     """
     Datos para el panel de inicio del alumno:
-      - bloques: progreso por bloque, leído de normas.plan_estudio (estado
-        cacheado, actualizado por get_fase_alumno tras cada tanda)
-      - proxima_accion: recomendación por regla simple (no IA) — el bloque
-        no estudiado con menor % de acierto, o simulacro personal si todos
-        están estudiados, o prueba de nivel si aún no hay datos
-      - actividad_reciente: últimas preguntas respondidas (SM-2)
+      - bloques: cada uno con su acierto agregado, si está "estudiado" (todos
+        sus temas con preguntas vistas ≥70%) y el desglose de sus temas
+        oficiales (normas.plan_estudio LEFT JOIN normas.epigrafes, así que
+        aparecen también los temas aún sin practicar, con 0%).
+      - proxima_accion: recomendación por regla simple (no IA) — el tema más
+        débil ya practicado, o el primer tema sin practicar si no hay ninguno
+        flojo, o simulacro personal si todo está estudiado, o prueba de nivel
+        si aún no hay datos.
+      - actividad_reciente: últimas preguntas respondidas (SM-2).
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT bloque, fase, preguntas_vistas, preguntas_correctas,
-                       porcentaje_acierto, estudiado, actualizado_en
-                FROM normas.plan_estudio
-                WHERE user_id = %s AND oposicion_id = %s
-                ORDER BY bloque
-            """, (user_id, oposicion_id))
-            cols = [d[0] for d in cur.description]
-            bloques = [dict(zip(cols, row)) for row in cur.fetchall()]
+                SELECT e.bloque, e.epigrafe_id, e.tema, e.titulo, e.orden,
+                       COALESCE(pe.fase, 'inicio'),
+                       COALESCE(pe.preguntas_vistas, 0),
+                       COALESCE(pe.preguntas_correctas, 0),
+                       COALESCE(pe.porcentaje_acierto, 0),
+                       COALESCE(pe.estudiado, FALSE)
+                FROM normas.epigrafes e
+                LEFT JOIN normas.plan_estudio pe
+                       ON pe.epigrafe_id = e.epigrafe_id
+                      AND pe.user_id = %s AND pe.oposicion_id = %s
+                WHERE e.oposicion_id = %s
+                ORDER BY e.orden
+            """, (user_id, oposicion_id, oposicion_id))
+            filas = cur.fetchall()
 
             cur.execute("""
                 SELECT p.pregunta_id, p.ultima_vez, p.ultima_correcta,
@@ -594,28 +668,69 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
             cols2 = [d[0] for d in cur.description]
             actividad_reciente = [dict(zip(cols2, row)) for row in cur.fetchall()]
 
-    if not bloques:
+    por_bloque: dict[str, dict] = {}
+    for bloque, epigrafe_id, tema, titulo, orden, fase, vistas, correctas, pct, estudiado in filas:
+        b = por_bloque.setdefault(bloque, {
+            "bloque": bloque, "temas": [], "preguntas_vistas": 0, "preguntas_correctas": 0,
+        })
+        b["temas"].append({
+            "bloque": bloque, "epigrafe_id": epigrafe_id, "tema": tema, "titulo": titulo,
+            "orden": orden, "fase": fase, "preguntas_vistas": vistas,
+            "preguntas_correctas": correctas, "porcentaje_acierto": float(pct),
+            "estudiado": estudiado,
+        })
+        b["preguntas_vistas"] += vistas
+        b["preguntas_correctas"] += correctas
+
+    bloques = []
+    for b in por_bloque.values():
+        temas_con_vistas = [t for t in b["temas"] if t["preguntas_vistas"] > 0]
+        estudiado_bloque = bool(temas_con_vistas) and all(t["estudiado"] for t in temas_con_vistas)
+        pct_bloque = (
+            round(100 * b["preguntas_correctas"] / b["preguntas_vistas"], 2)
+            if b["preguntas_vistas"] else 0.0
+        )
+        bloques.append({
+            "bloque": b["bloque"], "temas": b["temas"],
+            "preguntas_vistas": b["preguntas_vistas"], "preguntas_correctas": b["preguntas_correctas"],
+            "porcentaje_acierto": pct_bloque, "estudiado": estudiado_bloque,
+        })
+    bloques.sort(key=lambda b: b["bloque"])
+
+    if not filas:
         proxima_accion = {
             "tipo": "prueba_nivel",
             "motivo": "Aún no has hecho la prueba de nivel.",
         }
     else:
-        pendientes = [b for b in bloques if not b["estudiado"]]
-        if pendientes:
-            objetivo = min(pendientes, key=lambda b: b["porcentaje_acierto"])
+        todos_temas = [t for b in bloques for t in b["temas"]]
+        debiles = [t for t in todos_temas if t["preguntas_vistas"] > 0 and not t["estudiado"]]
+        if debiles:
+            objetivo = min(debiles, key=lambda t: t["porcentaje_acierto"])
             proxima_accion = {
-                "tipo": "practicar_bloque",
+                "tipo": "practicar_tema",
                 "bloque": objetivo["bloque"],
+                "epigrafe_id": objetivo["epigrafe_id"],
                 "motivo": (
-                    f"Bloque {objetivo['bloque']} con {objetivo['porcentaje_acierto']}% "
-                    f"de acierto, aún no estudiado (≥70%)."
+                    f"Tema {objetivo['bloque']}.{objetivo['tema']} con "
+                    f"{objetivo['porcentaje_acierto']}% de acierto, aún no estudiado (≥70%)."
                 ),
             }
         else:
-            proxima_accion = {
-                "tipo": "simulacro_personal",
-                "motivo": "Todos los bloques están estudiados (≥70% de acierto).",
-            }
+            sin_practicar = [t for t in todos_temas if t["preguntas_vistas"] == 0]
+            if sin_practicar:
+                objetivo = sin_practicar[0]
+                proxima_accion = {
+                    "tipo": "practicar_tema",
+                    "bloque": objetivo["bloque"],
+                    "epigrafe_id": objetivo["epigrafe_id"],
+                    "motivo": f"Todavía no has practicado el tema {objetivo['bloque']}.{objetivo['tema']}.",
+                }
+            else:
+                proxima_accion = {
+                    "tipo": "simulacro_personal",
+                    "motivo": "Todos los temas están estudiados (≥70% de acierto).",
+                }
 
     return {
         "bloques": bloques,
@@ -635,7 +750,7 @@ FASES_MIX = {
 _COLUMNAS_PREGUNTA = """
     pt.pregunta_id, pt.articulo, pt.pregunta,
     pt.opcion_a, pt.opcion_b, pt.opcion_c, pt.opcion_d,
-    pt.correcta, pt.explicacion, l.codigo AS ley_codigo
+    pt.correcta, pt.explicacion, l.codigo AS ley_codigo, pt.epigrafe_id
 """
 
 
@@ -680,22 +795,18 @@ def _fetch_por_fuente(cur, oposicion_id, bloque, fuente_filtro, excluir_ids, lim
 
 def get_preguntas_adaptativo(user_id: str, oposicion_id: int, bloque: str, n: int = 10) -> list[dict]:
     """
-    Tanda de práctica mezclando débiles/oficial/nueva según la fase actual
-    del alumno en ese bloque (normas.plan_estudio; 'inicio' si aún no hay
-    estado). Prioridad: se completa primero el % de débiles (preguntas con
-    ultima_correcta=FALSE, cualquier fuente); el resto se reparte
+    Tanda de práctica sobre TODO el bloque, mezclando débiles/oficial/nueva
+    según la fase agregada del bloque (media de preguntas vistas de sus
+    temas — ver _fase_bloque; el progreso vivo ya no se guarda por bloque,
+    solo por tema). Prioridad: se completa primero el % de débiles (preguntas
+    con ultima_correcta=FALSE, cualquier fuente); el resto se reparte
     proporcionalmente entre oficial (fuente oficial_*) y nueva (fuente='ia'),
     excluyendo las ya elegidas. Si un tramo no tiene suficientes preguntas,
     el hueco se rellena con el resto para no devolver una tanda incompleta.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT fase FROM normas.plan_estudio
-                WHERE user_id = %s AND oposicion_id = %s AND bloque = %s
-            """, (user_id, oposicion_id, bloque))
-            row = cur.fetchone()
-            fase = row[0] if row else "inicio"
+            fase = _fase_bloque(cur, user_id, oposicion_id, bloque)
             mix = FASES_MIX[fase]
 
             n_debiles = round(n * mix["debiles"])
@@ -729,14 +840,99 @@ def get_preguntas_adaptativo(user_id: str, oposicion_id: int, bloque: str, n: in
     return tanda
 
 
+def _fetch_debiles_tema(cur, user_id, epigrafe_id, limite):
+    if limite <= 0:
+        return []
+    cur.execute(f"""
+        SELECT {_COLUMNAS_PREGUNTA}
+        FROM normas.progreso_usuario pu
+        JOIN normas.preguntas_test pt ON pt.pregunta_id = pu.pregunta_id
+        JOIN normas.leyes l           ON l.ley_id       = pt.ley_id
+        WHERE pu.user_id = %s AND pu.ultima_correcta = FALSE
+          AND pt.epigrafe_id = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+        ORDER BY RANDOM()
+        LIMIT %s
+    """, (user_id, epigrafe_id, limite))
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def _fetch_por_fuente_tema(cur, epigrafe_id, fuente_filtro, excluir_ids, limite):
+    if limite <= 0:
+        return []
+    excluir_ids = excluir_ids or [0]
+    cur.execute(f"""
+        SELECT {_COLUMNAS_PREGUNTA}
+        FROM normas.preguntas_test pt
+        JOIN normas.leyes l ON l.ley_id = pt.ley_id
+        WHERE pt.epigrafe_id = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+          AND ({fuente_filtro})
+          AND NOT (pt.pregunta_id = ANY(%s::int[]))
+        ORDER BY RANDOM()
+        LIMIT %s
+    """, (epigrafe_id, excluir_ids, limite))
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def get_preguntas_adaptativo_tema(user_id: str, oposicion_id: int, epigrafe_id: int, n: int = 10) -> list[dict]:
+    """
+    Tanda de práctica acotada a UN tema oficial (epígrafe), mezclando
+    débiles/oficial/nueva según la fase actual del alumno en ese tema
+    (normas.plan_estudio; 'inicio' si aún no hay estado). Mismo criterio de
+    reparto y relleno que get_preguntas_adaptativo, pero filtrando por
+    epigrafe_id directamente en vez de por bloque completo.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT fase FROM normas.plan_estudio
+                WHERE user_id = %s AND oposicion_id = %s AND epigrafe_id = %s
+            """, (user_id, oposicion_id, epigrafe_id))
+            row = cur.fetchone()
+            fase = row[0] if row else "inicio"
+            mix = FASES_MIX[fase]
+
+            n_debiles = round(n * mix["debiles"])
+            debiles = _fetch_debiles_tema(cur, user_id, epigrafe_id, n_debiles)
+
+            restantes = n - len(debiles)
+            total_pct_resto = mix["oficial"] + mix["nueva"]
+            n_oficial = round(restantes * mix["oficial"] / total_pct_resto) if total_pct_resto > 0 else 0
+            n_nueva = restantes - n_oficial
+
+            excluir = [p["pregunta_id"] for p in debiles]
+            oficial = _fetch_por_fuente_tema(
+                cur, epigrafe_id, "pt.fuente LIKE 'oficial_%%'", excluir, n_oficial
+            )
+            excluir += [p["pregunta_id"] for p in oficial]
+            nueva = _fetch_por_fuente_tema(
+                cur, epigrafe_id, "pt.fuente = 'ia'", excluir, n_nueva
+            )
+
+            faltan = n - len(debiles) - len(oficial) - len(nueva)
+            if faltan > 0:
+                excluir += [p["pregunta_id"] for p in nueva]
+                relleno = _fetch_por_fuente_tema(
+                    cur, epigrafe_id,
+                    "pt.fuente LIKE 'oficial_%%' OR pt.fuente = 'ia'", excluir, faltan
+                )
+                nueva += relleno
+
+    tanda = debiles + oficial + nueva
+    random.shuffle(tanda)
+    return tanda
+
+
 def get_preguntas_simulacro_personal(user_id: str, oposicion_id: int, n: int = 50) -> dict:
     """
     Simulacro personal: n preguntas repartidas proporcionalmente (según el
     peso oficial oposicion_leyes.preguntas_simulacro) entre los bloques ya
-    "estudiado" (>=70% acierto agregado) del alumno. Requiere que el alumno
-    tenga plan_estudio en todos los bloques de la oposición (proxy de
-    "prueba de nivel ya hecha"); si no, o si no tiene ningún bloque
-    estudiado, devuelve disponible=False con el motivo.
+    "estudiado" (todos sus temas con preguntas vistas ≥70%, ver
+    get_stats_alumno) del alumno. Requiere que el alumno haya practicado al
+    menos un tema en cada bloque de la oposición (proxy de "prueba de nivel
+    ya hecha"); si no, o si no tiene ningún bloque estudiado, devuelve
+    disponible=False con el motivo.
 
     La fórmula oficial de corrección (A-(E/3)) se aplica al calificar las
     respuestas del alumno, no aquí — esta función solo selecciona preguntas.
@@ -749,24 +945,21 @@ def get_preguntas_simulacro_personal(user_id: str, oposicion_id: int, n: int = 5
             """, (oposicion_id,))
             bloques_oposicion = {r[0] for r in cur.fetchall()}
 
-            cur.execute("""
-                SELECT bloque, estudiado FROM normas.plan_estudio
-                WHERE user_id = %s AND oposicion_id = %s
-            """, (user_id, oposicion_id))
-            plan = {r[0]: r[1] for r in cur.fetchall()}
+            stats = get_stats_alumno(user_id, oposicion_id)
+            bloques_con_datos = {b["bloque"] for b in stats["bloques"] if b["preguntas_vistas"] > 0}
 
-            if not bloques_oposicion.issubset(plan.keys()):
+            if not bloques_oposicion.issubset(bloques_con_datos):
                 return {
                     "disponible": False,
                     "motivo": "Debes completar la prueba de nivel (todos los bloques) antes del simulacro personal.",
                     "preguntas": [],
                 }
 
-            bloques_estudiados = sorted(b for b, ok in plan.items() if ok)
+            bloques_estudiados = sorted(b["bloque"] for b in stats["bloques"] if b["estudiado"])
             if not bloques_estudiados:
                 return {
                     "disponible": False,
-                    "motivo": "Aún no tienes ningún bloque estudiado (≥70% de acierto agregado).",
+                    "motivo": "Aún no tienes ningún bloque estudiado (todos sus temas vistos con ≥70% de acierto).",
                     "preguntas": [],
                 }
 
