@@ -12,6 +12,13 @@ docker/data/
 .vscode/launch.json
 .vscode/*.code-workspace
 
+# Claude Code (notas/config locales, no del proyecto)
+.claude/CLAUDE.local.md
+.claude/settings.local.json
+
+# SQLTools (archivos de sesión, no del proyecto)
+*.session.sql
+
 # Sistema operativo
 .DS_Store
 Thumbs.db
