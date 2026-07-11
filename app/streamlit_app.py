@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import time
+from datetime import datetime, time as dtime
 import anthropic
 import streamlit as st
 from app.qa_pipeline import run_qa
@@ -16,7 +17,11 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_prueba_nivel,
                            get_preguntas_simulacro_personal, calificar_simulacro,
-                           guardar_resultado_simulacro, get_historial_simulacros)
+                           guardar_resultado_simulacro, get_historial_simulacros,
+                           get_preguntas_simulacro_academia,
+                           get_simulacros_academia_disponibles,
+                           generar_simulacro_academia, autorizar_simulacro_academia,
+                           listar_simulacros_academia)
 from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from app.auth_alumno import registrar_alumno, login_alumno
 from app.db import get_connection
@@ -346,6 +351,90 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
             st.rerun()
 
 
+def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
+    st.header("Simulacro de academia")
+    st.caption(
+        "Mismas preguntas para todos los alumnos, dentro de la ventana de tiempo "
+        "fijada por la academia. Un único intento por simulacro."
+    )
+
+    if "simulacro_academia" not in st.session_state:
+        st.session_state.simulacro_academia = {
+            "simulacro_id": None, "preguntas": [], "respuestas": {},
+            "respondido": False, "guardado": False,
+        }
+    sa = st.session_state.simulacro_academia
+
+    if not sa["preguntas"]:
+        disponibles = get_simulacros_academia_disponibles(oposicion_id, user_id)
+        pendientes = [s for s in disponibles if not s["ya_realizado"]]
+        if not pendientes:
+            if disponibles:
+                st.info("Ya has realizado todos los simulacros de academia disponibles ahora mismo.")
+            else:
+                st.info("No hay ningún simulacro de academia abierto en este momento.")
+            return
+
+        opciones = {
+            f"{s['nombre']} (cierra {s['fecha_fin'].strftime('%d/%m/%Y %H:%M')})": s["simulacro_id"]
+            for s in pendientes
+        }
+        elegido = st.selectbox("Simulacro disponible", list(opciones.keys()))
+        if st.button("Empezar simulacro de academia", type="primary"):
+            simulacro_id = opciones[elegido]
+            resultado = get_preguntas_simulacro_academia(simulacro_id)
+            if not resultado["disponible"]:
+                st.warning(resultado["motivo"])
+            else:
+                sa.update(
+                    simulacro_id=simulacro_id, preguntas=resultado["preguntas"],
+                    respuestas={}, respondido=False, guardado=False,
+                )
+                st.rerun()
+        return
+
+    if not sa["respondido"]:
+        _render_preguntas(sa["preguntas"], sa["respuestas"], "simulacro_academia", respondido=False)
+        respondidas = sum(1 for v in sa["respuestas"].values() if v is not None)
+        st.caption(f"{respondidas} / {len(sa['preguntas'])} respondidas")
+        if st.button("Comprobar respuestas", type="primary", key="btn_comprobar_academia"):
+            sa["respondido"] = True
+            st.rerun()
+    else:
+        _render_preguntas(sa["preguntas"], sa["respuestas"], "simulacro_academia", respondido=True)
+        preguntas = sa["preguntas"]
+        aciertos = sum(
+            1 for p in preguntas if sa["respuestas"].get(p["pregunta_id"]) == p["correcta"]
+        )
+        blancos = sum(1 for p in preguntas if sa["respuestas"].get(p["pregunta_id"]) is None)
+        errores = len(preguntas) - aciertos - blancos
+
+        resultado = calificar_simulacro(oposicion_id, aciertos, errores, blancos, len(preguntas))
+        if resultado["disponible"]:
+            if not sa["guardado"]:
+                guardar_resultado_simulacro(
+                    user_id, oposicion_id, "academia", len(preguntas),
+                    aciertos, errores, blancos, resultado["nota"], resultado["aprobado"],
+                    simulacro_academia_id=sa["simulacro_id"],
+                )
+                sa["guardado"] = True
+
+            st.success(
+                f"**{aciertos} / {len(preguntas)}** correctas · {errores} fallos · "
+                f"{blancos} en blanco"
+            )
+            veredicto = "✅ Aprobado" if resultado["aprobado"] else "❌ No alcanza la nota mínima"
+            st.info(
+                f"Nota estimada (extrapolada a examen completo): "
+                f"**{resultado['nota']} / {resultado['escala_max']}** — {veredicto} "
+                f"(mínimo {resultado['nota_minima']})"
+            )
+        else:
+            st.warning(resultado["motivo"])
+
+        st.caption("Este intento ya ha quedado registrado en \"Mi progreso\" — no se permite repetirlo.")
+
+
 def _modo_mi_progreso(oposicion_id: int, user_id: str) -> None:
     st.header("Mi progreso")
     historial = get_historial_simulacros(user_id, oposicion_id)
@@ -391,7 +480,7 @@ def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
 
     modo_alumno = st.radio(
         "¿Qué quieres hacer?",
-        ["Prueba de nivel", "Repaso", "Simulacro personal", "Mi progreso"],
+        ["Prueba de nivel", "Repaso", "Simulacro personal", "Simulacro academia", "Mi progreso"],
         key="modo_alumno_radio", horizontal=True,
     )
     st.divider()
@@ -402,6 +491,8 @@ def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
         _modo_repaso(oposicion_id, user_id, stats)
     elif modo_alumno == "Simulacro personal":
         _modo_simulacro_personal(oposicion_id, user_id)
+    elif modo_alumno == "Simulacro academia":
+        _modo_simulacro_academia(oposicion_id, user_id)
     else:
         _modo_mi_progreso(oposicion_id, user_id)
 
@@ -569,7 +660,7 @@ if not leyes_sel:
 ley_id     = leyes_sel[0]["ley_id"]
 ley_nombre = leyes_sel[0]["nombre"]
 
-modo = st.sidebar.radio("Modo", ["Q&A", "Generar test", "Editor"])
+modo = st.sidebar.radio("Modo", ["Q&A", "Generar test", "Editor", "Simulacros academia"])
 
 # ── Cabecera ──────────────────────────────────────────────────────────────────
 st.title("⚖️ Asistente Jurídico")
@@ -782,7 +873,7 @@ elif modo == "Generar test":
 # ── Modo Editor ────────────────────────────────────────────────────────────────
 elif modo == "Editor":
     st.header("Editor de preguntas")
-    st.caption(f"Sesión activa: {user["email"]}")
+    st.caption(f"Sesión activa: {user['email']}")
 
     tab_gen, tab_rev = st.tabs(["Generar", "Revisar"])
 
@@ -891,3 +982,61 @@ elif modo == "Editor":
                             _reject(pid)
                             st.warning("Pregunta eliminada.")
                             st.rerun()
+
+# ── Modo Simulacros academia ─────────────────────────────────────────────────
+elif modo == "Simulacros academia":
+    st.header("Simulacros de academia")
+    st.caption(
+        "La academia nunca elige preguntas: al generar, la plataforma reparte "
+        "proporcionalmente por el peso oficial de cada bloque, igual que el "
+        "simulacro personal pero sobre todos los bloques. Autoriza el simulacro "
+        "para abrir su ventana temporal a los alumnos."
+    )
+
+    with st.form("form_generar_simulacro_academia"):
+        nombre_sim = st.text_input("Nombre", placeholder="Simulacro academia — julio 2026")
+        n_sim = st.slider("Número de preguntas", min_value=10, max_value=100, value=50)
+        col_fi, col_ff = st.columns(2)
+        with col_fi:
+            fecha_inicio_sim = st.date_input("Fecha inicio")
+            hora_inicio_sim = st.time_input("Hora inicio", value=dtime(0, 0))
+        with col_ff:
+            fecha_fin_sim = st.date_input("Fecha fin")
+            hora_fin_sim = st.time_input("Hora fin", value=dtime(23, 59))
+
+        if st.form_submit_button("Generar", type="primary"):
+            inicio_dt = datetime.combine(fecha_inicio_sim, hora_inicio_sim)
+            fin_dt = datetime.combine(fecha_fin_sim, hora_fin_sim)
+            if not nombre_sim.strip():
+                st.error("Indica un nombre para el simulacro.")
+            elif fin_dt <= inicio_dt:
+                st.error("La fecha fin debe ser posterior a la fecha inicio.")
+            else:
+                simulacro_id = generar_simulacro_academia(
+                    oposicion_id, nombre_sim.strip(), n_sim, inicio_dt, fin_dt,
+                )
+                st.success(
+                    f"Simulacro #{simulacro_id} generado con {n_sim} preguntas. "
+                    "Autorízalo abajo para abrirlo a los alumnos."
+                )
+                st.rerun()
+
+    st.divider()
+    st.subheader("Simulacros existentes")
+    simulacros = listar_simulacros_academia(oposicion_id)
+    if not simulacros:
+        st.caption("Todavía no hay simulacros generados para esta oposición.")
+    for s in simulacros:
+        estado_label = "🟢 Autorizado" if s["estado"] == "autorizado" else "🟡 Generado (pendiente de autorizar)"
+        st.markdown(f"**#{s['simulacro_id']} — {s['nombre']}** ({s['n_preguntas']} preguntas) — {estado_label}")
+        st.caption(
+            f"Ventana: {s['fecha_inicio'].strftime('%d/%m/%Y %H:%M')} → "
+            f"{s['fecha_fin'].strftime('%d/%m/%Y %H:%M')}"
+        )
+        if s["estado"] == "generado":
+            if st.button("Autorizar", key=f"autorizar_sim_{s['simulacro_id']}", type="primary"):
+                autorizar_simulacro_academia(s["simulacro_id"], user["email"])
+                st.rerun()
+        else:
+            st.caption(f"Autorizado por {s['autorizado_por']} — {s['autorizado_en'].strftime('%d/%m/%Y %H:%M')}")
+        st.divider()

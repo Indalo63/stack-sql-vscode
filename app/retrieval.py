@@ -911,6 +911,127 @@ def get_preguntas_simulacro_academia(simulacro_id: int) -> dict:
     }
 
 
+def generar_simulacro_academia(oposicion_id: int, nombre: str, n: int,
+                               fecha_inicio, fecha_fin, academia: str | None = None) -> int:
+    """
+    Genera un simulacro de academia: reparto proporcional por peso oficial
+    (oposicion_leyes.preguntas_simulacro) entre TODOS los bloques de la
+    oposición — igual examen para todos los alumnos, sin personalización, a
+    diferencia del simulacro personal que solo usa bloques "estudiado".
+    Queda en estado 'generado'; hay que llamar a autorizar_simulacro_academia
+    para que sea visible a los alumnos. Devuelve el simulacro_id creado.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT bloque, SUM(preguntas_simulacro) AS peso
+                FROM normas.oposicion_leyes
+                WHERE oposicion_id = %s AND bloque IS NOT NULL
+                GROUP BY bloque
+            """, (oposicion_id,))
+            pesos = {r[0]: r[1] for r in cur.fetchall()}
+            total_peso = sum(pesos.values())
+
+            bloques = sorted(pesos)
+            reparto, asignadas = {}, 0
+            for i, b in enumerate(bloques):
+                if i == len(bloques) - 1:
+                    cantidad = n - asignadas  # el último bloque absorbe el redondeo
+                else:
+                    cantidad = round(n * pesos[b] / total_peso)
+                reparto[b] = cantidad
+                asignadas += cantidad
+
+            pregunta_ids = []
+            for b, cantidad in reparto.items():
+                if cantidad <= 0:
+                    continue
+                cur.execute("""
+                    SELECT pt.pregunta_id
+                    FROM normas.preguntas_test pt
+                    JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                    JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                                   AND ol.oposicion_id = %s
+                    WHERE ol.bloque = %s AND pt.revisada = TRUE AND pt.activa = TRUE
+                    ORDER BY RANDOM()
+                    LIMIT %s
+                """, (oposicion_id, b, cantidad))
+                pregunta_ids += [r[0] for r in cur.fetchall()]
+
+            random.shuffle(pregunta_ids)
+
+            cur.execute("""
+                INSERT INTO normas.simulacros_academia
+                    (academia, oposicion_id, nombre, fecha_inicio, fecha_fin)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING simulacro_id
+            """, (academia, oposicion_id, nombre, fecha_inicio, fecha_fin))
+            simulacro_id = cur.fetchone()[0]
+
+            cur.executemany("""
+                INSERT INTO normas.simulacro_academia_preguntas (simulacro_id, pregunta_id, orden)
+                VALUES (%s, %s, %s)
+            """, [(simulacro_id, pid, i) for i, pid in enumerate(pregunta_ids, 1)])
+        conn.commit()
+
+    return simulacro_id
+
+
+def autorizar_simulacro_academia(simulacro_id: int, autorizado_por: str) -> None:
+    """Marca un simulacro 'generado' como 'autorizado', fijando su selección de preguntas."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE normas.simulacros_academia
+                SET estado = 'autorizado', autorizado_por = %s, autorizado_en = NOW()
+                WHERE simulacro_id = %s AND estado = 'generado'
+            """, (autorizado_por, simulacro_id))
+        conn.commit()
+
+
+def listar_simulacros_academia(oposicion_id: int) -> list[dict]:
+    """Todos los simulacros de academia de una oposición, para el panel de Administración."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT sa.simulacro_id, sa.nombre, sa.estado, sa.fecha_inicio, sa.fecha_fin,
+                       sa.autorizado_por, sa.autorizado_en, sa.generado_en,
+                       COUNT(sap.pregunta_id) AS n_preguntas
+                FROM normas.simulacros_academia sa
+                LEFT JOIN normas.simulacro_academia_preguntas sap
+                       ON sap.simulacro_id = sa.simulacro_id
+                WHERE sa.oposicion_id = %s
+                GROUP BY sa.simulacro_id
+                ORDER BY sa.generado_en DESC
+            """, (oposicion_id,))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def get_simulacros_academia_disponibles(oposicion_id: int, user_id: str) -> list[dict]:
+    """
+    Simulacros de academia autorizados y dentro de su ventana temporal ahora
+    mismo. Marca ya_realizado si el alumno ya tiene un intento guardado en
+    historial_simulacros — solo se permite un intento por simulacro.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT sa.simulacro_id, sa.nombre, sa.fecha_inicio, sa.fecha_fin,
+                       EXISTS (
+                           SELECT 1 FROM normas.historial_simulacros hs
+                           WHERE hs.simulacro_academia_id = sa.simulacro_id
+                             AND hs.user_id = %s
+                       ) AS ya_realizado
+                FROM normas.simulacros_academia sa
+                WHERE sa.oposicion_id = %s AND sa.estado = 'autorizado'
+                  AND NOW() BETWEEN sa.fecha_inicio AND sa.fecha_fin
+                ORDER BY sa.fecha_fin
+            """, (user_id, oposicion_id))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def calificar_simulacro(oposicion_id: int, aciertos: int, errores: int, blancos: int,
                         n_preguntas: int) -> dict:
     """
