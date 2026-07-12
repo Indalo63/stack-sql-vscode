@@ -155,6 +155,20 @@ El banco REAL (209 oficiales) **no se ha tocado**: está separado por la marca `
 
 **Estado hoy: 155 de 1.819 (faltan 1.664).** El panel que lo muestre es la **Fase 6** del plan (`docs/plan-fases-alumno.md`).
 
+### Prueba de nivel: solo para quien viene de otra oposición (migración 046, 12/07/2026)
+**El valor pedagógico de la prueba de nivel es exactamente el INVERSO de lo que asumía el diseño**, que se la ofrecía por defecto a todo alumno nuevo.
+
+- **Principiante (primera oposición): la prueba es inútil y probablemente dañina.** Un test diagnostica cuando hay **algo que diferenciar**; si el alumno está a cero en todo, no hay señal, solo el ~25% del azar. *"No sabes nada"* no es un diagnóstico, es una obviedad. Y arrancar con un fracaso rotundo daña la autoeficacia **justo cuando es más frágil**. El motor tampoco la necesita (la fase "inicio" arranca de cero).
+- **Viene de otra oposición: aquí vale mucho.** Tiene conocimiento previo **real y desigual** (suele dominar Derecho Administrativo, común a casi todas, y no saber nada de UE o Gestión Financiera): justo lo que un diagnóstico debe encontrar. Sin ella, el SM-2 tardaría semanas en descubrirlo sirviéndole preguntas que ya domina → aburrimiento y abandono.
+
+**Marketing vs pedagogía:** la prueba es el *lead magnet* ("descubre tu nivel gratis"), así que con el principiante **chocan de frente**. La síntesis: **lo que engancha no es la nota, es el plan.** Se le da el plan sin la nota humillante.
+
+- [✅ Migración 046] `normas.perfil_alumno` (experiencia: `primera` | `otras_oposiciones`). **Se pregunta UNA sola cosa al registrarse**; sin ese dato era imposible distinguir los perfiles (no se guardaba nada del alumno).
+- [✅ `retrieval.get_plan_partida()`] Plan de partida del principiante **sin examinarle**: los temas ordenados por **la frecuencia real con que caen en los exámenes oficiales** (el Radar del Tribunal aplicado al onboarding) y el peso del bloque. Datos objetivos que ya teníamos.
+- [✅ `streamlit_app.py`] Onboarding con la pregunta del perfil → **principiante** va a **Repaso** con su plan de partida (nunca a la prueba); **veterano** va a la **prueba de nivel**, recomendada "encarecidamente" pero **no obligatoria**.
+- [ℹ️ **Mensaje falso corregido**] El simulacro personal decía *"Debes completar la prueba de nivel"* — y **era mentira**: la condición real es tener datos en **los 6 bloques**, que también se logra practicando en Repaso. Ese texto empujaba al principiante justo a lo que no le conviene. Ahora dice la verdad y **enumera los bloques que le faltan**.
+- [✅ Verificado en navegador real] Onboarding pregunta el perfil; el **principiante** recibe *"No te vamos a hacer un examen"* + plan de partida con la frecuencia real (*"Ha caído 10 veces…"*) y va a Repaso; el **veterano** recibe *"ya traes base"* + recomendación encarecida y va a la prueba de nivel, con la puerta abierta a saltársela. Sin errores de consola.
+
 ### Nueva regla de dominio de un tema (migración 045, 12/07/2026)
 La regla anterior (`vistas > 0 AND correctas/vistas >= 70%`) tenía **tres fallos de fondo**, no de calibración:
 1. **Ruido**: con `vistas > 0`, un tema con **2 respuestas** ya contaba. Medido: un tema con 2 vistas y 0% tumbaba un bloque que iba al 78%.

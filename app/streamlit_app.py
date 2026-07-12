@@ -25,6 +25,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
                            get_preguntas_prueba_nivel,
+                           guardar_perfil_alumno, get_perfil_alumno, get_plan_partida,
                            get_preguntas_simulacro_personal, calificar_simulacro,
                            guardar_resultado_simulacro, get_historial_simulacros,
                            get_preguntas_simulacro_academia,
@@ -741,25 +742,109 @@ def _modo_mi_progreso(oposicion_id: int, user_id: str) -> None:
         st.divider()
 
 
+def _onboarding_perfil(user_id: str) -> bool:
+    """
+    Pregunta UNA sola cosa: si es su primera oposición. Devuelve True si ya está
+    contestada (y se puede seguir), False si hay que esperar.
+
+    De esta respuesta depende TODO el arranque (migración 046): a un principiante
+    no se le hace la prueba de nivel (mediría el ~25% del azar y le desmotivaría
+    justo en el momento más frágil), mientras que a quien viene de otra oposición
+    sí — tiene conocimiento previo REAL y DESIGUAL, que es justo lo que la prueba
+    detecta.
+    """
+    st.title("🎓 Bienvenido/a")
+    st.markdown(
+        "Antes de empezar, **una sola pregunta**. Nos sirve para no hacerte "
+        "perder el tiempo."
+    )
+    exp = st.radio(
+        "¿Es la primera oposición que preparas?",
+        ["Sí, es mi primera oposición", "No, ya me he presentado a otras"],
+        index=None,
+    )
+    if exp and st.button("Empezar", type="primary"):
+        valor = "primera" if exp.startswith("Sí") else "otras_oposiciones"
+        error = guardar_perfil_alumno(user_id, valor)
+        if error:
+            st.error(error)
+        else:
+            st.rerun()
+    return False
+
+
+def _bienvenida_principiante(oposicion_id: int) -> None:
+    """
+    Plan de partida en vez de prueba de nivel.
+
+    A quien empieza de cero no hay nada que diagnosticarle: un test solo
+    diagnostica cuando hay algo que diferenciar. Lo que sí necesita es saber
+    POR DÓNDE EMPEZAR, y eso se responde con datos objetivos que ya tenemos:
+    la frecuencia real de cada tema en los exámenes oficiales.
+    """
+    st.success(
+        "**Empiezas de cero, y eso está bien.** No te vamos a hacer un examen "
+        "para decirte lo que ya sabes: que aún no dominas el temario. "
+        "Vamos directos a lo que importa — **por dónde empezar**."
+    )
+    plan = get_plan_partida(oposicion_id, n_temas=5)
+    if plan:
+        st.markdown("#### Tu plan de partida")
+        st.caption(
+            "Ordenado por lo que **más ha caído en los exámenes oficiales**. "
+            "No es una estimación: es la frecuencia real."
+        )
+        for i, t in enumerate(plan, 1):
+            veces = t["veces_en_examen"]
+            st.markdown(f"**{i}. Tema {t['bloque']}.{t['tema']}** — {t['titulo'][:70]}")
+            st.caption(
+                f"Ha caído **{veces} vece{'s' if veces != 1 else ''}** en los últimos "
+                f"exámenes · el bloque {t['bloque']} es el {t['peso_examen']}% del examen"
+            )
+    st.info(
+        "Ve a **Repaso** y empieza por el primero. El sistema irá aprendiendo tu "
+        "nivel según respondas: no hace falta que te examines antes.\n\n"
+        "Si algún día quieres medirte, la **prueba de nivel** estará ahí."
+    )
+
+
 def _flujo_alumno(oposicion_id: int, alumno: dict) -> None:
     user_id = alumno["user_id"]
+
+    # El perfil decide el arranque: sin él no se puede continuar (migración 046)
+    perfil = get_perfil_alumno(user_id)
+    if not perfil:
+        _onboarding_perfil(user_id)
+        return
+
     stats   = get_stats_alumno(user_id, oposicion_id)
-    es_nuevo = not stats["bloques"]
+    es_nuevo = not any(b["preguntas_vistas"] for b in stats["bloques"])
+    principiante = perfil["experiencia"] == "primera"
 
     st.title("🎓 Tu preparación")
     st.caption(f"{alumno['email']}")
 
-    if es_nuevo:
+    if es_nuevo and principiante:
+        _bienvenida_principiante(oposicion_id)
+    elif es_nuevo:
+        # Viene de otra oposición: aquí la prueba SÍ vale, y mucho. Tiene base
+        # previa desigual (suele dominar Derecho Administrativo y no saber nada
+        # de UE). Se le empuja fuerte, pero no se le obliga.
         st.info(
-            "**¡Bienvenido/a!** Esta plataforma te ayuda a preparar la oposición "
-            "con preguntas tipo test adaptadas a tu nivel.\n\n"
-            "Para empezar, te recomendamos hacer la **prueba de nivel**: 40 "
-            "preguntas que nos permiten calibrar en qué bloques necesitas "
-            "reforzar más. Si tienes cualquier problema, dínoslo directamente."
+            "**Vienes de otra oposición**, así que ya traes base — probablemente "
+            "desigual: hay bloques que dominarás y otros que verás por primera vez.\n\n"
+            "Te recomendamos **encarecidamente** hacer la **prueba de nivel** (40 "
+            "preguntas). Así no te haremos repetir lo que ya sabes y podremos ir "
+            "directos a tus lagunas. Puedes saltártela, pero tardaremos más en "
+            "descubrir tu nivel."
         )
 
     if "modo_alumno_radio" not in st.session_state:
-        st.session_state.modo_alumno_radio = "Prueba de nivel" if es_nuevo else "Repaso"
+        # Al principiante NO se le lleva a la prueba de nivel: se le lleva a Repaso.
+        if es_nuevo and not principiante:
+            st.session_state.modo_alumno_radio = "Prueba de nivel"
+        else:
+            st.session_state.modo_alumno_radio = "Repaso"
     if "_forzar_modo_alumno" in st.session_state:
         # No se puede reasignar la key de un widget ya instanciado en el mismo
         # rerun (StreamlitAPIException) — se consume ANTES de crear el radio.

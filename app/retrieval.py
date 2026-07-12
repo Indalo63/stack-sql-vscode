@@ -562,6 +562,80 @@ def get_historial_pesos(oposicion_id: int, limite: int = 20) -> list[dict]:
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
+def guardar_perfil_alumno(user_id: str, experiencia: str) -> str | None:
+    """Guarda el perfil del alumno (migración 046). Devuelve None si fue bien."""
+    if experiencia not in ("primera", "otras_oposiciones"):
+        return "Perfil no válido."
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO normas.perfil_alumno (user_id, experiencia)
+                VALUES (%s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET experiencia = EXCLUDED.experiencia
+            """, (user_id, experiencia))
+        conn.commit()
+    return None
+
+
+def get_perfil_alumno(user_id: str) -> dict | None:
+    """Perfil del alumno, o None si aún no lo ha declarado."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT user_id, experiencia, prueba_ofrecida, creado_en
+                FROM normas.perfil_alumno WHERE user_id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            cols = [d[0] for d in cur.description]
+            return dict(zip(cols, row))
+
+
+def get_plan_partida(oposicion_id: int, n_temas: int = 8) -> list[dict]:
+    """
+    Plan de partida para el alumno que empieza de cero, **sin hacerle la prueba
+    de nivel**.
+
+    Por qué no se le hace la prueba: a un principiante no hay nada que
+    diagnosticarle. Sacaría el ~25% del azar, y "no sabes nada" no es un
+    diagnóstico: es una obviedad que además desmotiva justo en el momento más
+    frágil. El motor tampoco la necesita (la fase "inicio" arranca de cero).
+
+    Lo que sí necesita es saber POR DÓNDE EMPEZAR. Eso se responde con datos
+    objetivos que ya tenemos, sin preguntarle nada:
+      1. el peso real de cada bloque en el examen (migración 042), y
+      2. cuántas veces ha caído cada tema en los exámenes oficiales
+         (el "Radar del Tribunal": frecuencia real, no una estimación).
+
+    Devuelve los temas por los que conviene empezar, con su frecuencia real.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT e.epigrafe_id, e.bloque, e.tema, e.titulo,
+                       ob.peso_examen,
+                       COUNT(pt.pregunta_id) FILTER (WHERE pt.fuente <> 'ia') AS veces_en_examen,
+                       COUNT(pt.pregunta_id) FILTER (
+                           WHERE pt.revisada AND pt.activa AND NOT pt.descartada
+                       ) AS preguntas_banco
+                FROM normas.epigrafes e
+                JOIN normas.objetivo_banco ob
+                     ON ob.bloque = e.bloque AND ob.oposicion_id = e.oposicion_id
+                LEFT JOIN normas.preguntas_test pt ON pt.epigrafe_id = e.epigrafe_id
+                WHERE e.oposicion_id = %s
+                GROUP BY e.epigrafe_id, e.bloque, e.tema, e.titulo, ob.peso_examen
+                HAVING COUNT(pt.pregunta_id) FILTER (
+                           WHERE pt.revisada AND pt.activa AND NOT pt.descartada
+                       ) > 0
+                ORDER BY COUNT(pt.pregunta_id) FILTER (WHERE pt.fuente <> 'ia') DESC,
+                         ob.peso_examen DESC
+                LIMIT %s
+            """, (oposicion_id, n_temas))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:
@@ -1588,9 +1662,19 @@ def get_preguntas_simulacro_personal(user_id: str, oposicion_id: int, n: int = 5
             bloques_con_datos = {b["bloque"] for b in stats["bloques"] if b["preguntas_vistas"] > 0}
 
             if not bloques_oposicion.issubset(bloques_con_datos):
+                # El mensaje anterior decía "debes completar la prueba de nivel", y
+                # era FALSO: la condición real es tener datos en los 6 bloques, que
+                # también se consigue practicando en Repaso. Decírselo mal empuja al
+                # principiante a una prueba que no le conviene (ver migración 046).
+                faltan = sorted(bloques_oposicion - bloques_con_datos)
                 return {
                     "disponible": False,
-                    "motivo": "Debes completar la prueba de nivel (todos los bloques) antes del simulacro personal.",
+                    "motivo": (
+                        "Para el simulacro necesitas haber practicado los 6 bloques. "
+                        f"Te faltan: {', '.join(faltan)}. Puedes practicarlos en Repaso, "
+                        "o hacer la prueba de nivel, que los cubre todos de una vez."
+                    ),
+                    "bloques_pendientes": faltan,
                     "preguntas": [],
                 }
 

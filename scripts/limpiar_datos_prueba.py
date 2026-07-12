@@ -96,7 +96,8 @@ def run(dry_run: bool = False) -> None:
 
             # ── 2. Progreso de los alumnos de prueba ──────────────────────────
             # user_id::text funciona igual si la columna es TEXT o UUID
-            for tabla in ("progreso_usuario", "plan_estudio", "historial_simulacros"):
+            for tabla in ("progreso_usuario", "plan_estudio", "historial_simulacros",
+                          "perfil_alumno"):
                 cur.execute(
                     f"SELECT COUNT(*) FROM normas.{tabla} WHERE user_id::text = ANY(%s)",
                     (uuids,),
