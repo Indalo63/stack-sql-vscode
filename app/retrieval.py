@@ -426,12 +426,15 @@ def search_articles_hierarchical(vector: list[float], ley_id: int,
 
 def get_preguntas_sm2(user_id: str,
                       oposicion_id: int,
-                      bloques: tuple[str, ...],
+                      ley_ids: tuple[int, ...],
                       n: int = 10) -> list[dict]:
     """
     Selecciona hasta n preguntas para una sesión SM-2:
     primero las pendientes de revisión (proxima_revision <= hoy),
     luego preguntas nuevas (sin historial) hasta completar n.
+
+    Recibe leyes concretas (no bloques): quien llama ya ha acotado el ámbito a
+    un tema o a unas leyes dentro de un bloque, nunca al bloque entero.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -449,10 +452,10 @@ def get_preguntas_sm2(user_id: str,
                   AND pu.proxima_revision  <= CURRENT_DATE
                   AND pt.revisada = TRUE
                   AND pt.activa   = TRUE
-                  AND ol.bloque   = ANY(%s)
+                  AND pt.ley_id   = ANY(%s)
                 ORDER BY pu.proxima_revision
                 LIMIT %s
-            """, (oposicion_id, user_id, list(bloques), n))
+            """, (oposicion_id, user_id, list(ley_ids), n))
             cols = [d[0] for d in cur.description]
             pendientes = [dict(zip(cols, row)) for row in cur.fetchall()]
 
@@ -473,7 +476,7 @@ def get_preguntas_sm2(user_id: str,
                                               AND ol.oposicion_id = %s
                 WHERE pt.revisada = TRUE
                   AND pt.activa   = TRUE
-                  AND ol.bloque   = ANY(%s)
+                  AND pt.ley_id   = ANY(%s)
                   AND NOT EXISTS (
                       SELECT 1 FROM normas.progreso_usuario pu
                       WHERE pu.user_id = %s AND pu.pregunta_id = pt.pregunta_id
@@ -481,7 +484,7 @@ def get_preguntas_sm2(user_id: str,
                   AND NOT (pt.pregunta_id = ANY(%s::int[]))
                 ORDER BY RANDOM()
                 LIMIT %s
-            """, (oposicion_id, list(bloques), user_id, vistos_ids, restantes))
+            """, (oposicion_id, list(ley_ids), user_id, vistos_ids, restantes))
             cols = [d[0] for d in cur.description]
             nuevas = [dict(zip(cols, row)) for row in cur.fetchall()]
 

@@ -52,6 +52,15 @@ Dos líneas que se desarrollan en paralelo:
 - Scripts con `--supabase`: leen `.streamlit/secrets.toml` y convierten a Session Pooler automáticamente.
 - **Las credenciales reales (ref de Supabase, usuario, claves API) no se reproducen en este archivo.** Viven solo en `.env` / `secrets.toml`.
 
+### Conectividad a Supabase desde este devcontainer (importante, se repite en cada sesión)
+Este devcontainer no resuelve por IPv6 el host directo de Postgres (`db.<ref>.supabase.co`) → cualquier conexión directa falla con "Network is unreachable". Hay que enrutar por el **Session Pooler** (`aws-1-eu-west-2.pooler.supabase.com`, usuario `postgres.<ref>`).
+
+**Para verificar código/queries en vivo (scripts sueltos, `python3 -c`, etc.):** usar `scripts/_supabase_env.py::load_supabase_secrets()` — llamarla *antes* de cualquier `from app... import`. Reutilizada ya por `asignar_leyes.py`, `asignar_epigrafes.py`, `asignar_epigrafe_leyes.py` y `load_convocatoria.py` (flag `--supabase`).
+
+**Por qué no basta con exportar solo `DB_HOST`/`DB_USER` por variable de entorno** (error engañoso: Supavisor devuelve `no tenant identifier provided`, no un error de red): `app/config.py::_get()` cae a `import streamlit as st` en cuanto una clave (`DB_NAME`, `DB_PASSWORD`, `OPENAI_API_KEY`...) no está ya en `os.environ` — y ese `import streamlit` tiene el efecto secundario de volcar `st.secrets` sobre `os.environ`, pisando silenciosamente el override del pooler. `load_supabase_secrets()` evita esto exportando **las 5 claves `DB_*` a la vez** (más el resto de `secrets.toml`), así que `_get()` nunca necesita importar Streamlit. Confirmado en vivo el 11/07/2026.
+
+**Para probar la app Streamlit completa (no solo scripts):** Streamlit vuelca `st.secrets` a variables de entorno al arrancar, así que ni siquiera `load_supabase_secrets()` sirve ahí — hay que editar `.streamlit/secrets.toml` temporalmente y restaurarlo al terminar (patrón ya usado en pasos anteriores, ver hito de abajo).
+
 ## Forma de trabajo con la IA
 - Avanzar siempre en **pasos numerados** (Paso 1, Paso 2…). No pasar al siguiente hasta confirmar el anterior.
 - Explicaciones en español, técnicas pero con tono docente. Breves y accionables, con comandos concretos pegables en WSL2.
@@ -146,6 +155,26 @@ Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales
 | 7 | Visualización de progreso (3 momentos) | ✅ Completado |
 | 8 | Simulacro personal | ✅ Completado |
 | 9 | Simulacro de academia | ✅ Completado |
+
+### Completado — Rediseño navegación "Gestión banco de preguntas" (12/07/2026)
+Fase 1 del rediseño propuesto por el usuario en un boceto (PDF, diagrama a mano). Alcance acotado con él antes de tocar código (4 rondas de preguntas): **solo navegación + Nuevas preguntas + Revisar preguntas + Generar test**. El resto del boceto queda explícitamente para fases posteriores, y **no se empieza la siguiente hasta cerrar esta**.
+
+- [✅ Renombrado] El perfil "Administración" pasa a llamarse **"Gestión banco de preguntas"** en toda la UI (botón de Acceso, título, textos). El valor interno `st.session_state.acceso == "administracion"` se mantiene (solo cambia lo visible); nuevo mapa `_ETIQUETA_ACCESO` porque `.capitalize()` ya no daba una etiqueta correcta.
+- [✅ Navegación] `modo` se elige **antes** que cualquier selector. El modo "Editor" (contenedor con tabs Generar/Revisar) **desaparece**: sus dos tabs pasan a ser modos de primer nivel. Radio final: **Q&A / Nuevas preguntas / Revisar preguntas / Generar test / Simulacros academia**.
+- [✅ Fin del selector global] El sidebar Bloque→Tema→Ley global (que condicionaba a todos los modos por igual) se elimina. Cada modo monta **su propio selector**, con `session_state` aislado por prefijo (`qa_*`, `nq_*`, `gt_*`, `rev_*`) para que la selección de un modo no arrastre a la de otro. Helper común `_checkboxes(...)` para el patrón multi-checkbox + "Seleccionar todo"/"Elimina la selección", que antes estaba triplicado.
+  - **Q&A** y **Nuevas preguntas**: cascada Bloque→Tema→Ley multi-selección (`_selector_bloque_tema_ley`).
+  - **Revisar preguntas**: radio **excluyente** "Por bloque" / "Por tema", selección **única** en ambas ramas (`_selector_revisar`).
+  - **Generar test**: Bloque **único** → radio excluyente "Generar por" Tema/Ley → multi-checkbox dentro de ese bloque (`_selector_generar_test`). **Nunca genera sobre el bloque completo sin acotar** — requisito explícito del usuario.
+  - **Simulacros academia**: sin cambios (no usa bloques/leyes).
+- [✅ `retrieval.py`] `get_preguntas_sm2` cambia de firma: `bloques: tuple[str, ...]` → `ley_ids: tuple[int, ...]` (y `ol.bloque = ANY(...)` → `pt.ley_id = ANY(...)` en sus dos queries). Necesario porque el nuevo "Generar test" acota a temas/leyes, no a bloques; el `JOIN oposicion_leyes` se conserva como guardia de que la ley pertenece a la oposición. Único punto de uso (`streamlit_app.py`), sin migración de BD.
+- [✅ Verificado en vivo, navegador real] Playwright headless contra Supabase real vía Session Pooler. Como el login Google **no es automatizable** aquí, se parcheó temporalmente la autenticación (variable `FAKE_EDITOR_EMAIL`) para simular sesión de editor, se recorrieron los 5 modos, y **se revirtió el parche** (verificado: 0 referencias en el código final). Comprobado: los 5 modos presentes y "Editor" ya no existe; Revisar preguntas alterna Bloque/Tema y muestra el panel de progreso con cifras reales (70 pendientes / 0 revisadas); Generar test muestra Bloque único → Tema/Ley → multi-checkbox; Nuevas preguntas exige la cascada completa; Simulacros academia no pide bloque. Sin errores de consola. `secrets.toml` restaurado al valor original.
+- [ℹ️ Nota de entorno, resuelta] Playwright necesitaba libs del sistema que faltaban (`libatk`, `libXcomposite`…) y `apt update` fallaba por un repo de yarn roto. Se desactivó ese repo (`/etc/apt/sources.list.d/yarn.list` → `/tmp/yarn.list.disabled`) y se instalaron con `playwright install-deps chromium`. Si vuelve a fallar en otra sesión, ese es el camino.
+
+**Pendiente — fases siguientes de este rediseño (no empezar hasta cerrar la fase 1):**
+1. **Actualización Legislación** (rama del boceto, no existe hoy como pantalla): submodo *Automática* = revisa cambios del BOE en leyes ya cargadas; *Manual* = el editor dispara la comprobación a mano, ley por ley. En **ambos casos**, los cambios detectados se muestran para **aprobar antes de aplicarlos a la BD** (mismo espíritu que la revisión de preguntas) — requisito explícito del usuario. Hoy solo existe `scripts/sync_boe.py` (CLI, sin UI ni paso de aprobación).
+2. **Generador de test de prueba** (Por tema completo / Por ley): simulacro de prueba para que el editor pruebe la experiencia del alumno. Es **distinto** del "Generar test" actual (repaso SM-2 del editor).
+3. **Reubicación de "Simulacros academia"** en el árbol: el usuario indicó que es la vía para ofrecer simulacros a academias gestionadas por una sola persona — pendiente de concretar dónde cuelga.
+4. **Panel de progreso de revisión**: posibles ajustes (el usuario lo dejó anotado como pendiente; hoy se queda tal cual, global y por supervisor).
 
 ### Completado — Administración: navegación Bloque → Tema → Ley (11/07/2026)
 Petición del usuario tras ver el nuevo selector del alumno: el sidebar de Administración (Q&A / Generar test / Editor, Google OAuth) también debía dejar elegir el tema oficial dentro del bloque, para acotar qué leyes trabajar. Planificado con `EnterPlanMode` (2 rondas de preguntas + un ajuste de rumbo a mitad de implementación cuando el `--dry-run` reveló un problema de diseño, ver abajo).

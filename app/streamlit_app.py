@@ -65,6 +65,136 @@ def _cargar_leyes(oposicion_id: int | None, bloques: tuple[str, ...] | None = No
                   excluir_test: bool = False, temas: tuple[int, ...] | None = None):
     return get_leyes_disponibles(oposicion_id, bloques, excluir_test=excluir_test, temas=temas)
 
+
+# ── Selectores del sidebar (Gestión banco de preguntas) ───────────────────────
+# Cada modo monta su propio selector: el prefijo aísla su session_state, para que
+# la selección de un modo no arrastre a la de otro.
+
+def _etiqueta_tema(t: dict) -> str:
+    return f"{t['bloque']}.{t['tema']}: {t['titulo'][:50]}{'…' if len(t['titulo']) > 50 else ''}"
+
+
+def _checkboxes(items, key_de, etiqueta_de, prefix: str, titulo: str):
+    """Bloque de multi-checkbox con botones 'Seleccionar todo' / 'Elimina la selección'."""
+    st.sidebar.markdown(f"**{titulo}**")
+    _c1, _c2 = st.sidebar.columns(2)
+    with _c1:
+        if st.button("Seleccionar todo", key=f"{prefix}_todos", use_container_width=True):
+            for it in items:
+                st.session_state[f"{prefix}_{key_de(it)}"] = True
+            st.rerun()
+    with _c2:
+        if st.button("Elimina la selección", key=f"{prefix}_ninguno", use_container_width=True):
+            for it in items:
+                st.session_state[f"{prefix}_{key_de(it)}"] = False
+            st.rerun()
+
+    return [
+        it for it in items
+        if st.sidebar.checkbox(etiqueta_de(it), value=False, key=f"{prefix}_{key_de(it)}")
+    ]
+
+
+def _selector_bloque_tema_ley(oposicion_id: int, prefix: str):
+    """Cascada Bloque → Tema → Ley (multi-selección en los tres niveles)."""
+    bloques_sel = tuple(_checkboxes(
+        _cargar_bloques(oposicion_id),
+        key_de=lambda b: b, etiqueta_de=lambda b: _NOMBRES_BLOQUE.get(b, b),
+        prefix=f"{prefix}_blq", titulo="Bloque",
+    ))
+    if not bloques_sel:
+        st.sidebar.info("Selecciona al menos un bloque.")
+        st.stop()
+
+    temas_sel = tuple(t["epigrafe_id"] for t in _checkboxes(
+        get_temas_por_bloques(oposicion_id, bloques_sel),
+        key_de=lambda t: t["epigrafe_id"], etiqueta_de=_etiqueta_tema,
+        prefix=f"{prefix}_tema", titulo="Tema",
+    ))
+    if not temas_sel:
+        st.sidebar.info("Selecciona al menos un tema.")
+        st.stop()
+
+    try:
+        leyes = _cargar_leyes(oposicion_id, bloques_sel, excluir_test=True, temas=temas_sel)
+    except Exception as e:
+        st.error(f"Error al cargar las leyes: {e}")
+        st.stop()
+    if not leyes:
+        st.sidebar.warning("Ninguna ley cargada está asociada todavía a los temas seleccionados.")
+        st.stop()
+
+    leyes_sel = _checkboxes(
+        leyes,
+        key_de=lambda l: l["ley_id"], etiqueta_de=lambda l: l["nombre_corto"] or l["nombre"],
+        prefix=f"{prefix}_ley", titulo="Ley",
+    )
+    if not leyes_sel:
+        st.sidebar.info("Selecciona al menos una ley.")
+        st.stop()
+
+    return bloques_sel, temas_sel, leyes_sel
+
+
+def _selector_generar_test(oposicion_id: int) -> list[dict]:
+    """Bloque (uno) → Por tema o Por ley (excluyente) → multi-selección dentro del
+    bloque. El test nunca se genera sobre el bloque completo sin acotar."""
+    bloque = st.sidebar.selectbox(
+        "Bloque", _cargar_bloques(oposicion_id),
+        format_func=lambda b: _NOMBRES_BLOQUE.get(b, b), key="gt_bloque",
+    )
+    if st.sidebar.radio("Generar por", ["Tema", "Ley"], key="gt_filtro") == "Tema":
+        temas_sel = tuple(t["epigrafe_id"] for t in _checkboxes(
+            get_temas_por_bloques(oposicion_id, (bloque,)),
+            key_de=lambda t: t["epigrafe_id"], etiqueta_de=_etiqueta_tema,
+            prefix="gt_tema", titulo="Tema",
+        ))
+        if not temas_sel:
+            st.sidebar.info("Selecciona al menos un tema.")
+            st.stop()
+        leyes_sel = _cargar_leyes(oposicion_id, (bloque,), excluir_test=True, temas=temas_sel)
+        if not leyes_sel:
+            st.sidebar.warning("Ninguna ley cargada está asociada todavía a los temas seleccionados.")
+            st.stop()
+    else:
+        leyes_sel = _checkboxes(
+            _cargar_leyes(oposicion_id, (bloque,), excluir_test=True),
+            key_de=lambda l: l["ley_id"], etiqueta_de=lambda l: l["nombre_corto"] or l["nombre"],
+            prefix="gt_ley", titulo="Ley",
+        )
+        if not leyes_sel:
+            st.sidebar.info("Selecciona al menos una ley.")
+            st.stop()
+
+    return leyes_sel
+
+
+def _selector_revisar(oposicion_id: int) -> list[dict]:
+    """Filtro excluyente Por bloque / Por tema, selección única en ambos casos."""
+    if st.sidebar.radio("Filtrar por", ["Bloque", "Tema"], key="rev_filtro") == "Bloque":
+        bloque = st.sidebar.selectbox(
+            "Bloque", _cargar_bloques(oposicion_id),
+            format_func=lambda b: _NOMBRES_BLOQUE.get(b, b), key="rev_bloque",
+        )
+        leyes = _cargar_leyes(oposicion_id, (bloque,), excluir_test=True)
+    else:
+        temas = get_temas_por_bloques(oposicion_id, tuple(_cargar_bloques(oposicion_id)))
+        if not temas:
+            st.sidebar.warning("No hay temas cargados para esta oposición.")
+            st.stop()
+        tema = st.sidebar.selectbox(
+            "Tema", temas, format_func=_etiqueta_tema, key="rev_tema",
+        )
+        leyes = _cargar_leyes(
+            oposicion_id, None, excluir_test=True, temas=(tema["epigrafe_id"],),
+        )
+
+    if not leyes:
+        st.sidebar.warning("Ninguna ley cargada está asociada todavía a esta selección.")
+        st.stop()
+    return leyes
+
+
 try:
     oposiciones = _cargar_oposiciones()
 except Exception as e:
@@ -558,16 +688,22 @@ oposicion_id = oposicion_seleccionada["oposicion_id"]
 st.sidebar.markdown("---")
 
 # ── Sidebar: Acceso ────────────────────────────────────────────────────────────
-# Único punto de bifurcación: Administración (Google OAuth → Editor/Q&A/Generar
-# test) o Alumno (Supabase Auth → prueba de nivel/repaso adaptativo). Sin
-# acceso anónimo: hasta elegir uno de los dos no se muestra ningún contenido.
+# Único punto de bifurcación: Gestión banco de preguntas (Google OAuth → Q&A,
+# nuevas preguntas, revisión, test) o Alumno (Supabase Auth → prueba de nivel/
+# repaso adaptativo). Sin acceso anónimo: hasta elegir uno de los dos no se
+# muestra ningún contenido.
+_ETIQUETA_ACCESO = {
+    "administracion": "Gestión banco de preguntas",
+    "alumno":         "Alumno",
+}
+
 if "acceso" not in st.session_state:
     st.session_state.acceso = None
 
 st.sidebar.markdown("**Acceso**")
 _cacc1, _cacc2 = st.sidebar.columns(2)
 with _cacc1:
-    if st.button("Administración", key="acceso_administracion", use_container_width=True):
+    if st.button("Gestión banco de preguntas", key="acceso_administracion", use_container_width=True):
         st.session_state.acceso = "administracion"
         st.rerun()
 with _cacc2:
@@ -576,14 +712,17 @@ with _cacc2:
         st.rerun()
 
 if st.session_state.acceso:
-    st.sidebar.caption(f"Acceso actual: **{st.session_state.acceso.capitalize()}**")
+    st.sidebar.caption(f"Acceso actual: **{_ETIQUETA_ACCESO[st.session_state.acceso]}**")
     if st.sidebar.button("← Cambiar acceso", key="acceso_reset"):
         st.session_state.acceso = None
         st.rerun()
 
 if st.session_state.acceso is None:
     st.title("⚖️ Asistente Jurídico")
-    st.info("Elige un tipo de acceso en la barra lateral: **Administración** o **Alumno**.")
+    st.info(
+        "Elige un tipo de acceso en la barra lateral: "
+        "**Gestión banco de preguntas** o **Alumno**."
+    )
     st.stop()
 
 st.sidebar.markdown("---")
@@ -627,18 +766,18 @@ if st.session_state.acceso == "alumno":
     st.stop()
 
 # ══════════════════════════════════════════════════════════════════════════
-# Camino Administración (Google OAuth) — Editor, Q&A y Generar test
+# Camino Gestión banco de preguntas (Google OAuth)
 # ══════════════════════════════════════════════════════════════════════════
 if not logged_in:
-    st.sidebar.markdown("**Acceso Administración**")
+    st.sidebar.markdown("**Acceso Gestión banco de preguntas**")
     st.sidebar.caption("Requiere cuenta Google autorizada (editor/academia).")
     if st.sidebar.button("Iniciar sesión con Google", key="admin_login", type="primary"):
         st.login("google")
 
-    st.title("⚖️ Área de Administración")
+    st.title("⚖️ Gestión banco de preguntas")
     st.info(
         "Inicia sesión con tu cuenta Google en la barra lateral para acceder "
-        "al editor de preguntas, Q&A y generación de test."
+        "a la generación y revisión de preguntas, Q&A y test."
     )
     st.stop()
 
@@ -648,104 +787,17 @@ if st.sidebar.button("Cerrar sesión"):
 
 st.sidebar.markdown("---")
 
-bloques_disponibles = _cargar_bloques(oposicion_id)
-st.sidebar.markdown("**Bloque**")
-_cb1, _cb2 = st.sidebar.columns(2)
-with _cb1:
-    if st.button("Seleccionar todo", key="blq_todos", use_container_width=True):
-        for b in bloques_disponibles:
-            st.session_state[f"blq_{b}"] = True
-        st.rerun()
-with _cb2:
-    if st.button("Elimina la selección", key="blq_ninguno", use_container_width=True):
-        for b in bloques_disponibles:
-            st.session_state[f"blq_{b}"] = False
-        st.rerun()
-
-bloques_sel = tuple(
-    b for b in bloques_disponibles
-    if st.sidebar.checkbox(_NOMBRES_BLOQUE.get(b, b), value=False, key=f"blq_{b}")
+# El modo se elige antes que nada: cada uno monta después su propio selector.
+modo = st.sidebar.radio(
+    "Modo",
+    ["Q&A", "Nuevas preguntas", "Revisar preguntas", "Generar test", "Simulacros academia"],
 )
-
-if not bloques_sel:
-    st.sidebar.info("Selecciona al menos un bloque.")
-    st.stop()
-
-bloques_filtro = bloques_sel
-
-temas_disponibles = get_temas_por_bloques(oposicion_id, bloques_sel)
-st.sidebar.markdown("**Tema**")
-_ct1, _ct2 = st.sidebar.columns(2)
-with _ct1:
-    if st.button("Seleccionar todo", key="tema_todos", use_container_width=True):
-        for t in temas_disponibles:
-            st.session_state[f"tema_{t['epigrafe_id']}"] = True
-        st.rerun()
-with _ct2:
-    if st.button("Elimina la selección", key="tema_ninguno", use_container_width=True):
-        for t in temas_disponibles:
-            st.session_state[f"tema_{t['epigrafe_id']}"] = False
-        st.rerun()
-
-temas_sel = tuple(
-    t["epigrafe_id"] for t in temas_disponibles
-    if st.sidebar.checkbox(
-        f"{t['bloque']}.{t['tema']}: {t['titulo'][:50]}{'…' if len(t['titulo']) > 50 else ''}",
-        value=False, key=f"tema_{t['epigrafe_id']}",
-    )
-)
-
-if not temas_sel:
-    st.sidebar.info("Selecciona al menos un tema.")
-    st.stop()
-
-try:
-    leyes = _cargar_leyes(oposicion_id, bloques_filtro, excluir_test=True, temas=temas_sel)
-except Exception as e:
-    st.error(f"Error al cargar las leyes: {e}")
-    st.stop()
-
-if not leyes:
-    st.sidebar.warning("Ninguna ley cargada está asociada todavía a los temas seleccionados.")
-    st.stop()
-
-st.sidebar.markdown("**Ley**")
-_cl1, _cl2 = st.sidebar.columns(2)
-with _cl1:
-    if st.button("Seleccionar todo", key="ley_todas", use_container_width=True):
-        for l in leyes:
-            st.session_state[f"ley_{l['ley_id']}"] = True
-        st.rerun()
-with _cl2:
-    if st.button("Elimina la selección", key="ley_ninguna", use_container_width=True):
-        for l in leyes:
-            st.session_state[f"ley_{l['ley_id']}"] = False
-        st.rerun()
-
-leyes_sel = [
-    l for l in leyes
-    if st.sidebar.checkbox(
-        l['nombre_corto'] or l['nombre'],
-        value=False,
-        key=f"ley_{l['ley_id']}",
-    )
-]
-
-if not leyes_sel:
-    st.sidebar.info("Selecciona al menos una ley.")
-    st.stop()
-
-# Alias para modos que trabajan con una sola ley (Q&A, Gentest)
-ley_id     = leyes_sel[0]["ley_id"]
-ley_nombre = leyes_sel[0]["nombre"]
-
-modo = st.sidebar.radio("Modo", ["Q&A", "Generar test", "Editor", "Simulacros academia"])
 
 # ── Cabecera ──────────────────────────────────────────────────────────────────
 st.title("⚖️ Asistente Jurídico")
 st.caption("Búsqueda semántica + Claude")
 
-# ── Helpers BD — Editor ───────────────────────────────────────────────────────
+# ── Helpers BD — Banco de preguntas ───────────────────────────────────────────
 def _get_pending(ley_ids: list[int]) -> list[dict]:
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -801,8 +853,39 @@ def _reject(pregunta_id: int) -> None:
         conn.commit()
 
 
+def _get_review_stats() -> dict:
+    """Progreso de revisión global (todo el banco IA), independiente de la
+    selección de leyes del sidebar — para que un supervisor vea de un
+    vistazo cuánto queda y quién ha revisado qué, sin importar la sesión."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*) FILTER (WHERE NOT revisada) AS pendientes,
+                       COUNT(*) FILTER (WHERE revisada)     AS revisadas
+                FROM normas.preguntas_test
+                WHERE fuente = 'ia'
+            """)
+            pendientes, revisadas = cur.fetchone()
+
+            cur.execute("""
+                SELECT revisado_por, COUNT(*) AS n, MAX(revisado_en) AS ultima
+                FROM normas.preguntas_test
+                WHERE fuente = 'ia' AND revisada AND revisado_por IS NOT NULL
+                GROUP BY revisado_por
+                ORDER BY n DESC
+            """)
+            cols = [d[0] for d in cur.description]
+            por_revisor = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    return {"pendientes": pendientes, "revisadas": revisadas, "por_revisor": por_revisor}
+
+
 # ── Modo Q&A ──────────────────────────────────────────────────────────────────
 if modo == "Q&A":
+    _, _, leyes_sel = _selector_bloque_tema_ley(oposicion_id, "qa")
+    ley_id     = leyes_sel[0]["ley_id"]
+    ley_nombre = leyes_sel[0]["nombre"]
+
     st.header("Consulta jurídica")
 
     if len(leyes_sel) > 1:
@@ -838,6 +921,8 @@ if modo == "Q&A":
 
 # ── Modo Generar test ──────────────────────────────────────────────────────────
 elif modo == "Generar test":
+    leyes_sel = _selector_generar_test(oposicion_id)
+
     st.header("Práctica de test")
     st.caption(f"Repaso adaptativo · {user['email']}")
 
@@ -863,12 +948,13 @@ elif modo == "Generar test":
 
     # ── Sin tanda activa: botón de inicio ─────────────────────────────────────
     if not quiz["preguntas"]:
-        bloques_label = " + ".join(_NOMBRES_BLOQUE.get(b, b) for b in bloques_sel)
-        st.info(f"Bloque{'s' if len(bloques_sel) > 1 else ''} seleccionado{'s' if len(bloques_sel) > 1 else ''}: **{bloques_label}**")
+        leyes_label = " + ".join(l["nombre_corto"] or l["nombre"] for l in leyes_sel)
+        st.info(f"Ley{'es' if len(leyes_sel) > 1 else ''}: **{leyes_label}**")
 
         if st.button("Iniciar repaso", type="primary"):
             preguntas = get_preguntas_sm2(
-                user["email"], oposicion_id, bloques_sel, n=10,
+                user["email"], oposicion_id,
+                tuple(l["ley_id"] for l in leyes_sel), n=10,
             )
             if not preguntas:
                 st.warning("No hay más preguntas disponibles para esta selección. ¡Has visto todas!")
@@ -949,118 +1035,140 @@ elif modo == "Generar test":
                 quiz["respondido"] = False
                 st.rerun()
 
-# ── Modo Editor ────────────────────────────────────────────────────────────────
-elif modo == "Editor":
-    st.header("Editor de preguntas")
+# ── Modo Nuevas preguntas ─────────────────────────────────────────────────────
+elif modo == "Nuevas preguntas":
+    _, _, leyes_sel = _selector_bloque_tema_ley(oposicion_id, "nq")
+
+    st.header("Nuevas preguntas")
     st.caption(f"Sesión activa: {user['email']}")
 
-    tab_gen, tab_rev = st.tabs(["Generar", "Revisar"])
+    nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
+    st.subheader(f"Generar preguntas — {nombres_sel}")
+    col_n, col_max = st.columns(2)
+    with col_n:
+        n_gen = st.slider("Preguntas por ley", min_value=1, max_value=50, value=10,
+                          key="editor_n_gen")
+    with col_max:
+        max_por_art = st.slider("Máximo por artículo", min_value=1, max_value=5, value=1,
+                                key="editor_max_art",
+                                help="Cuántas preguntas IA puede tener un mismo artículo (pendientes + aprobadas)")
 
-    # ── Tab Generar ───────────────────────────────────────────────────────────
-    with tab_gen:
-        nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
-        st.subheader(f"Generar preguntas — {nombres_sel}")
-        col_n, col_max = st.columns(2)
-        with col_n:
-            n_gen = st.slider("Preguntas por ley", min_value=1, max_value=50, value=10,
-                              key="editor_n_gen")
-        with col_max:
-            max_por_art = st.slider("Máximo por artículo", min_value=1, max_value=5, value=1,
-                                    key="editor_max_art",
-                                    help="Cuántas preguntas IA puede tener un mismo artículo (pendientes + aprobadas)")
-
-        if st.button("Generar y guardar en BD", type="primary", key="btn_generar"):
-            client  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            ok = err = 0
-            for ley_loop in leyes_sel:
-                lid   = ley_loop["ley_id"]
-                lnomb = ley_loop["nombre"]
-                arts  = _fetch_articles(lid, n_gen, max_por_art)
-                if not arts:
-                    st.info(f"{ley_loop['codigo']}: sin artículos nuevos.")
-                    continue
-                few_shots = _fetch_few_shots(lid)
-                progress  = st.progress(0, text=f"{ley_loop['codigo']} — iniciando…")
-                for i, art in enumerate(arts, 1):
-                    tiene_apartados = _has_numbered_paragraphs(art["contenido"])
-                    try:
-                        resp = client.messages.create(
-                            model=CLAUDE_MODEL,
-                            max_tokens=800,
-                            messages=_build_prompt(
-                                art, lnomb,
-                                few_shots=few_shots,
-                                tiene_apartados=tiene_apartados,
-                            ),
-                        )
-                        parsed = _parse_and_validate(resp.content[0].text)
-                        _save(lid, art, parsed)
-                        ok += 1
-                    except Exception as e:
-                        err += 1
-                        st.warning(f"{ley_loop['codigo']} — Art. {art['numero']}: {e}")
-                    progress.progress(i / len(arts),
-                                      text=f"{ley_loop['codigo']} — {i}/{len(arts)}")
-                    if i < len(arts):
-                        time.sleep(0.5)
-                progress.empty()
-
-            if ok:
-                st.success(f"{ok} pregunta{'s' if ok > 1 else ''} guardada{'s' if ok > 1 else ''} en BD.")
-            if err:
-                st.error(f"{err} error{'es' if err > 1 else ''} durante la generación.")
-            st.cache_data.clear()
-
-    # ── Tab Revisar ───────────────────────────────────────────────────────────
-    with tab_rev:
-        nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
-        st.subheader(f"Pendientes de revisión — {nombres_sel}")
-
-        pending = _get_pending([l["ley_id"] for l in leyes_sel])
-
-        if not pending:
-            st.info("No hay preguntas pendientes de revisión para esta ley.")
-        else:
-            st.caption(f"{len(pending)} pregunta{'s' if len(pending) > 1 else ''} pendiente{'s' if len(pending) > 1 else ''}")
-
-            for p in pending:
-                pid = p["pregunta_id"]
-                with st.expander(f"[{p['ley_codigo']}] Art. {p['articulo']} — {p['pregunta'][:70]}…"):
-                    pregunta    = st.text_area("Enunciado",    value=p["pregunta"],    key=f"preg_{pid}")
-                    col1, col2  = st.columns(2)
-                    with col1:
-                        opcion_a = st.text_input("a)", value=p["opcion_a"], key=f"a_{pid}")
-                        opcion_b = st.text_input("b)", value=p["opcion_b"], key=f"b_{pid}")
-                    with col2:
-                        opcion_c = st.text_input("c)", value=p["opcion_c"], key=f"c_{pid}")
-                        opcion_d = st.text_input("d)", value=p["opcion_d"], key=f"d_{pid}")
-                    correcta    = st.selectbox(
-                        "Correcta", ["a", "b", "c", "d"],
-                        index=["a", "b", "c", "d"].index(p["correcta"]),
-                        key=f"cor_{pid}",
+    if st.button("Generar y guardar en BD", type="primary", key="btn_generar"):
+        client  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        ok = err = 0
+        for ley_loop in leyes_sel:
+            lid   = ley_loop["ley_id"]
+            lnomb = ley_loop["nombre"]
+            arts  = _fetch_articles(lid, n_gen, max_por_art)
+            if not arts:
+                st.info(f"{ley_loop['codigo']}: sin artículos nuevos.")
+                continue
+            few_shots = _fetch_few_shots(lid)
+            progress  = st.progress(0, text=f"{ley_loop['codigo']} — iniciando…")
+            for i, art in enumerate(arts, 1):
+                tiene_apartados = _has_numbered_paragraphs(art["contenido"])
+                try:
+                    resp = client.messages.create(
+                        model=CLAUDE_MODEL,
+                        max_tokens=800,
+                        messages=_build_prompt(
+                            art, lnomb,
+                            few_shots=few_shots,
+                            tiene_apartados=tiene_apartados,
+                        ),
                     )
-                    explicacion = st.text_area("Explicación", value=p.get("explicacion", ""),
-                                               key=f"exp_{pid}")
+                    parsed = _parse_and_validate(resp.content[0].text)
+                    _save(lid, art, parsed)
+                    ok += 1
+                except Exception as e:
+                    err += 1
+                    st.warning(f"{ley_loop['codigo']} — Art. {art['numero']}: {e}")
+                progress.progress(i / len(arts),
+                                  text=f"{ley_loop['codigo']} — {i}/{len(arts)}")
+                if i < len(arts):
+                    time.sleep(0.5)
+            progress.empty()
 
-                    col_ok, col_ko = st.columns(2)
-                    with col_ok:
-                        if st.button("✅ Aprobar", key=f"ok_{pid}", type="primary"):
-                            _approve(pid, user["email"], {
-                                "pregunta":    pregunta,
-                                "opcion_a":    opcion_a,
-                                "opcion_b":    opcion_b,
-                                "opcion_c":    opcion_c,
-                                "opcion_d":    opcion_d,
-                                "correcta":    correcta,
-                                "explicacion": explicacion,
-                            })
-                            st.success("Aprobada y guardada.")
-                            st.rerun()
-                    with col_ko:
-                        if st.button("❌ Rechazar", key=f"ko_{pid}"):
-                            _reject(pid)
-                            st.warning("Pregunta eliminada.")
-                            st.rerun()
+        if ok:
+            st.success(f"{ok} pregunta{'s' if ok > 1 else ''} guardada{'s' if ok > 1 else ''} en BD.")
+        if err:
+            st.error(f"{err} error{'es' if err > 1 else ''} durante la generación.")
+        st.cache_data.clear()
+
+# ── Modo Revisar preguntas ────────────────────────────────────────────────────
+elif modo == "Revisar preguntas":
+    leyes_sel = _selector_revisar(oposicion_id)
+
+    st.header("Revisar preguntas")
+    st.caption(f"Sesión activa: {user['email']}")
+
+    stats = _get_review_stats()
+    col_pend, col_rev = st.columns(2)
+    col_pend.metric("Pendientes (todo el banco)", stats["pendientes"])
+    col_rev.metric("Revisadas (todo el banco)", stats["revisadas"])
+    if stats["por_revisor"]:
+        with st.expander(f"Desglose por supervisor ({len(stats['por_revisor'])})"):
+            st.dataframe(
+                [
+                    {
+                        "Supervisor": r["revisado_por"],
+                        "Revisadas": r["n"],
+                        "Última revisión": r["ultima"],
+                    }
+                    for r in stats["por_revisor"]
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
+
+    nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
+    st.subheader(f"Pendientes de revisión — {nombres_sel}")
+
+    pending = _get_pending([l["ley_id"] for l in leyes_sel])
+
+    if not pending:
+        st.info("No hay preguntas pendientes de revisión para esta selección.")
+    else:
+        st.caption(f"{len(pending)} pregunta{'s' if len(pending) > 1 else ''} pendiente{'s' if len(pending) > 1 else ''}")
+
+        for p in pending:
+            pid = p["pregunta_id"]
+            with st.expander(f"[{p['ley_codigo']}] Art. {p['articulo']} — {p['pregunta'][:70]}…"):
+                pregunta    = st.text_area("Enunciado",    value=p["pregunta"],    key=f"preg_{pid}")
+                col1, col2  = st.columns(2)
+                with col1:
+                    opcion_a = st.text_input("a)", value=p["opcion_a"], key=f"a_{pid}")
+                    opcion_b = st.text_input("b)", value=p["opcion_b"], key=f"b_{pid}")
+                with col2:
+                    opcion_c = st.text_input("c)", value=p["opcion_c"], key=f"c_{pid}")
+                    opcion_d = st.text_input("d)", value=p["opcion_d"], key=f"d_{pid}")
+                correcta    = st.selectbox(
+                    "Correcta", ["a", "b", "c", "d"],
+                    index=["a", "b", "c", "d"].index(p["correcta"]),
+                    key=f"cor_{pid}",
+                )
+                explicacion = st.text_area("Explicación", value=p.get("explicacion", ""),
+                                           key=f"exp_{pid}")
+
+                col_ok, col_ko = st.columns(2)
+                with col_ok:
+                    if st.button("✅ Aprobar", key=f"ok_{pid}", type="primary"):
+                        _approve(pid, user["email"], {
+                            "pregunta":    pregunta,
+                            "opcion_a":    opcion_a,
+                            "opcion_b":    opcion_b,
+                            "opcion_c":    opcion_c,
+                            "opcion_d":    opcion_d,
+                            "correcta":    correcta,
+                            "explicacion": explicacion,
+                        })
+                        st.success("Aprobada y guardada.")
+                        st.rerun()
+                with col_ko:
+                    if st.button("❌ Rechazar", key=f"ko_{pid}"):
+                        _reject(pid)
+                        st.warning("Pregunta eliminada.")
+                        st.rerun()
 
 # ── Modo Simulacros academia ─────────────────────────────────────────────────
 elif modo == "Simulacros academia":
