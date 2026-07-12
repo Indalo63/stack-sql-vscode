@@ -126,6 +126,39 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### 🔬 Pendiente — Lo que solo se puede cerrar CON ALUMNOS REALES (12/07/2026)
+
+Todo esto está **construido y funcionando**, pero calibrado con conjeturas o valores por defecto. **No se puede validar sin datos de alumnos.** No es deuda técnica: es deuda *empírica*.
+
+#### 1. La dificultad de las preguntas es una CONJETURA, no un dato
+- **Estado:** las 297 preguntas tienen `dificultad_origen = 'heuristica'` (migración 047): un valor provisional sacado de señales del texto. **Nadie ha comprobado que acierte.**
+- [ ] **Ejecutar periódicamente** `python3 scripts/calcular_dificultad.py --supabase --solo-empirica`. Sustituye la conjetura por el % de acierto real en cuanto una pregunta acumula `min_respuestas_dificultad` (20, en `parametros_aprendizaje`).
+- [ ] **Validar la heurística**: cuando haya datos, comparar `heuristica` vs `empirica` en las preguntas que tengan ambas. **Si no correlacionan, la heurística es ruido y hay que tirarla**, no maquillarla. Es la única forma de saber si vale.
+- ⚠️ **Realidad de escala:** calibrar el banco entero exige **~4.860 respuestas** (243 preguntas × 20). Con **2 alumnos** eso no va a pasar: el umbral solo se alcanzará en las preguntas más servidas. **La dificultad empírica madura con escala** (una academia con decenas de alumnos), no con el MVP. Si se quiere ver antes, se puede bajar el umbral — pero por debajo de ~10 respuestas el dato es ruido.
+
+#### 2. Los parámetros pedagógicos están puestos "a ojo"
+`normas.parametros_aprendizaje` — **están en BD precisamente para calibrarlos sin desplegar**:
+
+| Parámetro | Valor hoy | Qué hay que mirar con alumnos reales |
+|---|---|---|
+| `muestra_minima` | 5 | ¿Con 5 preguntas el dominio de un tema ya significa algo, o sigue siendo ruido? |
+| `umbral_dominio` | 70% | ¿Los alumnos que lo superan aprueban de verdad el simulacro? |
+| `repeticiones_ok` | 2 | ¿Dos aciertos seguidos bastan para dar una pregunta por asentada? |
+| `cobertura_bloque` | 60% | ¿Es alcanzable sin frustrar, o hay que bajarlo? |
+| `min_respuestas_dificultad` | 20 | Ver punto 1 |
+
+- [ ] Revisar estos cinco tras las primeras semanas de uso real.
+
+#### 3. Funciones que solo tienen sentido con historial
+- [ ] **"¿Estoy listo para el examen?"** (Fase 5.2): necesita que el SM-2 haya acumulado `intervalo` y `proxima_revision` durante semanas. Con un alumno recién llegado no se puede proyectar nada.
+- [ ] **Rachas y constancia** (Fase 5.1): necesita días de actividad. Hoy no se guarda ningún registro diario.
+- [ ] **Informe para el preparador** (Fase 4): sin alumnos con recorrido, el informe está vacío.
+
+#### 4. Lo que hay que vigilar cuando entren los 2 alumnos
+- [ ] ¿La regla de dominio **frustra**? (un bloque que no se da por estudiado pese a ir bien).
+- [ ] ¿La prueba de nivel del veterano **detecta** de verdad sus lagunas por bloque?
+- [ ] ¿El plan de partida del principiante le resulta **útil o arbitrario**?
+
 ### 📊 Backlog del perfil alumno — del análisis competitivo (12/07/2026)
 
 Análisis completo (con datos medidos contra la BD, no impresiones) en **`docs/analisis-competencia-alumno.md`**. Conclusión: *no vamos por detrás en tecnología, sino en producto* — el motor es mejor de lo que la interfaz deja ver.

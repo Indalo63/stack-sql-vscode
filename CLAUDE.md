@@ -130,6 +130,15 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
+## 🔬 Deuda EMPÍRICA — lo que solo se cierra con alumnos reales (12/07/2026)
+
+No es deuda técnica: está todo **construido y funcionando**, pero **calibrado con conjeturas**. Detalle y checklist en **`TODO.md`**.
+
+1. **La dificultad de las preguntas es una CONJETURA.** Las 297 tienen `dificultad_origen='heuristica'` (migración 047): un valor provisional de señales del texto que **nadie ha comprobado que acierte**. En cuanto haya respuestas reales, `scripts/calcular_dificultad.py --solo-empirica` lo sustituye por el % de acierto medido. **Y hay que validar la heurística**: si no correlaciona con el dato real, es ruido y se tira.
+   - ⚠️ **No madurará con el MVP**: calibrar el banco exige ~4.860 respuestas (243 preguntas × 20). Con 2 alumnos solo se alcanzará el umbral en las preguntas más servidas. **La dificultad empírica necesita escala** (una academia), no 2 alumnos.
+2. **Los 5 parámetros de `parametros_aprendizaje` están puestos a ojo** (muestra_minima=5, umbral_dominio=70, repeticiones_ok=2, cobertura_bloque=60, min_respuestas_dificultad=20). **Viven en BD precisamente para calibrarlos sin desplegar.**
+3. **Fases 4, 5.1 y 5.2 no se pueden ni empezar a evaluar sin historial** (informe al preparador, rachas, "¿estoy listo?").
+
 ## ⚠️ MVP EN CURSO — hay datos de PRUEBA en la base de datos (12/07/2026)
 
 **88 preguntas están aprobadas SIN revisión humana real** (`preguntas_test.es_prueba = TRUE`, `revisado_por='PRUEBA_MVP'`) y hay **2 alumnos ficticios** (`alumno.mvp.uno@example.com`, `alumno.mvp.dos@example.com`). Se crearon para validar el motor de aprendizaje con 2 alumnos de prueba.
