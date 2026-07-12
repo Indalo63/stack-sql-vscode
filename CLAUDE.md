@@ -181,6 +181,17 @@ Fase 1 del rediseño propuesto por el usuario en un boceto (PDF, diagrama a mano
 
 **Nota:** esto no sustituye a mantener la pantalla de consentimiento OAuth bien configurada, pero ya no es la única barrera: aunque se publicase a producción, una cuenta ajena no pasaría de "Acceso denegado".
 
+### Completado — Backfill de tema en las preguntas IA (12/07/2026)
+Al explicar por qué los contadores por tema sumaban más que el total del banco, salió a la luz un hueco de datos: **60 de las 70 preguntas IA pendientes no tenían tema asignado** (`preguntas_test.epigrafe_id IS NULL`). El generador (`build_test_bank._save`) acepta `epigrafe_id` pero **la app nunca se lo pasa**, así que toda pregunta generada desde Streamlit nace sin tema.
+
+Consecuencia (era lógica de negocio, no un bug): sin tema propio, el contador por tema tenía que deducirlo a través de la ley, y una misma ley es material de muchos temas (LPAC → **18** temas, LGP → 15). Las 10 preguntas de LPAC se contaban en los 18 temas que la estudian, de ahí que la suma se disparase.
+
+- [✅ Backfill ejecutado] `scripts/asignar_epigrafes.py --supabase --n 100` sobre las 60 sin tema: **60/60 OK, 0 errores**. Dry-run previo sobre 5 para revisar calidad (TUE → tema II.1, correcto). No tocó las preguntas oficiales (ya tenían tema).
+- [✅ Resultado] Las 70 pendientes reparten ahora en **12 temas oficiales** sumando **exactamente 70** (antes, contadas vía ley, se solapaban). Reparto: IV.7 (20), VI.1 (11), II.6 (9), II.1 (8), IV.11 (8), VI.3 (3), VI.5 (3), II.3 (2), IV.12 (2), VI.4 (2), II.5 (1), VI.2 (1).
+- [ℹ️ Contador del selector, sin cambios por decisión del usuario] `pendientes_por_tema` sigue contando **vía ley** (tema → leyes → pendientes), no por el `epigrafe_id` de la pregunta. Es lo coherente con lo que el editor realmente ve: el filtro "Por tema" de Revisar resuelve tema → leyes y `_get_pending` filtra por `ley_id`. Si algún día se quiere que "Revisar por tema" muestre **solo las preguntas de ese tema** (exacto, sin solape), hay que cambiar **las dos cosas a la vez**: `_get_pending` (filtrar por `epigrafe_id`) y `pendientes_por_tema`.
+
+**⏳ Pendiente — que el generador asigne el tema al crear la pregunta.** Si no, cada tanda nueva de preguntas IA volverá a nacer sin tema y habrá que repasar el backfill a mano. `build_test_bank._save(ley_id, art, parsed, epigrafe_id=None)` ya acepta el parámetro; falta que el modo "Nuevas preguntas" de `streamlit_app.py` se lo pase (el selector ya sabe qué temas eligió el editor). Anotado también en `TODO.md`.
+
 ### Completado — Revisar preguntas: hacer visible dónde está el trabajo (12/07/2026)
 Detectado por el usuario al ver la app: el panel decía **70 pendientes (todo el banco)** pero el bloque seleccionado (I, el que sale por defecto) mostraba "No hay preguntas pendientes". No era un bug — las 70 estaban en los bloques II (20), IV (30) y VI (20), y el Bloque I está genuinamente vacío. La anomalía era **de diseño**: el contador es global pero la lista está filtrada, así que la app decía *cuánto* trabajo hay pero no *dónde*, y había que ir probando bloques (o los 58 temas) a ciegas.
 
