@@ -22,32 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-
-def _load_supabase_secrets():
-    secrets_path = Path(__file__).parent.parent / ".streamlit" / "secrets.toml"
-    if not secrets_path.exists():
-        print("ERROR: .streamlit/secrets.toml no encontrado.", file=sys.stderr)
-        sys.exit(1)
-
-    secrets = {}
-    for line in secrets_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or line.startswith("["):
-            continue
-        if "=" in line:
-            k, _, v = line.partition("=")
-            secrets[k.strip()] = v.strip().strip('"').strip("'")
-
-    for k, v in secrets.items():
-        os.environ[k] = v
-
-    direct_host = secrets.get("DB_HOST", "")
-    ref = direct_host.split(".")[1] if direct_host.startswith("db.") else ""
-    if ref:
-        os.environ["DB_HOST"] = "aws-1-eu-west-2.pooler.supabase.com"
-        os.environ["DB_USER"] = f"postgres.{ref}"
-
-    print(f"Supabase via Session Pooler: {os.environ['DB_HOST']}")
+from scripts._supabase_env import load_supabase_secrets as _load_supabase_secrets
 
 
 def _fetch_pendientes(limit=None, pregunta_id=None):
