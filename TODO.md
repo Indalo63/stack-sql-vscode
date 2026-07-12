@@ -126,6 +126,18 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### 🔴 Pendiente — Cambiar producción al usuario de BD con permisos mínimos (12/07/2026)
+
+**Lo tiene que hacer el usuario**: requiere tocar los secrets de Streamlit Cloud, y si algo falla la app deja de conectar. Guía paso a paso (con rollback) en **`docs/cambiar-usuario-bd-produccion.md`**.
+
+**Estado:** el rol `app_asistente` **ya está creado y probado** en Supabase (migración 040). La app funciona entera con él y no puede borrar tablas ni datos (verificado: `DROP`/`DELETE`/`TRUNCATE`/`CREATE` fallan con `InsufficientPrivilege`). **Producción sigue conectando como `postgres`** hasta que se haga este cambio.
+
+- [ ] Generar/recuperar la contraseña de `app_asistente` (no está en el repo, a propósito). Si no se tiene: `ALTER ROLE app_asistente PASSWORD '<aleatoria>';` desde el SQL Editor de Supabase.
+- [ ] En Streamlit Cloud → Settings → Secrets, cambiar **solo** dos líneas: `DB_USER = "app_asistente"` y `DB_PASSWORD = "<la nueva>"`. **No tocar** `DB_HOST`/`DB_PORT`/`DB_NAME`.
+- [ ] Comprobar en la app: carga de leyes, cola de "Revisar preguntas", aprobar una pregunta, listado de "Editores".
+- **Por qué importa:** hoy la app conecta como `postgres`, que puede **borrar tablas** y se salta el RLS. La app no necesita ninguno de esos permisos.
+- **Si falla con un error de permisos:** no hay que volver a `postgres`; basta añadir el `GRANT` concreto que falte.
+
 ### 🔴 Pendiente IMPORTANTE — Dos leyes con la referencia oficial contradictoria (12/07/2026)
 
 Detectado al poblar `leyes.nombre_oficial` desde el BOE (migración 038). **No bloquea nada hoy, pero sí afecta a la calidad jurídica de las preguntas**: el generador cita ahora el `nombre_oficial`, así que si el título es el equivocado, las preguntas de esas dos leyes citarán una norma que no es. Requiere criterio jurídico (no lo puede decidir el código).
