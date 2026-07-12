@@ -194,6 +194,7 @@ def pendientes_por_bloque(oposicion_id: int) -> dict[str, int]:
                                               AND ol.oposicion_id = %s
                 WHERE pt.fuente = 'ia'
                   AND pt.revisada = FALSE
+                  AND NOT pt.descartada
                   AND ol.excluir_test = FALSE
                 GROUP BY ol.bloque
             """, (oposicion_id,))
@@ -219,10 +220,71 @@ def pendientes_por_tema(oposicion_id: int) -> dict[int, int]:
                                               AND ol.oposicion_id = %s
                 WHERE pt.fuente = 'ia'
                   AND pt.revisada = FALSE
+                  AND NOT pt.descartada
                   AND ol.excluir_test = FALSE
                 GROUP BY el.epigrafe_id
             """, (oposicion_id,))
             return {e: n for e, n in cur.fetchall()}
+
+
+def descartar_pregunta(pregunta_id: int, motivo: str, quien: str) -> str | None:
+    """
+    Rechaza una pregunta sin borrarla (migración 039). Devuelve None si fue bien,
+    o el motivo del error.
+
+    Antes esto era un DELETE: cualquier editor destruía trabajo de forma
+    irreversible y sin dejar rastro. Ahora queda guardada, con justificación,
+    autor y fecha, y un administrador puede restaurarla.
+    """
+    motivo = (motivo or "").strip()
+    if not motivo:
+        return "Escribe el motivo del rechazo: es obligatorio."
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE normas.preguntas_test
+                   SET descartada = TRUE, motivo_descarte = %s,
+                       descartada_por = %s, descartada_en = NOW()
+                 WHERE pregunta_id = %s AND NOT descartada
+            """, (motivo, quien, pregunta_id))
+            if cur.rowcount == 0:
+                return "Esa pregunta no existe o ya estaba descartada."
+        conn.commit()
+    return None
+
+
+def listar_descartadas(limite: int = 100) -> list[dict]:
+    """Preguntas rechazadas, para que un administrador las revise o restaure."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pt.pregunta_id, l.codigo AS ley_codigo, pt.articulo, pt.pregunta,
+                       pt.motivo_descarte, pt.descartada_por, pt.descartada_en
+                FROM normas.preguntas_test pt
+                LEFT JOIN normas.leyes l ON l.ley_id = pt.ley_id
+                WHERE pt.descartada
+                ORDER BY pt.descartada_en DESC
+                LIMIT %s
+            """, (limite,))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def restaurar_pregunta(pregunta_id: int) -> str | None:
+    """Devuelve una pregunta descartada a la cola de revisión. Solo administradores."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE normas.preguntas_test
+                   SET descartada = FALSE, motivo_descarte = NULL,
+                       descartada_por = NULL, descartada_en = NULL
+                 WHERE pregunta_id = %s AND descartada
+            """, (pregunta_id,))
+            if cur.rowcount == 0:
+                return "Esa pregunta no existe o no estaba descartada."
+        conn.commit()
+    return None
 
 
 def get_oposiciones() -> list[dict]:

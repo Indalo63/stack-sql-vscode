@@ -18,6 +18,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            revocar_editor, cambiar_rol_editor,
                            pendientes_por_bloque, pendientes_por_tema,
                            get_bloque_y_epigrafes,
+                           descartar_pregunta, listar_descartadas, restaurar_pregunta,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
@@ -937,6 +938,7 @@ def _get_pending(ley_ids: list[int]) -> list[dict]:
                 WHERE pt.ley_id = ANY(%s)
                   AND pt.fuente   = 'ia'
                   AND pt.revisada = FALSE
+                  AND NOT pt.descartada
                 ORDER BY pt.ley_id, pt.generada_en DESC
             """, (ley_ids,))
             cols = [d[0] for d in cur.description]
@@ -969,14 +971,8 @@ def _approve(pregunta_id: int, email: str, data: dict) -> None:
         conn.commit()
 
 
-def _reject(pregunta_id: int) -> None:
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "DELETE FROM normas.preguntas_test WHERE pregunta_id = %s",
-                (pregunta_id,)
-            )
-        conn.commit()
+# Nota: aquí vivía _reject(), que hacía DELETE FROM preguntas_test. Se eliminó en la
+# migración 039: rechazar ya no destruye, usa retrieval.descartar_pregunta().
 
 
 def _get_review_stats() -> dict:
@@ -989,7 +985,7 @@ def _get_review_stats() -> dict:
                 SELECT COUNT(*) FILTER (WHERE NOT revisada) AS pendientes,
                        COUNT(*) FILTER (WHERE revisada)     AS revisadas
                 FROM normas.preguntas_test
-                WHERE fuente = 'ia'
+                WHERE fuente = 'ia' AND NOT descartada
             """)
             pendientes, revisadas = cur.fetchone()
 
@@ -1337,10 +1333,56 @@ elif modo == "Revisar preguntas":
                         st.success("Aprobada y guardada.")
                         st.rerun()
                 with col_ko:
+                    # Rechazar ya NO borra (migración 039): descarta con justificación
+                    # obligatoria y queda recuperable por un administrador.
                     if st.button("❌ Rechazar", key=f"ko_{pid}"):
-                        _reject(pid)
-                        st.warning("Pregunta eliminada.")
-                        st.rerun()
+                        st.session_state[f"confirmar_ko_{pid}"] = True
+
+                if st.session_state.get(f"confirmar_ko_{pid}"):
+                    st.warning("Vas a descartar esta pregunta. Explica por qué:")
+                    motivo = st.text_area(
+                        "Motivo del rechazo", key=f"motivo_{pid}",
+                        placeholder="Ej.: el artículo citado no corresponde; los distractores son triviales…",
+                    )
+                    col_si, col_no = st.columns(2)
+                    with col_si:
+                        if st.button("Confirmar rechazo", key=f"ko_ok_{pid}", type="primary"):
+                            error = descartar_pregunta(pid, motivo, user["email"])
+                            if error:
+                                st.error(error)
+                            else:
+                                st.session_state.pop(f"confirmar_ko_{pid}", None)
+                                st.rerun()
+                    with col_no:
+                        if st.button("Cancelar", key=f"ko_no_{pid}"):
+                            st.session_state.pop(f"confirmar_ko_{pid}", None)
+                            st.rerun()
+
+    # ── Descartadas: solo administradores (ver motivo y restaurar) ────────────
+    if es_admin:
+        descartadas = listar_descartadas()
+        if descartadas:
+            with st.expander(f"🗑️ Preguntas descartadas ({len(descartadas)})"):
+                st.caption(
+                    "Rechazar no borra: la pregunta queda aquí con su motivo y se "
+                    "puede devolver a la cola de revisión."
+                )
+                for d in descartadas:
+                    col_txt, col_btn = st.columns([4, 1])
+                    with col_txt:
+                        st.markdown(f"**[{d['ley_codigo']}] Art. {d['articulo']}** — {d['pregunta'][:90]}…")
+                        st.caption(
+                            f"Motivo: *{d['motivo_descarte']}* · {d['descartada_por']} · "
+                            f"{d['descartada_en'].strftime('%d/%m/%Y %H:%M')}"
+                        )
+                    with col_btn:
+                        if st.button("Restaurar", key=f"rest_{d['pregunta_id']}"):
+                            error = restaurar_pregunta(d["pregunta_id"])
+                            if error:
+                                st.error(error)
+                            else:
+                                st.rerun()
+                    st.divider()
 
 # ── Modo Simulacros academia ─────────────────────────────────────────────────
 elif modo == "Simulacros academia":
@@ -1393,7 +1435,13 @@ elif modo == "Simulacros academia":
             f"{s['fecha_fin'].strftime('%d/%m/%Y %H:%M')}"
         )
         if s["estado"] == "generado":
-            if st.button("Autorizar", key=f"autorizar_sim_{s['simulacro_id']}", type="primary"):
+            # Autorizar publica el simulacro a TODOS los alumnos: acción sensible,
+            # reservada a administradores. Generar sí puede hacerlo un editor.
+            if st.button("Autorizar", key=f"autorizar_sim_{s['simulacro_id']}",
+                         type="primary", disabled=not es_admin,
+                         help=None if es_admin else
+                              "Solo un administrador puede autorizar un simulacro: "
+                              "al hacerlo queda abierto a todos los alumnos."):
                 autorizar_simulacro_academia(s["simulacro_id"], user["email"])
                 st.rerun()
         else:
