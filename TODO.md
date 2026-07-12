@@ -157,12 +157,18 @@ La dificultad es solo **la mitad** de la teoría clásica de test. La otra mitad
 - [x] Sección **"Calidad del banco"** en el panel de admin.
 - [ ] ⚠️ **Ejecutarlo cuando haya alumnos**: con 2 no dice nada (no hay variabilidad de capacidad). Madura con decenas.
 
-#### 4. Calibración de confianza y decisión de dejar en blanco
+#### 4. [✅ HECHO 12/07/2026 — migración 050] Calibración de confianza y decisión de dejar en blanco
 La fórmula oficial es **A − E/3**: responder a ciegas **resta**. Saber **cuándo NO contestar** es una destreza entrenable, y **ningún competidor la entrena**. Es específica de las oposiciones españolas.
 
-- [ ] Pedir la confianza del alumno antes de corregir (ej.: seguro / dudo / ni idea).
-- [ ] Medir su **calibración**: "fallas justo cuando dices estar seguro" / "dejas en blanco preguntas que sabías".
-- [ ] Entrenar la decisión óptima según la penalización.
+- [✅ Migración 050] `respuestas.confianza` (`seguro` | `dudo` | `ni_idea`, NULL si no la declara). Se pide **antes** de corregir: sin ese dato, **acertar por saberlo y acertar por suerte son indistinguibles** en la base de datos. `parametros_aprendizaje.min_respuestas_calibracion` (10) en BD.
+- [✅ `retrieval.get_umbral_rentabilidad()`] El umbral **se deriva de `convocatorias`, no se hardcodea**: `p* = (pen_error − pen_blanco) / (valor_acierto + pen_error)`. Con GACE da **25,0%** — exactamente el azar de 4 opciones. Conclusión contraintuitiva que se le enseña al alumno: **"ante la duda, en blanco" es matemáticamente FALSO**; descartar una sola opción sube el acierto a 1/3 y responder ya SUMA. Otra oposición con otra fórmula obtiene su propio umbral sin tocar código.
+- [✅ `retrieval.get_calibracion()`] Detecta las **dos patologías caras**, invisibles sin este dato:
+  - **Exceso de confianza** — falla diciendo "lo sé". Lo grave no es el fallo: es que **nunca lo repasará**, porque cree dominarlo.
+  - **Exceso de prudencia** — deja en blanco lo que habría acertado. Regala puntos evitando una penalización que no le salía a cuenta evitar.
+  - Además: **calibración monótona** (¿acierta más cuanto más seguro dice estar?) y **puntos/pregunta** por nivel de confianza, en la escala de la fórmula oficial.
+- [✅ `streamlit_app.py`] Selector 🟢 Lo sé / 🟡 Dudo / 🔴 Ni idea en **Repaso** y **Simulacro personal** (no en la prueba de nivel: 40 preguntas ya son mucha fricción para el onboarding; no en el simulacro de academia: es el examen de la academia, no un entrenamiento). Aviso en el sitio al fallar diciendo "lo sé". Panel **"¿Sabes lo que sabes?"** en Mi progreso.
+- [⚠️ Regla] Con menos de `min_respuestas_calibracion` en un nivel **no se da diagnóstico**: un consejo mal fundado es peor que ninguno.
+- [✅ Validado plantando las dos patologías] Alumno de laboratorio con exceso de confianza (58,3% acertando cuando dice "seguro") y exceso de prudencia (41,7% de acierto con "ni idea" —por encima del 25%— y 6 en blanco): **las dos cazadas**, con el texto correcto. Datos borrados. Verificado además en navegador real: el selector aparece, el aviso de "dijiste que lo sabías" salta, y el panel de Mi progreso muestra el umbral 25,0% leído de BD. Sin errores de consola.
 
 #### 5. Práctica intercalada (interleaving)
 Hoy el repaso es **por tema, en bloque**. La evidencia dice que **intercalar** material parecido-pero-distinto mejora la **discriminación** — y eso es justo lo que el examen explota: confundir los plazos de la LPAC con los de la LRJSP. Practicar cada ley por separado **no entrena esa distinción**.

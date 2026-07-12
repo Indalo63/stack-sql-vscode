@@ -637,12 +637,17 @@ def get_plan_partida(oposicion_id: int, n_temas: int = 8) -> list[dict]:
 
 
 def registrar_respuesta(user_id: str, pregunta_id: int, opcion_elegida: str | None,
-                        correcta: bool, contexto: str, segundos: int | None = None) -> None:
+                        correcta: bool, contexto: str, segundos: int | None = None,
+                        confianza: str | None = None) -> None:
     """
     Guarda UNA respuesta con la opción que eligió el alumno (migración 048).
 
     `opcion_elegida = None` significa que la dejó **en blanco** — y eso no es
     ruido: con la fórmula A−E/3, dejar en blanco es una decisión estratégica.
+
+    `confianza` (migración 050) es lo que el alumno DECLARÓ antes de ver la
+    corrección: 'seguro' | 'dudo' | 'ni_idea', o None si no se le pidió. Sin
+    ese dato, acertar por saberlo y acertar por suerte se ven exactamente igual.
 
     Es la base del análisis de distractores, del índice de discriminación (que
     detecta preguntas rotas o mal marcadas) y del diagnóstico real del error.
@@ -652,10 +657,228 @@ def registrar_respuesta(user_id: str, pregunta_id: int, opcion_elegida: str | No
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO normas.respuestas
-                    (user_id, pregunta_id, opcion_elegida, correcta, contexto, segundos)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (user_id, pregunta_id, opcion_elegida, correcta, contexto, segundos))
+                    (user_id, pregunta_id, opcion_elegida, correcta, contexto,
+                     segundos, confianza)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, pregunta_id, opcion_elegida, correcta, contexto,
+                  segundos, confianza))
         conn.commit()
+
+
+# Etiquetas de confianza, de más a menos. El orden importa: se usa para
+# comprobar si la calibración es MONÓTONA (acertar más cuanto más seguro dices
+# estar es, literalmente, la definición de estar bien calibrado).
+NIVELES_CONFIANZA = ("seguro", "dudo", "ni_idea")
+
+# Si dices estar seguro y aciertas menos de esto, no lo sabías: lo creías.
+_UMBRAL_SEGURO_FIABLE = 85.0
+
+
+def get_umbral_rentabilidad(oposicion_id: int) -> dict:
+    """
+    A partir de qué probabilidad de acierto sale a cuenta responder en vez de
+    dejar en blanco, según la fórmula oficial de la convocatoria vigente.
+
+        p* = (penalizacion_error − penalizacion_blanco) / (valor_acierto + penalizacion_error)
+
+    NO se hardcodea nada: los tres valores salen de `normas.convocatorias`, así
+    que una oposición con otra fórmula (o GACE si la cambia) obtiene su propio
+    umbral sin tocar código.
+
+    Con la fórmula GACE (1, 1/3, 0) el umbral es **0,25** — exactamente el azar
+    de 4 opciones. Consecuencia contraintuitiva y muy rentable de enseñar:
+    responder al azar es NEUTRO, y descartar una sola opción (p = 1/3) ya hace
+    que responder GANE puntos. "Ante la duda, en blanco" es matemáticamente
+    falso con esta fórmula.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT valor_acierto, penalizacion_error, penalizacion_blanco, año
+                FROM normas.convocatorias
+                WHERE oposicion_id = %s
+                ORDER BY año DESC
+                LIMIT 1
+            """, (oposicion_id,))
+            row = cur.fetchone()
+
+    if row is None:
+        return {"disponible": False,
+                "motivo": "No hay convocatoria configurada para esta oposición."}
+
+    va, pe, pb, anio = float(row[0]), float(row[1]), float(row[2]), row[3]
+    if va + pe <= 0:
+        return {"disponible": False, "motivo": "La fórmula configurada no penaliza el error."}
+
+    umbral = (pe - pb) / (va + pe)
+    return {
+        "disponible":   True,
+        "año":          anio,
+        "valor_acierto":       va,
+        "penalizacion_error":  pe,
+        "penalizacion_blanco": pb,
+        "umbral_pct":   round(100 * umbral, 1),
+        # Descartar una opción deja 3 candidatas: ¿ya compensa responder?
+        "compensa_con_una_descartada": (1 / 3) > umbral,
+    }
+
+
+def get_calibracion(user_id: str, oposicion_id: int) -> dict:
+    """
+    ¿Sabe el alumno lo que sabe? (migración 050)
+
+    Cruza la confianza que DECLARÓ con lo que realmente ocurrió. Dos patologías,
+    ambas caras y ambas invisibles sin este dato:
+
+      · **Exceso de confianza** — dice "seguro" y falla. Lo grave no es el fallo:
+        es que no volverá a repasar eso, porque cree que lo domina.
+      · **Exceso de prudencia** — deja en blanco preguntas que habría acertado.
+        Regala puntos evitando una penalización que no le salía a cuenta evitar.
+
+    Y la pregunta del millón, que solo se contesta con SUS datos: cuando dice
+    "ni idea", ¿acierta por encima del umbral de rentabilidad (p*)? Si sí, debe
+    responder SIEMPRE — sus corazonadas valen puntos. Si no, los distractores le
+    arrastran y ahí sí debe callar.
+
+    Devuelve `disponible=False` mientras no haya muestra suficiente: un consejo
+    mal fundado es peor que ninguno.
+    """
+    params = get_parametros_aprendizaje(oposicion_id)
+    min_n = params.get("min_respuestas_calibracion", 10)
+    rent = get_umbral_rentabilidad(oposicion_id)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT confianza,
+                       COUNT(*)                                       AS total,
+                       COUNT(*) FILTER (WHERE opcion_elegida IS NULL) AS blancos,
+                       COUNT(*) FILTER (WHERE correcta)               AS aciertos
+                FROM normas.respuestas
+                WHERE user_id = %s AND confianza IS NOT NULL
+                GROUP BY confianza
+            """, (user_id,))
+            filas = {r[0]: {"total": r[1], "blancos": r[2], "aciertos": r[3]}
+                     for r in cur.fetchall()}
+
+    total_declaradas = sum(f["total"] for f in filas.values())
+    if not total_declaradas:
+        return {"disponible": False,
+                "motivo": "Todavía no has declarado tu confianza en ninguna pregunta.",
+                "rentabilidad": rent}
+
+    umbral_pct = rent["umbral_pct"] if rent["disponible"] else 25.0
+    niveles = []
+    for nivel in NIVELES_CONFIANZA:
+        f = filas.get(nivel, {"total": 0, "blancos": 0, "aciertos": 0})
+        respondidas = f["total"] - f["blancos"]
+        # El % de acierto se mide sobre las que CONTESTÓ: un blanco no es un
+        # fallo de conocimiento, es una decisión. Mezclarlos falsea el dato.
+        pct = round(100 * f["aciertos"] / respondidas, 1) if respondidas else None
+        niveles.append({
+            "confianza":   nivel,
+            "total":       f["total"],
+            "respondidas": respondidas,
+            "blancos":     f["blancos"],
+            "aciertos":    f["aciertos"],
+            "pct_acierto": pct,
+            "fiable":      f["total"] >= min_n,
+            # Puntos que gana (o pierde) por cada pregunta que contesta con esta
+            # confianza, en la escala de la fórmula oficial.
+            "valor_esperado": (
+                round(
+                    (f["aciertos"] * rent["valor_acierto"]
+                     - (respondidas - f["aciertos"]) * rent["penalizacion_error"]) / respondidas,
+                    2,
+                )
+                if respondidas and rent["disponible"] else None
+            ),
+        })
+
+    por_nivel = {n["confianza"]: n for n in niveles}
+    diagnosticos = []
+
+    seguro = por_nivel["seguro"]
+    if seguro["fiable"] and seguro["pct_acierto"] is not None:
+        if seguro["pct_acierto"] < _UMBRAL_SEGURO_FIABLE:
+            diagnosticos.append({
+                "tipo": "exceso_confianza",
+                "gravedad": "alta",
+                "texto": (
+                    f"Cuando dices estar **seguro**, aciertas el "
+                    f"{seguro['pct_acierto']}%. Es decir: **el "
+                    f"{round(100 - seguro['pct_acierto'], 1)}% de las veces que crees "
+                    f"saberlo, no lo sabes** — y no vas a repasarlo, precisamente "
+                    f"porque crees que lo dominas. Es el fallo más caro que existe: "
+                    f"revisa las que fallaste estando seguro."
+                ),
+            })
+        else:
+            diagnosticos.append({
+                "tipo": "seguro_fiable",
+                "gravedad": "ok",
+                "texto": (
+                    f"Cuando dices estar seguro, aciertas el {seguro['pct_acierto']}%. "
+                    f"Tu 'seguro' vale: puedes fiarte de él el día del examen."
+                ),
+            })
+
+    # ¿Deja en blanco lo que habría acertado?
+    for nivel in ("dudo", "ni_idea"):
+        n = por_nivel[nivel]
+        if not n["fiable"] or n["pct_acierto"] is None:
+            continue
+        etiqueta = "dudo" if nivel == "dudo" else "ni idea"
+        if n["pct_acierto"] > umbral_pct and n["blancos"]:
+            diagnosticos.append({
+                "tipo": "exceso_prudencia",
+                "gravedad": "alta",
+                "texto": (
+                    f"Cuando dices «{etiqueta}» y **contestas**, aciertas el "
+                    f"{n['pct_acierto']}% — por encima del {umbral_pct}% que necesitas "
+                    f"para que responder salga a cuenta. Y aun así has dejado "
+                    f"**{n['blancos']} en blanco**: son puntos que estás regalando. "
+                    f"Contesta siempre que puedas descartar aunque sea una opción."
+                ),
+            })
+        elif n["pct_acierto"] < umbral_pct:
+            diagnosticos.append({
+                "tipo": "callar_compensa",
+                "gravedad": "media",
+                "texto": (
+                    f"Cuando dices «{etiqueta}» y contestas, aciertas el "
+                    f"{n['pct_acierto']}%, por debajo del {umbral_pct}% que hace "
+                    f"rentable responder: los distractores te están arrastrando. "
+                    f"Aquí sí compensa dejarla en blanco."
+                ),
+            })
+
+    # ¿Es monótona? Estar bien calibrado significa acertar más cuanto más seguro dices estar.
+    fiables = [n for n in niveles if n["fiable"] and n["pct_acierto"] is not None]
+    monotona = all(
+        fiables[i]["pct_acierto"] >= fiables[i + 1]["pct_acierto"]
+        for i in range(len(fiables) - 1)
+    ) if len(fiables) >= 2 else None
+    if monotona is False:
+        diagnosticos.append({
+            "tipo": "no_monotona",
+            "gravedad": "alta",
+            "texto": (
+                "Aciertas MÁS en las preguntas que dudas que en las que dices "
+                "dominar. Tu sensación de seguridad no te está informando de nada: "
+                "no te fíes de ella para decidir qué repasar."
+            ),
+        })
+
+    return {
+        "disponible":       True,
+        "total_declaradas": total_declaradas,
+        "min_respuestas":   min_n,
+        "niveles":          niveles,
+        "monotona":         monotona,
+        "diagnosticos":     diagnosticos,
+        "rentabilidad":     rent,
+    }
 
 
 def analisis_distractores(pregunta_id: int) -> dict:

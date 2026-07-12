@@ -24,6 +24,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            aplicar_pesos_bloque, get_historial_pesos,
                            get_preguntas_sm2, update_progreso_sm2,
                            registrar_respuesta, analisis_distractores,
+                           get_calibracion, get_umbral_rentabilidad,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
                            get_preguntas_prueba_nivel,
@@ -321,9 +322,23 @@ def _mensaje_error_alumno(e: Exception, accion: str) -> str:
     return f"No se pudo completar el {accion_txt}: {e}"
 
 
+_ETIQUETA_CONFIANZA = {
+    "seguro":  "🟢 Lo sé",
+    "dudo":    "🟡 Dudo",
+    "ni_idea": "🔴 Ni idea",
+}
+
+
 def _render_preguntas(preguntas: list[dict], respuestas: dict, key_prefix: str,
-                      respondido: bool) -> None:
-    """Renderiza una tanda de preguntas a/b/c/d; si `respondido`, muestra corrección."""
+                      respondido: bool, confianzas: dict | None = None) -> None:
+    """
+    Renderiza una tanda de preguntas a/b/c/d; si `respondido`, muestra corrección.
+
+    Si se pasa `confianzas`, se pide además —**antes** de corregir— cómo de
+    seguro está el alumno. Sin ese dato, acertar por saberlo y acertar por suerte
+    se ven idénticos, y no hay forma de detectar ni el exceso de confianza ni el
+    de prudencia (migración 050). Es opcional: quien no la declare, no la declara.
+    """
     for i, p in enumerate(preguntas, 1):
         pid      = p["pregunta_id"]
         opciones = {
@@ -342,6 +357,17 @@ def _render_preguntas(preguntas: list[dict], respuestas: dict, key_prefix: str,
                 label_visibility="collapsed",
             )
             respuestas[pid] = resp
+
+            if confianzas is not None:
+                conf = st.radio(
+                    "¿Cómo de seguro estás?",
+                    options=list(_ETIQUETA_CONFIANZA.keys()),
+                    format_func=lambda c: _ETIQUETA_CONFIANZA[c],
+                    key=f"{key_prefix}_conf_{pid}",
+                    index=None,
+                    horizontal=True,
+                )
+                confianzas[pid] = conf
         else:
             correcta = p["correcta"]
             elegida  = respuestas.get(pid)
@@ -352,6 +378,21 @@ def _render_preguntas(preguntas: list[dict], respuestas: dict, key_prefix: str,
                     st.markdown(f"❌ {letra}) {texto}")
                 else:
                     st.markdown(f"{letra}) {texto}")
+
+            # El fallo estando seguro es el más caro: no se repasa, porque el
+            # alumno cree que lo domina. Se le señala en el sitio, no en un panel.
+            conf = (confianzas or {}).get(pid)
+            if conf == "seguro" and elegida != correcta:
+                st.warning(
+                    "⚠️ Dijiste que lo sabías y has fallado. Estas son las que "
+                    "más cuestan: nunca las repasarías por tu cuenta."
+                )
+            elif conf == "ni_idea" and elegida == correcta:
+                st.caption(
+                    "🎲 Has acertado diciendo «ni idea». Si esto te pasa a menudo, "
+                    "responder a ciegas te sale a cuenta — lo verás en Mi progreso."
+                )
+
             if p.get("explicacion"):
                 st.info(p["explicacion"])
         st.divider()
@@ -453,10 +494,11 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
 
     if "repaso" not in st.session_state:
         st.session_state.repaso = {
-            "preguntas": [], "respuestas": {}, "respondido": False,
+            "preguntas": [], "respuestas": {}, "confianzas": {}, "respondido": False,
             "bloque": None, "epigrafe_id": None, "tema_label": None,
         }
     repaso = st.session_state.repaso
+    repaso.setdefault("confianzas", {})
 
     with st.expander("📊 Tu estado actual por bloque y tema", expanded=not repaso["preguntas"]):
         _panel_estado_bloques(stats)
@@ -505,7 +547,8 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
                 st.warning("No hay preguntas disponibles todavía para esta selección.")
             else:
                 repaso.update(
-                    preguntas=preguntas, respuestas={}, respondido=False, bloque=bloque_sel,
+                    preguntas=preguntas, respuestas={}, confianzas={},
+                    respondido=False, bloque=bloque_sel,
                     epigrafe_id=(None if tema_sel == _TEMA_TODO_BLOQUE else tema_sel),
                     tema_label=opciones_tema[tema_sel],
                 )
@@ -515,13 +558,15 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
     if not repaso["respondido"]:
         # Momento 2: composición de la tanda — mensaje genérico, sin desglose.
         st.caption(f"🎯 Tanda personalizada según tu progreso — {repaso['tema_label']}.")
-        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso", respondido=False)
+        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso",
+                          respondido=False, confianzas=repaso["confianzas"])
         if st.button("Comprobar respuestas", type="primary"):
             temas_tocados = set()
             for p in repaso["preguntas"]:
                 elegida = repaso["respuestas"].get(p["pregunta_id"])
                 registrar_respuesta(user_id, p["pregunta_id"], elegida,
-                                    elegida == p["correcta"], "repaso")
+                                    elegida == p["correcta"], "repaso",
+                                    confianza=repaso["confianzas"].get(p["pregunta_id"]))
                 if elegida is not None:
                     update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
                     if p.get("epigrafe_id"):
@@ -531,7 +576,8 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
             repaso["respondido"] = True
             st.rerun()
     else:
-        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso", respondido=True)
+        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso",
+                          respondido=True, confianzas=repaso["confianzas"])
         ok = sum(
             1 for p in repaso["preguntas"]
             if repaso["respuestas"].get(p["pregunta_id"]) == p["correcta"]
@@ -565,7 +611,7 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
                     )
 
         if st.button("Nueva tanda →", type="primary"):
-            repaso.update(preguntas=[], respondido=False)
+            repaso.update(preguntas=[], respondido=False, confianzas={})
             st.rerun()
 
 
@@ -578,11 +624,23 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
         "\"Mi progreso\"."
     )
 
+    rent = get_umbral_rentabilidad(oposicion_id)
+    if rent["disponible"]:
+        st.caption(
+            f"📐 Con la fórmula oficial, responder sale a cuenta si aciertas más "
+            f"del **{rent['umbral_pct']}%** de las veces. Ese es justo el azar de "
+            f"cuatro opciones: **si puedes descartar una sola opción, contestar ya "
+            f"te suma**. Declara tu confianza en cada pregunta y en \"Mi progreso\" "
+            f"verás si tu instinto acierta o te está costando puntos."
+        )
+
     if "simulacro" not in st.session_state:
         st.session_state.simulacro = {
-            "preguntas": [], "respuestas": {}, "respondido": False, "guardado": False,
+            "preguntas": [], "respuestas": {}, "confianzas": {},
+            "respondido": False, "guardado": False,
         }
     simulacro = st.session_state.simulacro
+    simulacro.setdefault("confianzas", {})
 
     if not simulacro["preguntas"]:
         if st.button("Empezar simulacro personal", type="primary"):
@@ -591,27 +649,30 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
                 st.warning(resultado["motivo"])
             else:
                 simulacro.update(
-                    preguntas=resultado["preguntas"], respuestas={},
+                    preguntas=resultado["preguntas"], respuestas={}, confianzas={},
                     respondido=False, guardado=False,
                 )
                 st.rerun()
         return
 
     if not simulacro["respondido"]:
-        _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro", respondido=False)
+        _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro",
+                          respondido=False, confianzas=simulacro["confianzas"])
         respondidas = sum(1 for v in simulacro["respuestas"].values() if v is not None)
         st.caption(f"{respondidas} / {len(simulacro['preguntas'])} respondidas")
         if st.button("Comprobar respuestas", type="primary"):
             simulacro["respondido"] = True
             st.rerun()
     else:
-        _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro", respondido=True)
+        _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro",
+                          respondido=True, confianzas=simulacro["confianzas"])
         preguntas = simulacro["preguntas"]
         if not simulacro["guardado"]:
             for p in preguntas:
                 elegida = simulacro["respuestas"].get(p["pregunta_id"])
                 registrar_respuesta(user_id, p["pregunta_id"], elegida,
-                                    elegida == p["correcta"], "simulacro_personal")
+                                    elegida == p["correcta"], "simulacro_personal",
+                                    confianza=simulacro["confianzas"].get(p["pregunta_id"]))
         aciertos = sum(
             1 for p in preguntas if simulacro["respuestas"].get(p["pregunta_id"]) == p["correcta"]
         )
@@ -643,7 +704,8 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
 
         if st.button("Nuevo simulacro →", type="primary"):
             st.session_state.simulacro = {
-                "preguntas": [], "respuestas": {}, "respondido": False, "guardado": False,
+                "preguntas": [], "respuestas": {}, "confianzas": {},
+                "respondido": False, "guardado": False,
             }
             st.rerun()
 
@@ -737,8 +799,83 @@ def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
         st.caption("Este intento ya ha quedado registrado en \"Mi progreso\" — no se permite repetirlo.")
 
 
+def _panel_calibracion(oposicion_id: int, user_id: str) -> None:
+    """
+    ¿Sabe el alumno lo que sabe? (migración 050)
+
+    Es la única parte de la app que no le dice si acierta, sino si **acierta
+    cuando cree que va a acertar**. De ahí salen las dos decisiones que la
+    fórmula A−E/3 convierte en puntos: qué repasar (lo que falla creyendo
+    saberlo) y cuándo contestar a ciegas.
+    """
+    cal = get_calibracion(user_id, oposicion_id)
+    rent = cal["rentabilidad"]
+
+    st.subheader("🎯 ¿Sabes lo que sabes?")
+
+    if rent["disponible"]:
+        st.info(
+            f"La fórmula oficial resta **{rent['penalizacion_error']:.2f}** por cada "
+            f"fallo y **{rent['penalizacion_blanco']:.2f}** por cada blanco. Haciendo "
+            f"la cuenta, responder te compensa siempre que aciertes más del "
+            f"**{rent['umbral_pct']}%** de las veces — que es exactamente lo que "
+            f"acertarías al azar entre cuatro opciones. Conclusión: **«ante la duda, "
+            f"en blanco» es falso**. Si logras descartar una sola opción, tu acierto "
+            f"sube al 33% y contestar ya te suma puntos."
+        )
+
+    if not cal["disponible"]:
+        st.caption(
+            f"{cal['motivo']} Al responder en Repaso o en el Simulacro personal, "
+            f"marca 🟢 Lo sé / 🟡 Dudo / 🔴 Ni idea antes de corregir: es lo que "
+            f"permite medir esto."
+        )
+        return
+
+    filas = []
+    for n in cal["niveles"]:
+        if not n["total"]:
+            continue
+        pct = f"{n['pct_acierto']}%" if n["pct_acierto"] is not None else "—"
+        ve = f"{n['valor_esperado']:+.2f}" if n["valor_esperado"] is not None else "—"
+        filas.append({
+            "Dijiste":       _ETIQUETA_CONFIANZA[n["confianza"]],
+            "Veces":         n["total"],
+            "En blanco":     n["blancos"],
+            "Acierto":       pct + ("" if n["fiable"] else " (pocos datos)"),
+            "Puntos/pregunta": ve,
+        })
+    if filas:
+        st.dataframe(filas, hide_index=True, use_container_width=True)
+        st.caption(
+            "«Puntos/pregunta» es lo que ganas (o pierdes) de media cada vez que "
+            "contestas con esa confianza, en la escala de la fórmula oficial. "
+            "Si es negativo, esas preguntas te están restando: mejor en blanco."
+        )
+
+    graves = [d for d in cal["diagnosticos"] if d["gravedad"] == "alta"]
+    otros  = [d for d in cal["diagnosticos"] if d["gravedad"] != "alta"]
+    for d in graves:
+        st.warning(d["texto"])
+    for d in otros:
+        (st.success if d["gravedad"] == "ok" else st.info)(d["texto"])
+
+    if not cal["diagnosticos"]:
+        st.caption(
+            f"Aún no hay muestra suficiente para darte un diagnóstico fiable "
+            f"(hacen falta {cal['min_respuestas']} respuestas en cada nivel). "
+            f"Llevas {cal['total_declaradas']}. Un consejo mal fundado es peor "
+            f"que ninguno, así que esperamos."
+        )
+
+
 def _modo_mi_progreso(oposicion_id: int, user_id: str) -> None:
     st.header("Mi progreso")
+
+    _panel_calibracion(oposicion_id, user_id)
+    st.divider()
+
+    st.subheader("📈 Simulacros")
     historial = get_historial_simulacros(user_id, oposicion_id)
 
     if not historial:
