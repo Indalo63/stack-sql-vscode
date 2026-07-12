@@ -1110,7 +1110,10 @@ elif modo == "Nuevas preguntas":
         ok = err = sin_tema = 0
         for ley_loop in leyes_sel:
             lid   = ley_loop["ley_id"]
-            lnomb = ley_loop["nombre"]
+            # Título oficial del BOE (migración 038). La norma obligatoria nº2 exige
+            # que el enunciado cite la norma completa: con el nombre de trabajo,
+            # Claude completaba la referencia de memoria unas veces sí y otras no.
+            lnomb = ley_loop.get("nombre_oficial") or ley_loop["nombre"]
             arts  = _fetch_articles(lid, n_gen, max_por_art)
             if not arts:
                 st.info(f"{ley_loop['codigo']}: sin artículos nuevos.")

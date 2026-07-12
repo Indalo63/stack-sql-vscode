@@ -268,7 +268,9 @@ def _responder_contenido(pregunta: str, ley_id: int, ley_nombre: str,
 
 def run_qa(pregunta: str, ley_id: int) -> str:
     ley    = get_ley_info(ley_id)
-    nombre = ley["nombre"]
+    # El título oficial del BOE (migración 038), no el nombre de trabajo: al citar
+    # la norma en una respuesta hay que darla completa, con su número y fecha.
+    nombre = ley.get("nombre_oficial") or ley["nombre"]
     tokens = ley.get("token_count") or 0
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     tipo   = _clasificar_pregunta(pregunta, nombre, client)

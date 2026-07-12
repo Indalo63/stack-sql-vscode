@@ -181,6 +181,28 @@ Fase 1 del rediseño propuesto por el usuario en un boceto (PDF, diagrama a mano
 
 **Nota:** esto no sustituye a mantener la pantalla de consentimiento OAuth bien configurada, pero ya no es la única barrera: aunque se publicase a producción, una cuenta ajena no pasaría de "Acceso denegado".
 
+### Completado — Nombres de ley: `nombre_oficial` (migración 038, 12/07/2026)
+Auditoría pedida por el usuario ("comprueba que siempre se aplica bien el nombre de las leyes"). **Encontró un incumplimiento real de la norma obligatoria nº2.**
+
+**El problema:** `leyes.nombre` no era homogéneo — **25 de las 60** leyes lo tenían *sin* la referencia oficial (LPAC era `"Ley del Procedimiento Administrativo Común de las Administraciones Públicas"`, sin el `"Ley 39/2015, de 1 de octubre"`). Como el generador pasaba ese campo al prompt, Claude completaba la referencia **de memoria unas veces sí y otras no**: **18 de las 70** preguntas pendientes citaban la norma de forma incompleta, incumpliendo la norma nº2 ("el enunciado cita la norma completa"). Preguntas de la *misma* ley salían unas bien y otras mal — el síntoma delator.
+
+**Modelo de nombres acordado con el usuario (3 campos, cada uno con su papel):**
+| Campo | Contenido | Quién lo usa |
+|---|---|---|
+| `nombre_oficial` (nuevo) | Título exacto del BOE | **Todo lo que cita la norma**: generador de preguntas, Q&A, y las futuras actualizaciones de legislación |
+| `nombre` | Nombre de trabajo (se deja como estaba) | Nada que cite; contexto interno |
+| `nombre_corto` | Etiqueta de UI (`Ley 39/2015 — Procedimiento Administrativo`) | Sidebar y selectores |
+
+- [✅ Migración 038, `sql/ddl/038_nombre_oficial.sql`] Columna `nombre_oficial`. **Los títulos no están escritos de memoria**: se descargaron del propio BOE (cabecera `documento-tit` de cada `url_boe`) — 56 de 60. Las otras 4 (CE1978, TUE, TFUE, GACE_NORM) no proceden del BOE y ya tenían nombre correcto, así que heredan su `nombre`. Aplicada; 60/60 con `nombre_oficial`.
+- [✅ `retrieval.py`] `get_leyes_disponibles` (sus 3 ramas) y `get_ley_info` devuelven `nombre_oficial`.
+- [✅ `streamlit_app.py` + `qa_pipeline.py`] El generador y `run_qa` usan `nombre_oficial` (con *fallback* a `nombre`). La **etiqueta de pantalla no cambia**: el editor sigue viendo el nombre corto en los selectores.
+- [✅ Las 18 preguntas mal citadas, corregidas] Sustitución del nombre incompleto por el oficial en el enunciado (no se regeneraron: opciones y respuesta correcta no se tocan). Verificado: **0 de 70** preguntas citan ya la norma sin referencia oficial.
+- [✅ Verificado en vivo] Pregunta nueva de LPAC generada tras el cambio: *"Según el artículo 27.4 de la **Ley 39/2015, de 1 de octubre**, del Procedimiento Administrativo Común…"*. La causa está resuelta, no solo el síntoma.
+
+**⚠️ Dos leyes quedan pendientes de revisión humana** (no bloquean nada, ver nota al final de la migración 038):
+- **RRCP**: su `url_boe` apunta al *RD 2073/1999 "por el que se **modifica** el Reglamento del Registro Central de Personal"* — es un decreto **modificador**, no el reglamento en sí. Decidir qué norma se quiere citar realmente.
+- **BCPSA**: el BOE devuelve *"Orden HFP/688/2017, de 20 de julio"*, pero la columna `numero_oficial` dice *"Real Decreto 364/2017, de 8 de abril"*. **Se contradicen**: hay que decidir cuál es la correcta.
+
 ### Completado — Backfill de tema en las preguntas IA (12/07/2026)
 Al explicar por qué los contadores por tema sumaban más que el total del banco, salió a la luz un hueco de datos: **60 de las 70 preguntas IA pendientes no tenían tema asignado** (`preguntas_test.epigrafe_id IS NULL`). El generador (`build_test_bank._save`) acepta `epigrafe_id` pero **la app nunca se lo pasa**, así que toda pregunta generada desde Streamlit nace sin tema.
 

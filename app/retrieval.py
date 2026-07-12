@@ -363,7 +363,7 @@ def get_leyes_disponibles(oposicion_id: int | None = None,
                     # justo los cruces entre bloques que epigrafe_leyes existe
                     # para capturar.
                     cur.execute(f"""
-                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto, l.nombre_oficial,
                                ol.preguntas_simulacro, ol.orden, ol.bloque
                         FROM normas.leyes l
                         JOIN normas.oposicion_leyes ol
@@ -378,7 +378,7 @@ def get_leyes_disponibles(oposicion_id: int | None = None,
                     """, {"oposicion_id": oposicion_id, "temas": list(temas)})
                 elif bloques:
                     cur.execute(f"""
-                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto, l.nombre_oficial,
                                ol.preguntas_simulacro, ol.orden, ol.bloque
                         FROM normas.leyes l
                         JOIN normas.oposicion_leyes ol
@@ -389,7 +389,7 @@ def get_leyes_disponibles(oposicion_id: int | None = None,
                     """, {"oposicion_id": oposicion_id, "bloques": list(bloques)})
                 else:
                     cur.execute(f"""
-                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto,
+                        SELECT l.ley_id, l.codigo, l.nombre, l.nombre_corto, l.nombre_oficial,
                                ol.preguntas_simulacro, ol.orden, ol.bloque
                         FROM normas.leyes l
                         JOIN normas.oposicion_leyes ol
@@ -400,7 +400,7 @@ def get_leyes_disponibles(oposicion_id: int | None = None,
                     """, (oposicion_id,))
             else:
                 cur.execute("""
-                    SELECT ley_id, codigo, nombre, nombre_corto,
+                    SELECT ley_id, codigo, nombre, nombre_corto, nombre_oficial,
                            NULL AS preguntas_simulacro, NULL AS orden, NULL AS bloque
                     FROM normas.leyes
                     WHERE activa = true
@@ -415,7 +415,7 @@ def get_ley_info(ley_id: int) -> dict:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT ley_id, codigo, nombre, nombre_corto, tipo, token_count
+                SELECT ley_id, codigo, nombre, nombre_corto, nombre_oficial, tipo, token_count
                 FROM normas.leyes
                 WHERE ley_id = %s AND activa = true
             """, (ley_id,))
