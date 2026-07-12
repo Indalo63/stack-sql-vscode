@@ -126,13 +126,6 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
-### ⏳ Pendiente — El generador debe asignar el tema al crear la pregunta (12/07/2026)
-
-Toda pregunta generada por IA desde Streamlit nace **sin tema** (`preguntas_test.epigrafe_id IS NULL`): `build_test_bank._save()` acepta `epigrafe_id`, pero el modo "Nuevas preguntas" nunca se lo pasa. El 12/07/2026 hubo que hacer un backfill con `asignar_epigrafes.py` para las 60 acumuladas.
-
-- [ ] Pasar el `epigrafe_id` en `_save(...)` desde el modo "Nuevas preguntas" (el selector ya sabe qué temas eligió el editor; si eligió varios, decidir cómo se asigna — probablemente clasificando la pregunta como hace `asignar_epigrafes.py`).
-- **Por qué importa:** sin esto, cada tanda nueva vuelve a nacer sin tema y hay que repasar el backfill a mano. Además el plan de estudio del alumno ya funciona **por tema**, así que las preguntas sin tema no le llegan bien.
-
 ### ⏳ Pendiente — Pantalla de gestión de alumnos (12/07/2026)
 
 Contrapartida de la pantalla de "Editores" (ya hecha, migración 037), pero **no es simétrica** — conviene tenerlo claro antes de planificarla:

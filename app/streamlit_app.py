@@ -17,6 +17,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_editor, listar_editores, alta_editor,
                            revocar_editor, cambiar_rol_editor,
                            pendientes_por_bloque, pendientes_por_tema,
+                           get_bloque_y_epigrafes,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
@@ -1106,7 +1107,7 @@ elif modo == "Nuevas preguntas":
 
     if st.button("Generar y guardar en BD", type="primary", key="btn_generar"):
         client  = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        ok = err = 0
+        ok = err = sin_tema = 0
         for ley_loop in leyes_sel:
             lid   = ley_loop["ley_id"]
             lnomb = ley_loop["nombre"]
@@ -1115,6 +1116,21 @@ elif modo == "Nuevas preguntas":
                 st.info(f"{ley_loop['codigo']}: sin artículos nuevos.")
                 continue
             few_shots = _fetch_few_shots(lid)
+
+            # Claude elige el tema oficial de cada pregunta dentro del mismo prompt
+            # que la genera, y se valida contra los temas del bloque de la ley. Sin
+            # esto la pregunta nace sin tema y el plan de estudio del alumno (que va
+            # por tema) no la ve; era el motivo del backfill del 12/07/2026.
+            bloque_ley, epigrafes = get_bloque_y_epigrafes(
+                lid, oposicion_codigo=oposicion_seleccionada["codigo"],
+            )
+            temas_validos = {e["tema"] for e in epigrafes} if epigrafes else None
+            if not epigrafes:
+                st.warning(
+                    f"{ley_loop['codigo']}: sin temas asociados en el programa; "
+                    "sus preguntas se guardarán sin tema."
+                )
+
             progress  = st.progress(0, text=f"{ley_loop['codigo']} — iniciando…")
             for i, art in enumerate(arts, 1):
                 tiene_apartados = _has_numbered_paragraphs(art["contenido"])
@@ -1126,10 +1142,22 @@ elif modo == "Nuevas preguntas":
                             art, lnomb,
                             few_shots=few_shots,
                             tiene_apartados=tiene_apartados,
+                            epigrafes=epigrafes,
                         ),
                     )
-                    parsed = _parse_and_validate(resp.content[0].text)
-                    _save(lid, art, parsed)
+                    parsed = _parse_and_validate(resp.content[0].text,
+                                                 temas_validos=temas_validos)
+
+                    epigrafe_id = None
+                    if epigrafes and "tema" in parsed:
+                        epigrafe_id = next(
+                            e["epigrafe_id"] for e in epigrafes
+                            if e["tema"] == parsed["tema"]
+                        )
+                    if epigrafe_id is None:
+                        sin_tema += 1
+
+                    _save(lid, art, parsed, epigrafe_id=epigrafe_id)
                     ok += 1
                 except Exception as e:
                     err += 1
@@ -1142,6 +1170,11 @@ elif modo == "Nuevas preguntas":
 
         if ok:
             st.success(f"{ok} pregunta{'s' if ok > 1 else ''} guardada{'s' if ok > 1 else ''} en BD.")
+        if sin_tema:
+            st.warning(
+                f"{sin_tema} sin tema asignado. Puedes clasificarlas después con "
+                "`scripts/asignar_epigrafes.py`."
+            )
         if err:
             st.error(f"{err} error{'es' if err > 1 else ''} durante la generación.")
         st.cache_data.clear()
