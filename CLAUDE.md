@@ -199,9 +199,9 @@ Auditoría pedida por el usuario ("comprueba que siempre se aplica bien el nombr
 - [✅ Las 18 preguntas mal citadas, corregidas] Sustitución del nombre incompleto por el oficial en el enunciado (no se regeneraron: opciones y respuesta correcta no se tocan). Verificado: **0 de 70** preguntas citan ya la norma sin referencia oficial.
 - [✅ Verificado en vivo] Pregunta nueva de LPAC generada tras el cambio: *"Según el artículo 27.4 de la **Ley 39/2015, de 1 de octubre**, del Procedimiento Administrativo Común…"*. La causa está resuelta, no solo el síntoma.
 
-**⚠️ Dos leyes quedan pendientes de revisión humana** (no bloquean nada, ver nota al final de la migración 038):
-- **RRCP**: su `url_boe` apunta al *RD 2073/1999 "por el que se **modifica** el Reglamento del Registro Central de Personal"* — es un decreto **modificador**, no el reglamento en sí. Decidir qué norma se quiere citar realmente.
-- **BCPSA**: el BOE devuelve *"Orden HFP/688/2017, de 20 de julio"*, pero la columna `numero_oficial` dice *"Real Decreto 364/2017, de 8 de abril"*. **Se contradicen**: hay que decidir cuál es la correcta.
+**🔴 PENDIENTE IMPORTANTE — dos leyes con la referencia oficial contradictoria.** Requiere criterio jurídico del usuario (el código no puede decidirlo). No bloquea, pero **sí afecta a la calidad jurídica de las preguntas**: el generador cita ahora `nombre_oficial`, así que si el título es el equivocado, las preguntas de esas dos leyes citarán una norma que no es. Detalle y query de comprobación en `TODO.md`.
+- **RRCP**: su `url_boe` apunta al *RD 2073/1999 "por el que se **modifica** el Reglamento del Registro Central de Personal"* — es un decreto **modificador**, no el reglamento. (Ojo: ya hubo un vaivén previo RD 2073/1999 ↔ RD 172/1988, ver `git log` de la migración 029.)
+- **BCPSA**: el BOE devuelve *"Orden HFP/688/2017, de 20 de julio"*, pero `numero_oficial` dice *"Real Decreto 364/2017, de 8 de abril"*. **Se contradicen**; el `url_boe` guardado apunta a la Orden.
 
 ### Completado — Backfill de tema en las preguntas IA (12/07/2026)
 Al explicar por qué los contadores por tema sumaban más que el total del banco, salió a la luz un hueco de datos: **60 de las 70 preguntas IA pendientes no tenían tema asignado** (`preguntas_test.epigrafe_id IS NULL`). El generador (`build_test_bank._save`) acepta `epigrafe_id` pero **la app nunca se lo pasa**, así que toda pregunta generada desde Streamlit nace sin tema.

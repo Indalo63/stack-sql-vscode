@@ -126,6 +126,15 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### 🔴 Pendiente IMPORTANTE — Dos leyes con la referencia oficial contradictoria (12/07/2026)
+
+Detectado al poblar `leyes.nombre_oficial` desde el BOE (migración 038). **No bloquea nada hoy, pero sí afecta a la calidad jurídica de las preguntas**: el generador cita ahora el `nombre_oficial`, así que si el título es el equivocado, las preguntas de esas dos leyes citarán una norma que no es. Requiere criterio jurídico (no lo puede decidir el código).
+
+- [ ] **RRCP** (`ley_id` de "Reglamento del Registro Central de Personal"). Su `url_boe` apunta al **RD 2073/1999, "por el que se _modifica_ el Reglamento del Registro Central de Personal"** — es un decreto **modificador**, no el reglamento en sí. El reglamento original es otro (histórico del repo: hubo un vaivén previo entre RD 2073/1999 y RD 172/1988, ver `git log` de la migración 029). **Decidir qué norma se quiere citar y corregir `url_boe` + `nombre_oficial` + `numero_oficial` en consecuencia.**
+- [ ] **BCPSA** (bases comunes de procesos selectivos AGE). El BOE devuelve **"Orden HFP/688/2017, de 20 de julio"**, pero la columna `numero_oficial` dice **"Real Decreto 364/2017, de 8 de abril"**. **Se contradicen: una de las dos está mal.** (El `url_boe` guardado apunta a la Orden.) Verificar cuál es la norma correcta y alinear los tres campos.
+
+**Cómo comprobar el impacto:** `SELECT codigo, nombre, nombre_oficial, numero_oficial, url_boe FROM normas.leyes WHERE codigo IN ('RRCP','BCPSA');`
+
 ### ⏳ Pendiente — Pantalla de gestión de alumnos (12/07/2026)
 
 Contrapartida de la pantalla de "Editores" (ya hecha, migración 037), pero **no es simétrica** — conviene tenerlo claro antes de planificarla:
