@@ -65,7 +65,7 @@ Este devcontainer no resuelve por IPv6 el host directo de Postgres (`db.<ref>.su
 - Avanzar siempre en **pasos numerados** (Paso 1, Paso 2…). No pasar al siguiente hasta confirmar el anterior.
 - Explicaciones en español, técnicas pero con tono docente. Breves y accionables, con comandos concretos pegables en WSL2.
 - Al proponer cambios en archivos, indicar siempre: **ruta**, **bloque a crear/modificar** y **contenido completo del bloque**.
-- Documentación técnica en `docs/` (despliegue, configuración, arquitectura). Guía principal: `docs/stack-sql-vscode.md`. Todo en Markdown.
+- Documentación técnica en `docs/` (despliegue, configuración, arquitectura). Guía principal: `docs/stack-sql-vscode.md`. **Roles y permisos vigentes: `docs/roles-y-permisos.md`** (auditoría del estado real; actualizarla si se tocan los permisos). Todo en Markdown.
 - Los archivos nuevos respetan la estructura existente del repo.
 
 ## Qué NO hacer
