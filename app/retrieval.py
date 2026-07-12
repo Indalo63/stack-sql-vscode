@@ -636,6 +636,67 @@ def get_plan_partida(oposicion_id: int, n_temas: int = 8) -> list[dict]:
             return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
+def registrar_respuesta(user_id: str, pregunta_id: int, opcion_elegida: str | None,
+                        correcta: bool, contexto: str, segundos: int | None = None) -> None:
+    """
+    Guarda UNA respuesta con la opción que eligió el alumno (migración 048).
+
+    `opcion_elegida = None` significa que la dejó **en blanco** — y eso no es
+    ruido: con la fórmula A−E/3, dejar en blanco es una decisión estratégica.
+
+    Es la base del análisis de distractores, del índice de discriminación (que
+    detecta preguntas rotas o mal marcadas) y del diagnóstico real del error.
+    Se llama SIEMPRE que el alumno responde, en cualquier modo.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO normas.respuestas
+                    (user_id, pregunta_id, opcion_elegida, correcta, contexto, segundos)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (user_id, pregunta_id, opcion_elegida, correcta, contexto, segundos))
+        conn.commit()
+
+
+def analisis_distractores(pregunta_id: int) -> dict:
+    """
+    Qué eligió la gente en esta pregunta. Sirve para detectar:
+
+      · Distractor MUERTO: no lo elige nadie. La pregunta es de 3 opciones en la
+        práctica, así que es más fácil de lo que parece.
+      · Distractor DEMASIADO bueno: lo eligen más que a la correcta. O la clave
+        está mal marcada, o el distractor es defendible (pregunta ambigua).
+      · Tasa de blancos: si es alta, la pregunta desconcierta.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT opcion_elegida, COUNT(*)
+                FROM normas.respuestas
+                WHERE pregunta_id = %s
+                GROUP BY opcion_elegida
+            """, (pregunta_id,))
+            conteo = {(o or "blanco"): n for o, n in cur.fetchall()}
+
+            cur.execute("SELECT correcta FROM normas.preguntas_test WHERE pregunta_id = %s",
+                        (pregunta_id,))
+            row = cur.fetchone()
+
+    total = sum(conteo.values())
+    clave = row[0] if row else None
+    return {
+        "pregunta_id": pregunta_id,
+        "correcta":    clave,
+        "total":       total,
+        "conteo":      conteo,
+        "pct":         {k: round(100 * v / total, 1) for k, v in conteo.items()} if total else {},
+        "muertos":     [o for o in "abcd" if o != clave and conteo.get(o, 0) == 0] if total else [],
+        "sospechosa":  bool(total) and any(
+            o != clave and conteo.get(o, 0) > conteo.get(clave, 0) for o in "abcd"
+        ),
+    }
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:

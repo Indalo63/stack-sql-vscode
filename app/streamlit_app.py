@@ -22,6 +22,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_cobertura_banco, proponer_pesos_bloque,
                            aplicar_pesos_bloque, get_historial_pesos,
                            get_preguntas_sm2, update_progreso_sm2,
+                           registrar_respuesta, analisis_distractores,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
                            get_preguntas_prueba_nivel,
@@ -389,6 +390,10 @@ def _modo_prueba_nivel(oposicion_id: int, user_id: str) -> None:
             temas_tocados = set()
             for p in nivel["preguntas"]:
                 elegida = nivel["respuestas"].get(p["pregunta_id"])
+                # Se registra SIEMPRE, incluso en blanco: dejar en blanco es una
+                # decisión (la fórmula A−E/3 penaliza fallar), no una no-respuesta.
+                registrar_respuesta(user_id, p["pregunta_id"], elegida,
+                                    elegida == p["correcta"], "prueba_nivel")
                 if elegida is not None:
                     update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
                     if p.get("epigrafe_id"):
@@ -514,6 +519,8 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
             temas_tocados = set()
             for p in repaso["preguntas"]:
                 elegida = repaso["respuestas"].get(p["pregunta_id"])
+                registrar_respuesta(user_id, p["pregunta_id"], elegida,
+                                    elegida == p["correcta"], "repaso")
                 if elegida is not None:
                     update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
                     if p.get("epigrafe_id"):
@@ -599,6 +606,11 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
     else:
         _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro", respondido=True)
         preguntas = simulacro["preguntas"]
+        if not simulacro["guardado"]:
+            for p in preguntas:
+                elegida = simulacro["respuestas"].get(p["pregunta_id"])
+                registrar_respuesta(user_id, p["pregunta_id"], elegida,
+                                    elegida == p["correcta"], "simulacro_personal")
         aciertos = sum(
             1 for p in preguntas if simulacro["respuestas"].get(p["pregunta_id"]) == p["correcta"]
         )
@@ -687,6 +699,11 @@ def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
     else:
         _render_preguntas(sa["preguntas"], sa["respuestas"], "simulacro_academia", respondido=True)
         preguntas = sa["preguntas"]
+        if not sa["guardado"]:
+            for p in preguntas:
+                elegida = sa["respuestas"].get(p["pregunta_id"])
+                registrar_respuesta(user_id, p["pregunta_id"], elegida,
+                                    elegida == p["correcta"], "simulacro_academia")
         aciertos = sum(
             1 for p in preguntas if sa["respuestas"].get(p["pregunta_id"]) == p["correcta"]
         )

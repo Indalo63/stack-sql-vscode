@@ -140,11 +140,13 @@ Aprobado por el usuario en la sesión del 12/07/2026. **Orden de ejecución: 1 �
 - [x] Barajado **en el generador** (`build_test_bank._barajar_opciones`), verificado con 400 generaciones: 23,8/24,0/25,2/27,0%.
 - [x] Las preguntas **oficiales no se tocaron**: son el examen real.
 
-#### 2. Guardar QUÉ opción eligió el alumno (hoy se tira)
+#### 2. ✅ HECHO (12/07/2026, migración 048) — Guardar QUÉ opción eligió el alumno
 `progreso_usuario` solo guarda `ultima_correcta` (sí/no). **Se está tirando la señal pedagógica más valiosa.** Sin ella no hay análisis de distractores, ni diagnóstico real del error, ni detección de preguntas rotas.
 
-- [ ] Tabla de respuestas (una fila por respuesta: alumno, pregunta, opción elegida, correcta, fecha, tiempo).
-- **Urgente en el sentido de que los datos que no se guardan hoy NO se pueden recuperar mañana.**
+- [x] `normas.respuestas`: una fila por CADA respuesta (`opcion_elegida`, **NULL = en blanco**, `correcta`, `contexto`, `segundos` para el futuro cronómetro).
+- [x] `registrar_respuesta()` enganchado en los 4 modos del alumno. **Registra también las dejadas en blanco**: con A−E/3, dejar en blanco es una decisión estratégica (habilita el punto 4).
+- [x] `analisis_distractores()` ya operativo: detecta **distractores muertos** y preguntas **sospechosas** (un distractor gana a la correcta → clave mal marcada o pregunta ambigua).
+- [x] El script de limpieza del MVP borra también esta tabla.
 
 #### 3. Discriminación del ítem + análisis de distractores
 La dificultad es solo **la mitad** de la teoría clásica de test. La otra mitad: ¿la pregunta **distingue** al que sabe del que no?
