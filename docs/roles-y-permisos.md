@@ -10,7 +10,7 @@
 
 Solo existen **dos roles reales**: `admin` y `editor` (tabla `normas.editores`). **"Alumno"
 no es un rol** —es una cuenta de Supabase Auth sin tabla ni rol propio— y **"academia" no
-existe como perfil**: sus funciones las ejerce cualquier editor.
+existe como perfil**: generar sus simulacros lo hace un editor, y autorizarlos, un administrador.
 
 ---
 
@@ -43,6 +43,8 @@ Todo lo del editor, **más**:
 | Dar de alta editores (y elegir su rol) | Modo **Editores** |
 | Revocar y reactivar editores | Modo **Editores** |
 | Cambiar el rol de otros (admin ↔ editor) | Modo **Editores** |
+| Ver y **restaurar** preguntas descartadas (con su motivo y autor) | Modo **Revisar preguntas** |
+| **Autorizar** simulacros de academia (los abre a todos los alumnos) | Modo **Simulacros academia** |
 
 **Límites (protección anti-bloqueo, en `retrieval.py`, no solo en los botones):**
 - No puede revocarse a sí mismo.
@@ -55,12 +57,16 @@ Todo lo del editor, **más**:
 | Consultar la normativa (Q&A) | Modo **Q&A** | Consume API de Claude |
 | **Generar** preguntas con IA | Modo **Nuevas preguntas** | Consume API de Claude; escribe en `preguntas_test` |
 | **Aprobar** preguntas | Modo **Revisar preguntas** | Marca `revisada = TRUE`; queda registrado en `revisado_por` |
-| **Borrar** preguntas ⚠️ | Modo **Revisar preguntas** | El botón "Rechazar" hace `DELETE`, **no** es reversible |
+| **Rechazar** preguntas | Modo **Revisar preguntas** | Borrado **lógico** con justificación obligatoria (039). No destruye: queda registrado quién, cuándo y por qué |
 | Practicar test (repaso SM-2) | Modo **Generar test** | |
 | **Generar** simulacros de academia | Modo **Simulacros academia** | |
-| **Autorizar** simulacros de academia ⚠️ | Modo **Simulacros academia** | Los abre a **todos** los alumnos |
 
-**No puede:** ver ni tocar el modo "Editores" (no aparece en su barra lateral).
+**No puede:**
+- Ver ni tocar el modo "Editores" (no aparece en su barra lateral).
+- **Autorizar** simulacros de academia (botón deshabilitado): publicarlos a todos los alumnos
+  es cosa de administradores.
+- Ver ni restaurar las preguntas descartadas.
+- **Borrar nada de la base de datos** (el usuario `app_asistente` no tiene permiso de `DELETE`).
 
 ### Alumno (cuenta de Supabase Auth, sin rol)
 
@@ -79,27 +85,51 @@ propio email como `user_id`.
 
 ---
 
-## 3. Capa de base de datos: **no aplica ningún permiso**
-
-Esto es lo más importante del documento.
+## 3. Capa de base de datos
 
 | Aspecto | Estado |
 |---|---|
-| **Row Level Security (RLS)** | ❌ **Ninguna tabla de `normas.*` lo tiene activado** |
-| **Usuario de conexión de la app** | `postgres` (permisos totales sobre el esquema) |
-| **`SUPABASE_ANON_KEY`** | Se usa **solo** para Supabase Auth (registro y login), no para leer/escribir datos |
-| **Roles de Postgres** | Solo los que crea Supabase por defecto (`postgres`, `authenticator`, `supabase_*`); **ninguno modela** admin/editor/alumno |
+| **Usuario de conexión de la app** | `app_asistente` — permisos mínimos (migración 040) |
+| **Row Level Security (RLS)** | ❌ No activado — **y hoy no serviría de nada** (ver abajo) |
+| **`SUPABASE_ANON_KEY`** | Solo para Supabase Auth (registro/login). **No** puede leer datos: el esquema `normas` **no está expuesto** por la API REST (solo lo están `public` y `graphql_public`) |
+| **Roles de Postgres** | `app_asistente` (la app) + los de Supabase. **Ninguno modela** admin/editor/alumno: eso es lógica de aplicación |
 
-**Consecuencia:** *toda* la autorización vive en el código de Streamlit. La base de datos no
-distingue entre un administrador, un editor y un alumno — cualquiera que tenga la contraseña
-de `DB_PASSWORD` tiene acceso total.
+### Qué puede y qué no puede el usuario de la app (`app_asistente`)
 
-Esto no es necesariamente un fallo (es una app monolítica con un único backend de confianza),
-pero conviene tenerlo presente:
-- El aislamiento de los datos de un alumno **no lo garantiza la base de datos**: lo garantiza
-  que la app le pase su propio email. Un error de código podría exponer datos de otro alumno.
-- Un futuro frontend que hablara con Supabase directamente (sin pasar por Streamlit) **no
-  tendría ninguna protección**. Ahí sí haría falta RLS.
+| Puede | No puede |
+|---|---|
+| `SELECT` en todo el esquema `normas` | ❌ `DELETE` (en ninguna tabla) |
+| `INSERT`/`UPDATE` solo en las 7 tablas que la app escribe | ❌ `TRUNCATE` |
+| | ❌ `CREATE`/`ALTER`/`DROP` (DDL) |
+| | ❌ Ser superusuario o saltarse el RLS |
+
+Se comprobó que la app **no hace ningún `DELETE` ni ningún DDL** (rechazar una pregunta es un
+borrado lógico desde la migración 039), así que esos permisos simplemente no se conceden. Un
+bug o una inyección SQL no pueden destruir el esquema.
+
+**Las migraciones no usan este rol**: se siguen aplicando como `postgres` desde el SQL Editor
+de Supabase.
+
+### Por qué NO se ha activado RLS (decisión consciente, no un olvido)
+
+Sería **seguridad decorativa**:
+
+1. El esquema `normas` **no está expuesto** por la API REST de Supabase, así que la clave
+   `anon` no puede alcanzar los datos ni intentándolo (`PGRST106: Only the following schemas
+   are exposed: public, graphql_public`).
+2. El único cliente es Streamlit, y las políticas RLS tendrían que permitirle **todo lo que
+   la app hace** — con lo cual no protegerían de nada.
+
+**Cuándo será imprescindible:** el día que exista un frontend propio (línea B2C) que hable
+**directamente** con Supabase usando la clave `anon` o `authenticated`. Entonces sí hay que
+exponer el esquema *y* proteger cada tabla con RLS **antes** de abrirlo. `app_asistente` ya
+está creado con `NOBYPASSRLS`, así que las políticas le aplicarán desde el primer día.
+
+### Lo que sigue sin garantizar la base de datos
+
+El aislamiento de los datos de un alumno lo garantiza **el código**, que le pasa su propio
+email — no una política de base de datos. Un error de programación podría exponer datos de
+otro alumno.
 
 ---
 
@@ -112,24 +142,29 @@ No existe ningún rol de academia. Lo que hay son dos columnas sueltas:
 | `normas.editores.academia` | Columna reservada para el futuro modelo B2B (multi-academia) | **Vacía**, sin usar |
 | `normas.simulacros_academia.academia` | Un texto con el nombre de la academia del simulacro | Descriptivo, no da permisos |
 
-**Quién ejerce hoy las funciones de "academia":** cualquier **editor** (no hace falta ser
-admin) puede generar y autorizar simulacros de academia. Autorizar uno lo abre a **todos**
-los alumnos de la oposición, sin distinguir a qué academia pertenecen — porque esa relación
-alumno↔academia **no existe** en el esquema.
+**Quién ejerce hoy las funciones de "academia":** un **editor** puede *generar* un simulacro,
+pero solo un **administrador** puede *autorizarlo* (desde el 12/07/2026). Autorizar uno lo abre
+a **todos** los alumnos de la oposición, sin distinguir a qué academia pertenecen — porque esa
+relación alumno↔academia **no existe** en el esquema.
 
 ---
 
 ## 5. Puntos de atención (hechos, no propuestas)
 
-1. **Cualquier editor puede borrar preguntas de forma irreversible.** El botón "Rechazar" del
-   modo Revisar hace un `DELETE`, no un borrado lógico. No hay papelera ni auditoría de quién
-   borró qué (sí la hay de quién *aprobó*: `revisado_por` / `revisado_en`).
-2. **Cualquier editor puede autorizar un simulacro de academia**, lo que lo abre a todos los
-   alumnos. No está restringido a administradores.
-3. **No hay relación alumno↔academia**, así que no se puede acotar un simulacro a los alumnos
-   de una academia concreta.
-4. **El registro de alumnos es abierto**: cualquiera con la URL puede crearse una cuenta.
-5. **La base de datos no aplica permisos** (§3).
+Corregidos el 12/07/2026 (migraciones 039 y 040):
+- ~~Cualquier editor podía borrar preguntas de forma irreversible~~ → ahora "Rechazar" es un
+  **borrado lógico con justificación obligatoria**, y solo un admin puede restaurarlas.
+- ~~Cualquier editor podía autorizar simulacros~~ → **solo administradores**.
+- ~~La app conectaba como `postgres`~~ → ahora usa `app_asistente`, **sin permisos de borrado
+  ni de DDL**.
+
+Siguen abiertos:
+1. **No hay relación alumno↔academia**, así que no se puede acotar un simulacro a los alumnos
+   de una academia concreta. Un simulacro autorizado se abre a **todos** los alumnos.
+2. **El registro de alumnos es abierto**: cualquiera con la URL puede crearse una cuenta
+   (es intencionado).
+3. **El aislamiento de los datos de un alumno depende del código**, no de la base de datos (§3).
+4. **No hay auditoría de quién genera preguntas** (sí de quién aprueba y de quién descarta).
 
 ---
 
@@ -139,8 +174,12 @@ alumno↔academia **no existe** en el esquema.
 -- Roles reales y quién los tiene
 SELECT email, nombre, rol, activo FROM normas.editores ORDER BY rol, email;
 
--- ¿Alguna tabla protegida con RLS?  (hoy: ninguna)
-SELECT c.relname, c.relrowsecurity
-FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = 'normas' AND c.relkind = 'r' AND c.relrowsecurity;
+-- Permisos reales del usuario de la app (deben ser todos 'false')
+SELECT rolname, rolsuper AS superusuario, rolbypassrls AS salta_rls,
+       has_schema_privilege('app_asistente','normas','CREATE') AS puede_ddl
+FROM pg_roles WHERE rolname = 'app_asistente';
+
+-- ¿Puede borrar algo?  (debe devolver 0 filas)
+SELECT table_name, privilege_type FROM information_schema.table_privileges
+WHERE grantee = 'app_asistente' AND privilege_type IN ('DELETE','TRUNCATE');
 ```
