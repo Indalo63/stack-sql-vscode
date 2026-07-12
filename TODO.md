@@ -126,6 +126,24 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### 📊 Backlog del perfil alumno — del análisis competitivo (12/07/2026)
+
+Análisis completo (con datos medidos contra la BD, no impresiones) en **`docs/analisis-competencia-alumno.md`**. Conclusión: *no vamos por detrás en tecnología, sino en producto* — el motor es mejor de lo que la interfaz deja ver.
+
+**Prioridad 1 (alto valor, bajo esfuerzo — no requieren arquitectura nueva):**
+- [ ] **Corrección diagnóstica al fallar.** Hoy el alumno solo ve la respuesta correcta + una explicación. No sabe *por qué* se equivocó. Es el momento de máximo aprendizaje y lo estamos desperdiciando. (Una segunda llamada al modelo con artículo + pregunta + opción elegida + correcta: las 4 piezas ya están en BD.)
+- [ ] **Mostrar el artículo del BOE junto a la respuesta** ("verificado contra el art. X de la Ley Y", con el texto desplegable). Convierte nuestra arquitectura en confianza visible. El texto ya está en `normas.articulos`.
+- [ ] **Puerta anti-alucinación en el generador**: `_parse_and_validate()` no comprueba que el artículo citado en el enunciado sea el artículo fuente. Medido: hoy 78/78 aciertan, pero por buen comportamiento del modelo, no porque lo impidamos. ~20 líneas.
+- [ ] **Dar el Q&A semántico al alumno.** Está construido y probado, pero solo lo usan los editores. **Ningún competidor lo tiene.**
+- [ ] **Radar del Tribunal por tema**: frecuencia de cada tema en los exámenes oficiales. Es un `GROUP BY` sobre datos que ya existen (157 preguntas oficiales clasificadas; IV.11 salió 10 veces, V.6 siete).
+
+**Prioridad 2:**
+- [ ] **Informe para el preparador** (cómo van sus alumnos, dónde fallan). **Es lo que vende el B2B**: la academia no compra gamificación, compra evidencia de que sus alumnos mejoran.
+- [ ] Rachas/constancia y dashboard (B2C). Hoy **no existe ningún concepto de racha**.
+- [ ] Estimación "¿estoy listo para el examen?" a partir del % por tema y el peso oficial.
+
+**Prioridad 3 / no copiar:** radar por artículo (exige re-procesar los exámenes: hoy `articulo='S/N'`), gamificación social (con pocos alumnos un ranking desmotiva), y **generar más preguntas sin revisar** — el cuello de botella no es generar, es revisar (78 esperando).
+
 ### 🔴 Pendiente — Cambiar producción al usuario de BD con permisos mínimos (12/07/2026)
 
 **Lo tiene que hacer el usuario**: requiere tocar los secrets de Streamlit Cloud, y si algo falla la app deja de conectar. Guía paso a paso (con rollback) en **`docs/cambiar-usuario-bd-produccion.md`**.
