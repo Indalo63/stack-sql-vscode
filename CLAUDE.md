@@ -141,6 +141,20 @@ python3 scripts/limpiar_datos_prueba.py --supabase             # limpiar
 ```
 El banco REAL (209 oficiales) **no se ha tocado**: está separado por la marca `es_prueba`. Detalle completo en **`docs/mvp-datos-prueba.md`**.
 
+### Objetivo de cobertura del banco (migración 043, 12/07/2026)
+**El banco estaba muy sesgado respecto al examen real**: el bloque IV acaparaba el **35% del banco** teniendo el **20% del examen**, mientras que el V —que pesa lo mismo que el I, el máximo (21%)— iba a **la mitad** de lo que le toca. Se generaba donde era cómodo, no donde cae el examen.
+
+`normas.objetivo_banco` fija la **distribución mínima** del banco por bloque (en BD, no en código). Decisión del usuario: **respetar el peso real del examen** (migración 042) con un **suelo de 200 preguntas en el bloque más pequeño**:
+
+| Bloque | I | II | III | IV | V | VI | Total |
+|---|---|---|---|---|---|---|---|
+| % examen | 21 | 12 | 11 | 20 | 21 | 15 | 100 |
+| **Objetivo** | 382 | 218 | **200** | 364 | 382 | 273 | **1.819** |
+
+`retrieval.get_cobertura_banco(oposicion_id)` mide el déficit por bloque. **No cuenta las preguntas `es_prueba`**: el banco de prueba no debe inflar la cobertura.
+
+**Estado hoy: 155 de 1.819 (faltan 1.664).** El panel que lo muestre es la **Fase 6** del plan (`docs/plan-fases-alumno.md`).
+
 ### 🐛 Bug grave corregido al preparar el MVP (migración 042)
 **Los bloques II y III tenían peso 0** en `oposicion_leyes.preguntas_simulacro`, y los pesos sumaban **51, no 100**. Cadena de efectos: la prueba de nivel reparte por peso → nunca servía preguntas de II ni III → el simulacro personal (que exige datos en los 6 bloques) **quedaba bloqueado para siempre**. Los alumnos jamás habrían podido hacerlo.
 

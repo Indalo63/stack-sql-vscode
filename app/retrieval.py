@@ -287,6 +287,57 @@ def restaurar_pregunta(pregunta_id: int) -> str | None:
     return None
 
 
+def get_cobertura_banco(oposicion_id: int, incluir_prueba: bool = False) -> list[dict]:
+    """
+    Estado del banco por bloque frente al objetivo (migración 043).
+
+    Para cada bloque devuelve: peso real del examen, preguntas que hay, objetivo,
+    déficit y cobertura. Sirve para decidir DÓNDE generar: sin esto, el banco se
+    sesga hacia donde es cómodo generar y no hacia donde cae el examen (en julio
+    de 2026 el bloque IV tenía el 35% del banco con el 20% del examen, mientras
+    que el V, que pesa igual que el I, iba a la mitad de lo que le toca).
+
+    incluir_prueba=False (por defecto) cuenta solo el banco REAL: las preguntas
+    aprobadas sin revisión humana (es_prueba) no deben inflar la cobertura.
+    """
+    filtro_prueba = "" if incluir_prueba else "AND NOT pt.es_prueba"
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                SELECT ob.bloque, ob.peso_examen, ob.objetivo,
+                       COUNT(pt.pregunta_id) AS actual
+                FROM normas.objetivo_banco ob
+                LEFT JOIN normas.oposicion_leyes ol
+                       ON ol.oposicion_id = ob.oposicion_id
+                      AND ol.bloque = ob.bloque
+                      AND NOT ol.excluir_test
+                LEFT JOIN normas.preguntas_test pt
+                       ON pt.ley_id = ol.ley_id
+                      AND pt.revisada AND pt.activa AND NOT pt.descartada
+                      {filtro_prueba}
+                WHERE ob.oposicion_id = %s
+                GROUP BY ob.bloque, ob.peso_examen, ob.objetivo
+                ORDER BY ob.bloque
+            """, (oposicion_id,))
+            filas = cur.fetchall()
+
+    total = sum(f[3] for f in filas) or 1
+    out = []
+    for bloque, peso, objetivo, actual in filas:
+        out.append({
+            "bloque":        bloque,
+            "peso_examen":   peso,
+            "objetivo":      objetivo,
+            "actual":        actual,
+            "faltan":        max(0, objetivo - actual),
+            "cobertura":     round(100 * actual / objetivo, 1) if objetivo else 0.0,
+            # cuánto pesa este bloque DENTRO del banco, frente a cuánto debería
+            "pct_banco":     round(100 * actual / total, 1),
+            "desfase_pct":   round(100 * actual / total - peso, 1),
+        })
+    return out
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:

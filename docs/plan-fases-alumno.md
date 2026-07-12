@@ -95,6 +95,25 @@ multi-academia. Requerirá su propia ronda de decisiones.
 
 ---
 
+## Fase 6 — Panel de administración con las métricas relevantes
+
+**Objetivo:** que el editor vea de un vistazo el estado real del proyecto y **sepa dónde generar**, en vez de generar a ojo.
+
+**Por qué es necesario (medido el 12/07/2026):** el banco estaba **muy sesgado** respecto al examen. El bloque IV acaparaba el **35% del banco** teniendo el **20% del examen**, mientras que el V —que pesa lo mismo que el I, el máximo— iba a **la mitad** de lo que le toca. Sin visibilidad, se genera donde resulta cómodo, no donde cae el examen.
+
+| # | Métrica | Ya disponible |
+|---|---|---|
+| 6.1 | **Cobertura del banco por bloque** frente al objetivo (migración 043) | ✅ `retrieval.get_cobertura_banco()` |
+| 6.2 | **Radar del Tribunal**: temas más preguntados en los exámenes oficiales | Datos ya en BD (Fase 3) |
+| 6.3 | Preguntas pendientes de revisión, por bloque y tema | ✅ `pendientes_por_bloque/_tema` |
+| 6.4 | Progreso de los alumnos (agregado) — solapa con la Fase 4 (informe al preparador) | Parcial |
+| 6.5 | Temas sin ninguna pregunta en el banco | Consulta directa |
+
+**Migraciones:** ninguna (la 043 ya existe).
+**Hecho cuando:** al entrar en Administración, el editor ve dónde falta banco y puede ir directo a generarlo.
+
+---
+
 ## Fase 5 — Retención *(sobre todo B2C)*
 
 | # | Tarea | Detalle |
