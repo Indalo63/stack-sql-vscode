@@ -130,7 +130,36 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
-## Hito inmediato — Plataforma de estudio para el alumno
+## Hito inmediato — Mejoras del perfil alumno (5 fases, aprobado 12/07/2026)
+
+Origen: comparativa con la competencia (OpoRuta, OpositaTest) — `docs/analisis-competencia-alumno.md`.
+**Plan de fases detallado: `docs/plan-fases-alumno.md`.** Fases secuenciales; no se empieza una sin cerrar la anterior.
+
+**Conclusión que ordena todo:** *no vamos por detrás en tecnología, sino en producto*. Lo medido contra la BD real:
+- Nuestras preguntas **ya son anti-alucinación**: 78/78 citan exactamente el artículo del que se generaron (el prompt se ancla en el texto real del BOE). Falta la **puerta** que lo compruebe y **enseñárselo** al alumno.
+- El **"Radar del Tribunal"** ya se puede calcular: 157 preguntas oficiales clasificadas por tema (IV.11 salió 10 veces). Es un `GROUP BY`.
+- **El feedback al fallar es lo más flojo que tenemos**: solo la respuesta correcta + explicación. Ni causa del error ni qué hacer. Aquí sí vamos detrás.
+- El **Q&A semántico** es un diferencial que **ningún competidor tiene**… y solo lo usan los editores.
+
+| Fase | Qué | Estado |
+|------|-----|--------|
+| 1 | **Confianza**: puerta anti-alucinación + mostrar el artículo del BOE al corregir | ⏳ Pendiente |
+| 2 | **Corrección diagnóstica**: por qué fallaste, no solo cuál era la buena | ⏳ Pendiente |
+| 3 | **Explotar lo que ya hay**: Radar del Tribunal por tema + Q&A para el alumno | ⏳ Pendiente |
+| 4 | **Informe para el preparador** (lo que vende el B2B) — requiere vínculo alumno↔academia, que hoy **no existe** | ⏳ Pendiente (mucho diseño) |
+| 5 | **Retención**: rachas (B2C) + "¿estoy listo para el examen?" | ⏳ Pendiente |
+
+**Decisiones de arquitectura ya confirmadas (no reabrir):**
+- El diagnóstico del error **se precalcula** (3 por pregunta, uno por opción errónea; 627 hoy), no se genera en vivo: coste acotado, respuesta instantánea y **el editor lo revisa antes de que un alumno lo vea** (control de calidad = argumento B2B). **Más** un botón "explícamelo mejor" que sí llama en vivo, opcional.
+- Generación **en lote ahora + automática al aprobar** en adelante (mismo patrón que los temas).
+
+**Límite conocido:** el artículo del BOE solo se puede mostrar donde lo tenemos — 78/78 de las IA, pero solo **97 de 209** oficiales (el resto se cargó con `articulo='S/N'`). Se omite el bloque, no se inventa.
+
+**Descartado a propósito:** rankings/competición (con pocos alumnos desmotiva), radar por artículo (exige re-procesar los exámenes) y **generar más preguntas** — el cuello de botella no es generar, es **revisar** (78 esperando).
+
+---
+
+## Hito anterior (completado) — Plataforma de estudio para el alumno
 
 Diseño completo aprobado el 05/07/2026. Implementación en 9 pasos secuenciales — **completados los 9 el 11/07/2026**. Pendiente de definir el siguiente hito.
 
