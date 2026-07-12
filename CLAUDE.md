@@ -181,6 +181,12 @@ Fase 1 del rediseño propuesto por el usuario en un boceto (PDF, diagrama a mano
 
 **Nota:** esto no sustituye a mantener la pantalla de consentimiento OAuth bien configurada, pero ya no es la única barrera: aunque se publicase a producción, una cuenta ajena no pasaría de "Acceso denegado".
 
+**⏳ Pendiente (12/07/2026) — auditar la pantalla de consentimiento de OAuth en Google Cloud.** No se ha revisado su estado real (no es accesible desde este entorno: requiere entrar a Google Cloud Console con la cuenta del proyecto). Qué hay que comprobar y por qué importa:
+- **Modo de publicación**: *Testing* (solo entran las cuentas dadas de alta como usuarios de prueba, máx. 100; las sesiones caducan cada 7 días) vs *In production* (cualquier usuario de Google puede completar el OAuth). Con la lista blanca de la migración 036 ya no es crítico, pero conviene saber en cuál está: si sigue en *Testing*, **añadir un editor nuevo exige dos pasos** (usuario de prueba en Google Cloud + fila en `normas.editores`), lo cual es fácil de olvidar y da un error confuso.
+- **Tipo de usuario**: *External* vs *Internal* (este último solo existe con Google Workspace).
+- **URIs de redirección autorizados**: deben incluir la URL de producción (`https://<app>.streamlit.app/oauth2callback`) además de la de local, o el login falla en producción aunque funcione en desarrollo.
+- **Estado de verificación**: si la app pide scopes sensibles y está sin verificar, Google muestra la pantalla de "app no verificada" a los usuarios.
+
 **Pendiente — fases siguientes de este rediseño (no empezar hasta cerrar la fase 1):**
 1. **Actualización Legislación** (rama del boceto, no existe hoy como pantalla): submodo *Automática* = revisa cambios del BOE en leyes ya cargadas; *Manual* = el editor dispara la comprobación a mano, ley por ley. En **ambos casos**, los cambios detectados se muestran para **aprobar antes de aplicarlos a la BD** (mismo espíritu que la revisión de preguntas) — requisito explícito del usuario. Hoy solo existe `scripts/sync_boe.py` (CLI, sin UI ni paso de aprobación).
 2. **Generador de test de prueba** (Por tema completo / Por ley): simulacro de prueba para que el editor pruebe la experiencia del alumno. Es **distinto** del "Generar test" actual (repaso SM-2 del editor).

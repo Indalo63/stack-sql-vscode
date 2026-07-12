@@ -126,6 +126,15 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### ⏳ Pendiente — Auditar la pantalla de consentimiento de OAuth (Google Cloud) (12/07/2026)
+
+Requiere entrar a Google Cloud Console con la cuenta del proyecto (no accesible desde el entorno de desarrollo). Surge al implementar la lista blanca de editores (migración 036): el control de acceso ya no depende de esta pantalla, pero su configuración sigue afectando a quién puede loguearse y a si el login funciona en producción.
+
+- [ ] **Modo de publicación**: ¿*Testing* o *In production*? Si sigue en *Testing*, dar de alta a un editor nuevo exige **dos pasos** (usuario de prueba en Google Cloud + fila en `normas.editores`) — fácil de olvidar y el error resultante es confuso. Además, en *Testing* las sesiones caducan cada 7 días.
+- [ ] **Tipo de usuario**: *External* vs *Internal* (solo con Google Workspace).
+- [ ] **URIs de redirección autorizados**: comprobar que incluyen la URL de producción (`https://<app>.streamlit.app/oauth2callback`), no solo la de local. Si falta, el login falla en producción aunque funcione en desarrollo.
+- [ ] **Estado de verificación**: si la app pide scopes sensibles sin verificar, Google muestra el aviso de "app no verificada".
+
 ### Diseño aprobado — App de estudio del alumno (05/07/2026)
 
 Arquitectura completa definida y aprobada. Implementación en 9 pasos.
