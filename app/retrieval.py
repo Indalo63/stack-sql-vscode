@@ -1030,6 +1030,10 @@ def get_preguntas_sm2(user_id: str,
             return pendientes + nuevas
 
 
+# Techo del intervalo SM-2, en días. Ver el comentario dentro de update_progreso_sm2.
+_INTERVALO_MAX_DIAS = 365
+
+
 def update_progreso_sm2(user_id: str, pregunta_id: int, correcto: bool) -> None:
     """Aplica SM-2 y hace upsert en progreso_usuario."""
     q = 4 if correcto else 0
@@ -1056,6 +1060,14 @@ def update_progreso_sm2(user_id: str, pregunta_id: int, correcto: bool) -> None:
             else:
                 nuevo_intervalo = 1
                 repeticiones = 0
+
+            # Techo del intervalo. Sin él, `intervalo * facilidad` compone sin
+            # límite y acaba desbordando la fecha (`CURRENT_DATE + <bigint>` peta
+            # con "operator does not exist: date + bigint"). Se detectó al probar
+            # la regla de dominio con muchos aciertos seguidos sobre la misma
+            # pregunta. Un año es de sobra: más allá, la pregunta ya está dominada
+            # y volver a verla una vez al año basta para no perderla.
+            nuevo_intervalo = min(nuevo_intervalo, _INTERVALO_MAX_DIAS)
 
             nueva_facilidad = round(
                 max(1.3, float(facilidad) + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)), 2)
@@ -1096,41 +1108,76 @@ def _fase_por_vistas(vistas: int) -> str:
     return "preexamen"
 
 
-def get_fase_alumno(user_id: str, oposicion_id: int, epigrafe_id: int) -> dict:
-    """
-    Calcula el estado vivo del alumno en un tema oficial (epígrafe): fase por
-    preguntas vistas, preguntas vistas/correctas, % acierto agregado y si el
-    tema está "estudiado" (≥70%). Lo persiste en normas.plan_estudio (UPSERT,
-    una fila por tema) para lectura rápida desde get_stats_alumno. No se
-    recalcula por trigger: se llama tras cada tanda de preguntas, una vez por
-    cada tema tocado en esa tanda (junto a update_progreso_sm2).
-    """
+def get_parametros_aprendizaje(oposicion_id: int) -> dict:
+    """Parámetros de la regla de dominio (migración 045). Viven en BD, no en código."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT bloque FROM normas.epigrafes WHERE epigrafe_id = %s
-            """, (epigrafe_id,))
+                SELECT muestra_minima, umbral_dominio, repeticiones_ok, cobertura_bloque
+                FROM normas.parametros_aprendizaje WHERE oposicion_id = %s
+            """, (oposicion_id,))
+            row = cur.fetchone()
+    if not row:
+        return {"muestra_minima": 5, "umbral_dominio": 70,
+                "repeticiones_ok": 2, "cobertura_bloque": 60}
+    return dict(zip(("muestra_minima", "umbral_dominio",
+                     "repeticiones_ok", "cobertura_bloque"), row))
+
+
+def get_fase_alumno(user_id: str, oposicion_id: int, epigrafe_id: int) -> dict:
+    """
+    Estado vivo del alumno en un tema oficial. Persiste en plan_estudio (UPSERT).
+
+    REGLA DE DOMINIO (migración 045) — no confundir con el % de acierto:
+
+      tema dominado = (preguntas DISTINTAS vistas >= muestra_minima)
+                      AND (>= umbral_dominio % de ellas ASENTADAS en SM-2)
+
+    "Asentada" = `repeticiones >= repeticiones_ok` (acertada varias veces
+    seguidas, en momentos distintos). Al fallar, SM-2 resetea `repeticiones` a 0,
+    así que esto mide el dominio **actual**, no el historial.
+
+    Por qué NO se usa `porcentaje_acierto` para decidir esto: es acumulado de toda
+    la vida, así que castiga al alumno que falla, repasa y acaba dominando el tema
+    — justo el comportamiento que la repetición espaciada busca provocar. Se sigue
+    calculando y guardando, pero solo para MOSTRARLO.
+
+    La `fase` sigue midiéndose por RESPUESTAS (no por preguntas distintas): el
+    SM-2 re-sirve las falladas, y esa repetición es parte del trabajo hecho.
+    """
+    p = get_parametros_aprendizaje(oposicion_id)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT bloque FROM normas.epigrafes WHERE epigrafe_id = %s",
+                        (epigrafe_id,))
             row = cur.fetchone()
             bloque = row[0] if row else None
 
             cur.execute("""
-                SELECT COALESCE(SUM(pu.total_vistas), 0),
-                       COALESCE(SUM(pu.total_correctas), 0)
+                SELECT COALESCE(SUM(pu.total_vistas), 0)     AS respuestas,
+                       COALESCE(SUM(pu.total_correctas), 0)  AS correctas,
+                       COUNT(*)                              AS distintas,
+                       COUNT(*) FILTER (WHERE pu.repeticiones >= %s) AS asentadas
                 FROM normas.progreso_usuario pu
                 JOIN normas.preguntas_test pt ON pt.pregunta_id = pu.pregunta_id
                 WHERE pu.user_id = %s AND pt.epigrafe_id = %s
-            """, (user_id, epigrafe_id))
-            vistas, correctas = cur.fetchone()
+            """, (p["repeticiones_ok"], user_id, epigrafe_id))
+            vistas, correctas, distintas, asentadas = cur.fetchone()
 
-            fase = _fase_por_vistas(vistas)
+            fase       = _fase_por_vistas(vistas)
             porcentaje = round(100 * correctas / vistas, 2) if vistas else 0.0
-            estudiado = vistas > 0 and porcentaje >= 70.0
+            dominio    = round(100 * asentadas / distintas, 2) if distintas else 0.0
+            evaluable  = distintas >= p["muestra_minima"]
+            estudiado  = evaluable and dominio >= p["umbral_dominio"]
 
             cur.execute("""
                 INSERT INTO normas.plan_estudio
                     (user_id, oposicion_id, bloque, epigrafe_id, fase, preguntas_vistas,
-                     preguntas_correctas, porcentaje_acierto, estudiado, actualizado_en)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                     preguntas_correctas, porcentaje_acierto, estudiado,
+                     preguntas_distintas, preguntas_asentadas, dominio_pct, evaluable,
+                     actualizado_en)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 ON CONFLICT (user_id, oposicion_id, epigrafe_id) DO UPDATE SET
                     bloque              = EXCLUDED.bloque,
                     fase                = EXCLUDED.fase,
@@ -1138,18 +1185,27 @@ def get_fase_alumno(user_id: str, oposicion_id: int, epigrafe_id: int) -> dict:
                     preguntas_correctas = EXCLUDED.preguntas_correctas,
                     porcentaje_acierto  = EXCLUDED.porcentaje_acierto,
                     estudiado           = EXCLUDED.estudiado,
+                    preguntas_distintas = EXCLUDED.preguntas_distintas,
+                    preguntas_asentadas = EXCLUDED.preguntas_asentadas,
+                    dominio_pct         = EXCLUDED.dominio_pct,
+                    evaluable           = EXCLUDED.evaluable,
                     actualizado_en      = NOW()
-            """, (user_id, oposicion_id, bloque, epigrafe_id, fase, vistas, correctas, porcentaje, estudiado))
+            """, (user_id, oposicion_id, bloque, epigrafe_id, fase, vistas, correctas,
+                  porcentaje, estudiado, distintas, asentadas, dominio, evaluable))
         conn.commit()
 
     return {
-        "epigrafe_id": epigrafe_id,
-        "bloque": bloque,
-        "fase": fase,
-        "preguntas_vistas": vistas,
+        "epigrafe_id":         epigrafe_id,
+        "bloque":              bloque,
+        "fase":                fase,
+        "preguntas_vistas":    vistas,
         "preguntas_correctas": correctas,
-        "porcentaje_acierto": porcentaje,
-        "estudiado": estudiado,
+        "porcentaje_acierto":  porcentaje,
+        "preguntas_distintas": distintas,
+        "preguntas_asentadas": asentadas,
+        "dominio_pct":         dominio,
+        "evaluable":           evaluable,
+        "estudiado":           estudiado,
     }
 
 
@@ -1179,6 +1235,8 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
         si aún no hay datos.
       - actividad_reciente: últimas preguntas respondidas (SM-2).
     """
+    p_apr = get_parametros_aprendizaje(oposicion_id)
+
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -1187,7 +1245,11 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
                        COALESCE(pe.preguntas_vistas, 0),
                        COALESCE(pe.preguntas_correctas, 0),
                        COALESCE(pe.porcentaje_acierto, 0),
-                       COALESCE(pe.estudiado, FALSE)
+                       COALESCE(pe.estudiado, FALSE),
+                       COALESCE(pe.preguntas_distintas, 0),
+                       COALESCE(pe.preguntas_asentadas, 0),
+                       COALESCE(pe.dominio_pct, 0),
+                       COALESCE(pe.evaluable, FALSE)
                 FROM normas.epigrafes e
                 LEFT JOIN normas.plan_estudio pe
                        ON pe.epigrafe_id = e.epigrafe_id
@@ -1196,6 +1258,21 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
                 ORDER BY e.orden
             """, (user_id, oposicion_id, oposicion_id))
             filas = cur.fetchall()
+
+            # Temas con banco suficiente para poder llegar a la muestra mínima.
+            # La cobertura del bloque se mide sobre ESTOS, no sobre los 58 temas:
+            # 6 temas no tienen ninguna pregunta, y exigirlos haría que el bloque
+            # fuese inalcanzable para siempre.
+            cur.execute("""
+                SELECT e.bloque, COUNT(*)
+                FROM normas.epigrafes e
+                WHERE e.oposicion_id = %s
+                  AND (SELECT COUNT(*) FROM normas.preguntas_test pt
+                        WHERE pt.epigrafe_id = e.epigrafe_id
+                          AND pt.revisada AND pt.activa AND NOT pt.descartada) >= %s
+                GROUP BY e.bloque
+            """, (oposicion_id, p_apr["muestra_minima"]))
+            temas_con_banco = dict(cur.fetchall())
 
             cur.execute("""
                 SELECT p.pregunta_id, p.ultima_vez, p.ultima_correcta,
@@ -1211,7 +1288,8 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
             actividad_reciente = [dict(zip(cols2, row)) for row in cur.fetchall()]
 
     por_bloque: dict[str, dict] = {}
-    for bloque, epigrafe_id, tema, titulo, orden, fase, vistas, correctas, pct, estudiado in filas:
+    for (bloque, epigrafe_id, tema, titulo, orden, fase, vistas, correctas, pct,
+         estudiado, distintas, asentadas, dominio, evaluable) in filas:
         b = por_bloque.setdefault(bloque, {
             "bloque": bloque, "temas": [], "preguntas_vistas": 0, "preguntas_correctas": 0,
         })
@@ -1220,14 +1298,30 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
             "orden": orden, "fase": fase, "preguntas_vistas": vistas,
             "preguntas_correctas": correctas, "porcentaje_acierto": float(pct),
             "estudiado": estudiado,
+            "preguntas_distintas": distintas, "preguntas_asentadas": asentadas,
+            "dominio_pct": float(dominio), "evaluable": evaluable,
         })
         b["preguntas_vistas"] += vistas
         b["preguntas_correctas"] += correctas
 
     bloques = []
     for b in por_bloque.values():
-        temas_con_vistas = [t for t in b["temas"] if t["preguntas_vistas"] > 0]
-        estudiado_bloque = bool(temas_con_vistas) and all(t["estudiado"] for t in temas_con_vistas)
+        # REGLA DEL BLOQUE (migración 045), dos condiciones:
+        #   1. Cobertura: haber evaluado al menos `cobertura_bloque` % de los temas
+        #      QUE TIENEN BANCO SUFICIENTE (no de los 58: 6 no tienen preguntas y
+        #      exigirlos haría el bloque inalcanzable). Cierra el agujero de dar un
+        #      bloque por estudiado habiendo tocado un solo tema.
+        #   2. Ninguno de los temas evaluados por debajo del umbral de dominio.
+        #      Los NO evaluables (muestra insuficiente) no bloquean — antes, un tema
+        #      con 2 respuestas falladas tumbaba el bloque entero.
+        evaluables = [t for t in b["temas"] if t["evaluable"]]
+        disponibles = temas_con_banco.get(b["bloque"], 0)
+        cobertura = (100 * len(evaluables) / disponibles) if disponibles else 0.0
+        estudiado_bloque = (
+            bool(evaluables)
+            and cobertura >= p_apr["cobertura_bloque"]
+            and all(t["estudiado"] for t in evaluables)
+        )
         pct_bloque = (
             round(100 * b["preguntas_correctas"] / b["preguntas_vistas"], 2)
             if b["preguntas_vistas"] else 0.0
@@ -1236,6 +1330,9 @@ def get_stats_alumno(user_id: str, oposicion_id: int) -> dict:
             "bloque": b["bloque"], "temas": b["temas"],
             "preguntas_vistas": b["preguntas_vistas"], "preguntas_correctas": b["preguntas_correctas"],
             "porcentaje_acierto": pct_bloque, "estudiado": estudiado_bloque,
+            "temas_evaluados": len(evaluables),
+            "temas_con_banco": disponibles,
+            "cobertura_pct": round(cobertura, 1),
         })
     bloques.sort(key=lambda b: b["bloque"])
 

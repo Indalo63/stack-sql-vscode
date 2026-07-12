@@ -155,6 +155,21 @@ El banco REAL (209 oficiales) **no se ha tocado**: está separado por la marca `
 
 **Estado hoy: 155 de 1.819 (faltan 1.664).** El panel que lo muestre es la **Fase 6** del plan (`docs/plan-fases-alumno.md`).
 
+### Nueva regla de dominio de un tema (migración 045, 12/07/2026)
+La regla anterior (`vistas > 0 AND correctas/vistas >= 70%`) tenía **tres fallos de fondo**, no de calibración:
+1. **Ruido**: con `vistas > 0`, un tema con **2 respuestas** ya contaba. Medido: un tema con 2 vistas y 0% tumbaba un bloque que iba al 78%.
+2. **Castigaba el aprendizaje** (el peor): el % era **acumulado de toda la vida**. El alumno que falla 5 veces y luego domina la pregunta quedaba hundido para siempre. Usábamos repetición espaciada —que existe porque *fallar y reaprender ES aprender*— y luego lo evaluábamos con una métrica que lo penaliza.
+3. **Agujero de cobertura** (en sentido contrario): los temas sin practicar no contaban en contra, así que bastaba practicar **un** tema al 70% para dar el bloque por estudiado.
+
+**Regla nueva:** tema dominado = `distintas >= muestra_minima` **AND** `>= umbral_dominio %` de ellas **asentadas en SM-2** (`repeticiones >= 2`: acertadas varias veces seguidas; al fallar, SM-2 resetea a 0, así que mide el dominio **actual**, no el historial). Bloque estudiado = `>= cobertura_bloque %` de sus temas **con banco suficiente** evaluados **AND** ninguno evaluado por debajo del umbral.
+
+**Por qué el SM-2 y no el %** (razón competitiva, no solo pedagógica): es la **única métrica proyectable al día del examen** (guarda `intervalo` y `proxima_revision` = un modelo de la curva de olvido). Un % histórico no se puede proyectar. **Esto es lo que hará posible el "¿estoy listo?" (Fase 5.2)**, que OpoRuta vende y OpositaTest no tiene.
+
+- [✅ Migración 045] `parametros_aprendizaje` (muestra_minima=5, umbral_dominio=70, repeticiones_ok=2, cobertura_bloque=60) **en BD**, para calibrar con alumnos reales sin desplegar. `plan_estudio` gana `preguntas_distintas`, `preguntas_asentadas`, `dominio_pct`, `evaluable`. **`porcentaje_acierto` se conserva** pero ya **no decide**: solo se muestra.
+- [⚠️ Detalle importante] La **cobertura se mide sobre los temas CON BANCO SUFICIENTE**, no sobre los 58: 6 temas no tienen preguntas y exigirlos haría el bloque **inalcanzable para siempre**.
+- [✅ Verificado contra la BD] (1) Un tema con 2 falladas ya **no bloquea** (`evaluable=False`). (2) Acertar 8 preguntas **una vez** da 100% de acierto pero **0% de dominio** → no cuela: hay que acertarlas otra vez. (3) El que falla 3 veces y luego domina: acierto histórico **40%**, dominio real **100%**, tema dominado — **con la regla antigua estaría bloqueado pese a sabérselo**. (4) Con 2 temas dominados de 4, cobertura 50% → bloque **no** estudiado (el agujero antiguo, cerrado). (5) **El dominio converge**: las preguntas nuevas lo diluyen, pero una tanda más y sube — no se persigue la cola.
+- [ℹ️ **Bug real corregido de paso**] El SM-2 **no tenía techo de intervalo**: `intervalo * facilidad` compone sin límite y acababa desbordando la fecha (`CURRENT_DATE + <bigint>` → `operator does not exist: date + bigint`). Encontrado al probar con muchos aciertos seguidos. Había ya **una fila con intervalo de 1.385 millones de días**. Techo puesto en 365 días (`_INTERVALO_MAX_DIAS`) y fila corregida.
+
 ### Recálculo autorizado de pesos (migración 044, 12/07/2026)
 Los pesos son una **foto fija** de los exámenes cargados (2024 y 2025). Si se carga el de 2023, el reparto real cambia. **El recálculo NO es automático a propósito**: un examen cargado con errores desviaría en silencio el motor y el objetivo del banco.
 
