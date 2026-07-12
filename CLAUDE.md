@@ -130,6 +130,30 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
+## ⚠️ MVP EN CURSO — hay datos de PRUEBA en la base de datos (12/07/2026)
+
+**88 preguntas están aprobadas SIN revisión humana real** (`preguntas_test.es_prueba = TRUE`, `revisado_por='PRUEBA_MVP'`) y hay **2 alumnos ficticios** (`alumno.mvp.uno@example.com`, `alumno.mvp.dos@example.com`). Se crearon para validar el motor de aprendizaje con 2 alumnos de prueba.
+
+**Esto degrada la lógica de negocio** (el banco revisado *es* el producto). **Nada de esto puede llegar a un alumno de pago.** Todo es reversible:
+```bash
+python3 scripts/limpiar_datos_prueba.py --supabase --dry-run   # ver
+python3 scripts/limpiar_datos_prueba.py --supabase             # limpiar
+```
+El banco REAL (209 oficiales) **no se ha tocado**: está separado por la marca `es_prueba`. Detalle completo en **`docs/mvp-datos-prueba.md`**.
+
+### 🐛 Bug grave corregido al preparar el MVP (migración 042)
+**Los bloques II y III tenían peso 0** en `oposicion_leyes.preguntas_simulacro`, y los pesos sumaban **51, no 100**. Cadena de efectos: la prueba de nivel reparte por peso → nunca servía preguntas de II ni III → el simulacro personal (que exige datos en los 6 bloques) **quedaba bloqueado para siempre**. Los alumnos jamás habrían podido hacerlo.
+
+Los pesos nuevos **no están inventados**: salen del reparto real de los exámenes oficiales 2024+2025. **Método determinista, sin IA:** los exámenes **están ordenados por bloque** (I→II→III→IV→V→VI), así que el bloque de las preguntas sin ley asignada se deduce **por su posición**. Esto corrigió un sesgo real: contar solo las preguntas con ley asignada **infravalora a II y III**, porque su contenido apunta a normas no cargadas. Reparto final: I=21, II=12, III=11, IV=20, V=21, VI=15 (=100).
+
+### Validado contra la BD real
+Prueba de nivel (cubre los 6 bloques) · las **4 fases** del mix adaptativo · el mix **no se rompe** al agotarse una categoría · bloque "estudiado" · simulacro personal (50 preguntas, fórmula A−E/3) · Mi progreso.
+
+- **Descubrimiento:** el motor cuenta **respuestas**, no preguntas distintas (el SM-2 re-sirve las falladas). **Bastan 25 preguntas en un tema** para recorrer las 4 fases, no 30+ distintas como se estimó.
+- **Aviso de producto:** la regla "bloque estudiado = TODOS sus temas ≥70%" es **muy estricta**. En la simulación, un tema con 2 vistas y 0% bloqueaba el bloque entero pese a ir al 78% global. Es el diseño acordado, pero **un golpe de mala suerte en un tema pequeño puede frustrar al alumno**.
+
+---
+
 ## Hito inmediato — Mejoras del perfil alumno (5 fases, aprobado 12/07/2026)
 
 Origen: comparativa con la competencia (OpoRuta, OpositaTest) — `docs/analisis-competencia-alumno.md`.
