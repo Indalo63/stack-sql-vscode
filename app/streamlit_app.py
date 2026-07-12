@@ -1443,9 +1443,17 @@ elif modo == "Editores":
 
     # ── Listado ───────────────────────────────────────────────────────────────
     st.subheader("Editores dados de alta")
-    for e in listar_editores():
+    editores = listar_editores()
+    # Si solo queda un administrador activo, no puede degradarse ni revocarse: la
+    # app se quedaría sin nadie capaz de gestionarla (solo recuperable por SQL).
+    # La regla ya se aplica en retrieval.py; aquí solo se refleja en los botones,
+    # para no ofrecer una acción que va a fallar.
+    n_admins = sum(1 for x in editores if x["activo"] and x["rol"] == "admin")
+
+    for e in editores:
         activo = e["activo"]
         soy_yo = e["email"].lower() == user["email"].lower()
+        ultimo_admin = activo and e["rol"] == "admin" and n_admins == 1
 
         col_info, col_rol, col_accion = st.columns([3, 1.4, 1.2])
         with col_info:
@@ -1461,7 +1469,12 @@ elif modo == "Editores":
         if activo:
             with col_rol:
                 otro_rol = "editor" if e["rol"] == "admin" else "admin"
-                if st.button(f"Hacer {otro_rol}", key=f"rol_{e['email']}"):
+                if st.button(f"Hacer {otro_rol}", key=f"rol_{e['email']}",
+                             disabled=ultimo_admin,
+                             help=("Eres el único administrador: si te quitas el rol, "
+                                   "nadie podría gestionar la lista de editores. Da de "
+                                   "alta a otro administrador primero.")
+                                  if ultimo_admin else None):
                     error = cambiar_rol_editor(e["email"], otro_rol, user["email"])
                     if error:
                         st.error(error)
@@ -1469,8 +1482,11 @@ elif modo == "Editores":
                         st.session_state["editores_flash"] = f"{e['email']} ahora es {otro_rol}."
                         st.rerun()
             with col_accion:
-                if st.button("Revocar", key=f"rev_{e['email']}", disabled=soy_yo,
-                             help="No puedes revocar tu propia cuenta." if soy_yo else None):
+                if st.button("Revocar", key=f"rev_{e['email']}",
+                             disabled=soy_yo or ultimo_admin,
+                             help=("No puedes revocar tu propia cuenta." if soy_yo else
+                                   "Es el único administrador activo." if ultimo_admin
+                                   else None)):
                     error = revocar_editor(e["email"], user["email"])
                     if error:
                         st.error(error)
