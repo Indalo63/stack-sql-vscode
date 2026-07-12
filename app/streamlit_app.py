@@ -42,6 +42,49 @@ st.set_page_config(
     layout="centered",
 )
 
+st.markdown("""
+<style>
+  /* Sidebar compacto: sin esto, los 6 bloques no caben en un portátil (768px) y
+     hay que hacer scroll para ver el último. */
+  section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] { gap: .45rem; }
+  section[data-testid="stSidebar"] hr { margin: .5rem 0; }
+  section[data-testid="stSidebar"] [data-testid="stCheckbox"] { margin-bottom: -.35rem; }
+
+  /* Pie del sidebar: compacto y discreto */
+  .st-key-sidebar_footer {
+      padding-top: .6rem;
+      border-top: 1px solid rgba(128,128,128,.25);
+  }
+  .st-key-sidebar_footer p { font-size: .78rem; margin-bottom: .2rem; }
+</style>
+""", unsafe_allow_html=True)
+
+
+# El pie va al final del sidebar. Como los selectores llaman a st.stop() cuando no
+# hay nada marcado, un bloque escrito al final del script no llegaría a pintarse en
+# ese caso: por eso _parar() lo pinta antes de detener la ejecución.
+_pie_pintado = False
+
+
+def _pie_sidebar() -> None:
+    """Sesión activa + cerrar sesión, al fondo del sidebar. Idempotente."""
+    global _pie_pintado
+    if _pie_pintado or not st.session_state.get("_pie_datos"):
+        return
+    _pie_pintado = True
+    email, rol = st.session_state["_pie_datos"]
+    with st.sidebar.container(key="sidebar_footer"):
+        st.caption(f"👤 {email} · {rol}")
+        if st.button("Cerrar sesión", key="logout_admin", type="tertiary"):
+            st.logout()
+
+
+def _parar():
+    """st.stop() que no se deja el pie del sidebar sin pintar."""
+    _pie_sidebar()
+    st.stop()
+
+
 _NOMBRES_BLOQUE = {
     "I":   "I — Organización del Estado",
     "II":  "II — Unión Europea",
@@ -79,7 +122,8 @@ def _etiqueta_tema(t: dict) -> str:
 
 
 def _checkboxes(items, key_de, etiqueta_de, prefix: str, titulo: str):
-    """Bloque de multi-checkbox con botones 'Seleccionar todo' / 'Elimina la selección'."""
+    """Multi-checkbox con 'Seleccionar todo' / 'Elimina la selección'. Solo para
+    listas cortas (Bloque, 6 opciones): con listas largas usar _multiselect."""
     st.sidebar.markdown(f"**{titulo}**")
     _c1, _c2 = st.sidebar.columns(2)
     with _c1:
@@ -99,6 +143,39 @@ def _checkboxes(items, key_de, etiqueta_de, prefix: str, titulo: str):
     ]
 
 
+def _multiselect(items, key_de, etiqueta_de, prefix: str, titulo: str):
+    """
+    Desplegable multiselección: ocupa una línea en vez de una casilla por opción.
+
+    Necesario en Tema (hasta 58) y Ley (decenas): con casillas, el sidebar llegaba
+    a 4.800px — más de 6 pantallas de scroll — y era imposible trabajar.
+    """
+    key = f"{prefix}_ms"
+    ids = [key_de(it) for it in items]
+    por_id = {key_de(it): it for it in items}
+
+    # Al cambiar el filtro de arriba (p. ej. otro bloque), la selección guardada
+    # puede contener ids que ya no existen: hay que limpiarla o Streamlit peta.
+    if key in st.session_state:
+        st.session_state[key] = [i for i in st.session_state[key] if i in por_id]
+
+    _c1, _c2 = st.sidebar.columns(2)
+    with _c1:
+        if st.button("Seleccionar todo", key=f"{prefix}_todos", use_container_width=True):
+            st.session_state[key] = ids
+            st.rerun()
+    with _c2:
+        if st.button("Elimina la selección", key=f"{prefix}_ninguno", use_container_width=True):
+            st.session_state[key] = []
+            st.rerun()
+
+    sel = st.sidebar.multiselect(
+        titulo, options=ids, format_func=lambda i: etiqueta_de(por_id[i]),
+        key=key, placeholder="Elige una o varias…",
+    )
+    return [por_id[i] for i in sel]
+
+
 def _selector_bloque_tema_ley(oposicion_id: int, prefix: str):
     """Cascada Bloque → Tema → Ley (multi-selección en los tres niveles)."""
     bloques_sel = tuple(_checkboxes(
@@ -108,34 +185,34 @@ def _selector_bloque_tema_ley(oposicion_id: int, prefix: str):
     ))
     if not bloques_sel:
         st.sidebar.info("Selecciona al menos un bloque.")
-        st.stop()
+        _parar()
 
-    temas_sel = tuple(t["epigrafe_id"] for t in _checkboxes(
+    temas_sel = tuple(t["epigrafe_id"] for t in _multiselect(
         get_temas_por_bloques(oposicion_id, bloques_sel),
         key_de=lambda t: t["epigrafe_id"], etiqueta_de=_etiqueta_tema,
         prefix=f"{prefix}_tema", titulo="Tema",
     ))
     if not temas_sel:
         st.sidebar.info("Selecciona al menos un tema.")
-        st.stop()
+        _parar()
 
     try:
         leyes = _cargar_leyes(oposicion_id, bloques_sel, excluir_test=True, temas=temas_sel)
     except Exception as e:
         st.error(f"Error al cargar las leyes: {e}")
-        st.stop()
+        _parar()
     if not leyes:
         st.sidebar.warning("Ninguna ley cargada está asociada todavía a los temas seleccionados.")
-        st.stop()
+        _parar()
 
-    leyes_sel = _checkboxes(
+    leyes_sel = _multiselect(
         leyes,
         key_de=lambda l: l["ley_id"], etiqueta_de=lambda l: l["nombre_corto"] or l["nombre"],
         prefix=f"{prefix}_ley", titulo="Ley",
     )
     if not leyes_sel:
         st.sidebar.info("Selecciona al menos una ley.")
-        st.stop()
+        _parar()
 
     return bloques_sel, temas_sel, leyes_sel
 
@@ -148,27 +225,27 @@ def _selector_generar_test(oposicion_id: int) -> list[dict]:
         format_func=lambda b: _NOMBRES_BLOQUE.get(b, b), key="gt_bloque",
     )
     if st.sidebar.radio("Generar por", ["Tema", "Ley"], key="gt_filtro") == "Tema":
-        temas_sel = tuple(t["epigrafe_id"] for t in _checkboxes(
+        temas_sel = tuple(t["epigrafe_id"] for t in _multiselect(
             get_temas_por_bloques(oposicion_id, (bloque,)),
             key_de=lambda t: t["epigrafe_id"], etiqueta_de=_etiqueta_tema,
             prefix="gt_tema", titulo="Tema",
         ))
         if not temas_sel:
             st.sidebar.info("Selecciona al menos un tema.")
-            st.stop()
+            _parar()
         leyes_sel = _cargar_leyes(oposicion_id, (bloque,), excluir_test=True, temas=temas_sel)
         if not leyes_sel:
             st.sidebar.warning("Ninguna ley cargada está asociada todavía a los temas seleccionados.")
-            st.stop()
+            _parar()
     else:
-        leyes_sel = _checkboxes(
+        leyes_sel = _multiselect(
             _cargar_leyes(oposicion_id, (bloque,), excluir_test=True),
             key_de=lambda l: l["ley_id"], etiqueta_de=lambda l: l["nombre_corto"] or l["nombre"],
             prefix="gt_ley", titulo="Ley",
         )
         if not leyes_sel:
             st.sidebar.info("Selecciona al menos una ley.")
-            st.stop()
+            _parar()
 
     return leyes_sel
 
@@ -197,7 +274,7 @@ def _selector_revisar(oposicion_id: int) -> list[dict]:
         temas = get_temas_por_bloques(oposicion_id, tuple(_cargar_bloques(oposicion_id)))
         if not temas:
             st.sidebar.warning("No hay temas cargados para esta oposición.")
-            st.stop()
+            _parar()
         por_tema = pendientes_por_tema(oposicion_id)
 
         def _etiqueta_tema_pend(t: dict) -> str:
@@ -215,7 +292,7 @@ def _selector_revisar(oposicion_id: int) -> list[dict]:
 
     if not leyes:
         st.sidebar.warning("Ninguna ley cargada está asociada todavía a esta selección.")
-        st.stop()
+        _parar()
     return leyes
 
 
@@ -223,7 +300,7 @@ try:
     oposiciones = _cargar_oposiciones()
 except Exception as e:
     st.error(f"No se puede conectar a la base de datos: {e}")
-    st.stop()
+    _parar()
 
 # ── Flujo Alumno (Supabase Auth) ───────────────────────────────────────────────
 def _mensaje_error_alumno(e: Exception, accion: str) -> str:
@@ -724,24 +801,22 @@ _ETIQUETA_ACCESO = {
 if "acceso" not in st.session_state:
     st.session_state.acceso = None
 
-st.sidebar.markdown("**Acceso**")
-_cacc1, _cacc2 = st.sidebar.columns(2)
-with _cacc1:
-    if st.button("Gestión banco de preguntas", key="acceso_administracion", use_container_width=True):
-        st.session_state.acceso = "administracion"
-        st.rerun()
-with _cacc2:
-    if st.button("Alumno", key="acceso_alumno", use_container_width=True):
-        st.session_state.acceso = "alumno"
-        st.rerun()
-
-if st.session_state.acceso:
-    st.sidebar.caption(f"Acceso actual: **{_ETIQUETA_ACCESO[st.session_state.acceso]}**")
-    if st.sidebar.button("← Cambiar acceso", key="acceso_reset"):
-        st.session_state.acceso = None
-        st.rerun()
-
+# La elección de acceso solo ocupa sitio mientras haga falta: una vez dentro, el
+# título de la página ya dice dónde estás, así que estos botones (y el rótulo
+# "Acceso actual") desaparecen. Liberan ~200px justo encima de los selectores de
+# trabajo, que es lo que impedía ver los 6 bloques sin hacer scroll.
 if st.session_state.acceso is None:
+    st.sidebar.markdown("**Acceso**")
+    _cacc1, _cacc2 = st.sidebar.columns(2)
+    with _cacc1:
+        if st.button("Gestión banco", key="acceso_administracion", use_container_width=True):
+            st.session_state.acceso = "administracion"
+            st.rerun()
+    with _cacc2:
+        if st.button("Alumno", key="acceso_alumno", use_container_width=True):
+            st.session_state.acceso = "alumno"
+            st.rerun()
+
     st.title("⚖️ Asistente Jurídico")
     st.info(
         "Elige un tipo de acceso en la barra lateral: "
@@ -825,17 +900,16 @@ if not editor:
         "de preguntas. Si crees que es un error, pide al administrador que dé de "
         "alta tu cuenta."
     )
-    st.info("¿Eres opositor? Vuelve atrás y entra por **Alumno** (← Cambiar acceso).")
+    st.info("¿Eres opositor? Pulsa **Alumno** en la barra lateral.")
     st.stop()
 
 es_admin = editor["rol"] == "admin"
 
-st.sidebar.markdown(f"👤 {user['email']}")
-st.sidebar.caption("Administrador" if es_admin else "Editor")
-if st.sidebar.button("Cerrar sesión"):
-    st.logout()
-
-st.sidebar.markdown("---")
+# Datos del pie; se pinta al final del sidebar (o en _parar(), si algún selector
+# detiene la ejecución antes de llegar al final del script).
+st.session_state["_pie_datos"] = (
+    user["email"], "Administrador" if es_admin else "Editor",
+)
 
 # El modo se elige antes que nada: cada uno monta después su propio selector.
 # "Editores" solo lo ven los administradores (rol='admin', migración 037).
@@ -1419,3 +1493,6 @@ elif modo == "Editores":
         "persona. La app impide revocar tu propia cuenta y quedarse sin ningún "
         "administrador activo."
     )
+
+# ── Pie del sidebar (siempre el último) ──────────────────────────────────────
+_pie_sidebar()

@@ -181,6 +181,16 @@ Fase 1 del rediseño propuesto por el usuario en un boceto (PDF, diagrama a mano
 
 **Nota:** esto no sustituye a mantener la pantalla de consentimiento OAuth bien configurada, pero ya no es la única barrera: aunque se publicase a producción, una cuenta ajena no pasaría de "Acceso denegado".
 
+### Completado — Sidebar: caben los 6 bloques y se acaba el scroll infinito (12/07/2026)
+Reportado por el usuario: *"no se ven todos los bloques"*. **Medido antes de tocar nada** (Playwright, ventana 1366×768 de portátil): había **664px de cabecera** antes de llegar a "Bloque", así que solo cabían 4 de los 6; y al marcar los 6 bloques aparecían 58 casillas de tema y el sidebar llegaba a **4.826px — 6,3 pantallas de scroll**.
+
+- [✅ Sección "Acceso" oculta una vez dentro] Los dos botones + el rótulo "Acceso actual" seguían ocupando ~200px después de haber entrado, repitiendo lo que ya dice el título. Ahora solo se pintan cuando `acceso is None`. Para cambiar de perfil se recarga la página.
+- [✅ "← Cambiar acceso" eliminado] Petición explícita del usuario. Era redundante con los propios botones de Acceso.
+- [✅ Pie del sidebar] `👤 email · rol` + "Cerrar sesión" (botón `type="tertiary"`, pequeño) bajan al fondo. **Detalle no obvio:** los selectores llaman a `st.stop()` cuando no hay nada marcado, así que un bloque escrito al final del script **no se pintaría** justo en ese caso — por eso existe `_parar()` (pinta el pie y luego para) y `_pie_sidebar()` es idempotente. Un intento previo de anclarlo con CSS (`order`/`margin-top:auto`) **no funcionó**: Streamlit re-anida los contenedores y el `order` no llegaba al nivel del flex padre.
+- [✅ Tema y Ley pasan a desplegable multiselección] `_multiselect()` sustituye a `_checkboxes()` en Tema (hasta 58) y Ley (decenas); Bloque se queda con casillas (solo 6, y ahora caben). **Ojo al reutilizar:** al cambiar el filtro de arriba, la selección guardada puede contener ids que ya no existen y Streamlit lanza excepción — `_multiselect` la limpia antes de pintar.
+- [✅ CSS compacto] Menos separación entre elementos del sidebar (`gap`, `hr`, casillas).
+- [✅ Verificado en vivo, navegador real] **Los 6 bloques caben sin scroll** (último a 561px de 768). Sidebar con los 6 bloques marcados: **4.826px → 768px** (de 6,3 pantallas a 1,0). Desplegable de Tema funcionando (58 opciones en una línea) y cascada Bloque→Tema→Ley intacta. Sin errores de consola.
+
 ### Completado — Nombres de ley: `nombre_oficial` (migración 038, 12/07/2026)
 Auditoría pedida por el usuario ("comprueba que siempre se aplica bien el nombre de las leyes"). **Encontró un incumplimiento real de la norma obligatoria nº2.**
 
