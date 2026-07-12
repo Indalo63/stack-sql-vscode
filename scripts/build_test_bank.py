@@ -26,6 +26,7 @@ import re
 import sys
 import json
 import time
+import random
 import argparse
 from pathlib import Path
 
@@ -399,6 +400,48 @@ def _parse_and_validate(raw, temas_validos=None):
             raise ValueError(f"Tema {tema} no pertenece al bloque (válidos: {sorted(temas_validos)})")
         parsed["tema"] = tema
 
+    return _barajar_opciones(parsed)
+
+
+_RE_OPCION = re.compile(r'(?<![\d.])\b([abcd])\)')
+
+
+def _barajar_opciones(parsed):
+    """
+    Baraja las opciones y remapea la respuesta correcta.
+
+    POR QUÉ: el modelo coloca la respuesta correcta en la "a" de forma
+    abrumadora. Medido el 12/07/2026 sobre las 88 primeras preguntas generadas:
+    **86,4% en la "a"** (el examen oficial real: 27,8%). Sin barajar, el alumno
+    aprende "ante la duda, marca la a", acierta SIN saber la ley, y eso además
+    corrompe nuestras métricas (dominio, dificultad, "¿estoy listo?"), que
+    estarían midiendo a alguien que adivina el patrón.
+
+    También se remapean las letras dentro de la explicación: el modelo escribe
+    cosas como "la opción b) es incorrecta porque…", y barajar sin tocar ese
+    texto lo dejaría señalando a la opción equivocada. Las referencias a
+    artículos ("artículo 10.2.c)") NO se tocan: el patrón exige que la letra no
+    vaya precedida de dígito ni punto.
+    """
+    letras = ["a", "b", "c", "d"]
+    ops = parsed["opciones"]
+    correcta = parsed["correcta"]
+
+    destino = random.choice(letras)                       # dónde va la correcta
+    libres  = [l for l in letras if l != destino]
+    otras   = [l for l in letras if l != correcta]
+    random.shuffle(libres)
+    mapa = {correcta: destino}
+    mapa.update(dict(zip(otras, libres)))
+
+    parsed["opciones"] = {mapa[k]: v for k, v in ops.items()}
+    parsed["correcta"] = destino
+
+    def _remap(txt):
+        return _RE_OPCION.sub(lambda m: f"{mapa[m.group(1)]})", txt) if txt else txt
+
+    parsed["explicacion"] = _remap(parsed.get("explicacion"))
+    parsed["pregunta"]    = _remap(parsed.get("pregunta"))
     return parsed
 
 

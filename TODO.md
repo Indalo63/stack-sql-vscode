@@ -130,15 +130,15 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 Aprobado por el usuario en la sesión del 12/07/2026. **Orden de ejecución: 1 → 2 → resto.**
 
-#### 1. 🔴 URGENTE — Sesgo de la opción "a" (corrompe TODO lo demás)
+#### 1. ✅ HECHO (12/07/2026) — Sesgo de la opción "a"
 **Medido:** el **86,4%** de las 88 preguntas IA tienen la respuesta correcta en la **opción "a"** (b: 6,8% · c: 5,7% · d: 1,1%). El examen oficial real está equilibrado (a: 27,8% · b: 22,5% · c: 31,6% · d: 18,2%).
 
 **Por qué es grave:** el alumno aprende *"ante la duda, marca la a"*, acierta sin saber la ley, y esa costumbre **le perjudica en el examen real**. Además **invalida nuestras métricas** (dominio, dificultad empírica, "¿estoy listo?"): miden a alguien que adivina el patrón, no que aprende.
 
-- [ ] Barajar las opciones de las 88 preguntas ya generadas, **remapeando `correcta`**.
-- [ ] Añadir el barajado **al generador** (`build_test_bank`), para que no vuelva a pasar.
-- [ ] Comprobación posterior: la distribución debe quedar ~25% en cada opción.
-- Determinista, **sin coste de API**.
+- [x] Barajado **dirigido** de las 88 (no aleatorio: el aleatorio deja el reparto desigual). Clave al **25,0% exacto**. `scripts/equilibrar_clave.py`.
+- [x] **Remapeo de las letras dentro de la explicación**: 59 de 88 citaban las opciones por letra ("La opción b) es incorrecta…") y habrían quedado señalando a la opción equivocada. No toca las referencias a artículos (`artículo 10.2.c)`). Validación automática: **0 incoherencias**.
+- [x] Barajado **en el generador** (`build_test_bank._barajar_opciones`), verificado con 400 generaciones: 23,8/24,0/25,2/27,0%.
+- [x] Las preguntas **oficiales no se tocaron**: son el examen real.
 
 #### 2. Guardar QUÉ opción eligió el alumno (hoy se tira)
 `progreso_usuario` solo guarda `ultima_correcta` (sí/no). **Se está tirando la señal pedagógica más valiosa.** Sin ella no hay análisis de distractores, ni diagnóstico real del error, ni detección de preguntas rotas.
