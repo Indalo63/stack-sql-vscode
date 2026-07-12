@@ -181,6 +181,15 @@ Fase 1 del rediseño propuesto por el usuario en un boceto (PDF, diagrama a mano
 
 **Nota:** esto no sustituye a mantener la pantalla de consentimiento OAuth bien configurada, pero ya no es la única barrera: aunque se publicase a producción, una cuenta ajena no pasaría de "Acceso denegado".
 
+### Completado — Revisar preguntas: hacer visible dónde está el trabajo (12/07/2026)
+Detectado por el usuario al ver la app: el panel decía **70 pendientes (todo el banco)** pero el bloque seleccionado (I, el que sale por defecto) mostraba "No hay preguntas pendientes". No era un bug — las 70 estaban en los bloques II (20), IV (30) y VI (20), y el Bloque I está genuinamente vacío. La anomalía era **de diseño**: el contador es global pero la lista está filtrada, así que la app decía *cuánto* trabajo hay pero no *dónde*, y había que ir probando bloques (o los 58 temas) a ciegas.
+
+- [✅ `retrieval.py`] `pendientes_por_bloque(oposicion_id)` y `pendientes_por_tema(oposicion_id)`. **Ojo con el conteo por tema:** una misma ley puede ser relevante para varios temas (`epigrafe_leyes` es N:M), así que la suma por temas **excede** el total del banco — no es un reparto, es "cuántas verás si eliges este tema", que es justo lo que necesita el editor. Documentado en el docstring.
+- [✅ `streamlit_app.py`, `_selector_revisar`] Las etiquetas de Bloque y Tema llevan el número de pendientes (`IV — Derecho Administrativo · 30`), con un caption que lo explica.
+- [✅ Mensaje de vacío útil] Cuando la selección no tiene pendientes, ahora dice **dónde sí las hay** ("Sí hay pendientes en: II — Unión Europea: 20 · IV — Derecho Administrativo: 30 · VI — Gestión Financiera: 20") en vez de dejar al editor a ciegas.
+- [✅ Subtítulo sin ruido] Antes listaba las 8 leyes del bloque aunque ninguna tuviera preguntas; ahora solo las que **realmente aportan** pendientes (`Pendientes de revisión — LGS, LPAC, RLGS`).
+- [✅ Verificado en vivo, navegador real] Desplegable de Bloque mostrando los contadores; Bloque I (vacío) indica dónde está el trabajo; Bloque IV muestra "30 preguntas pendientes" y solo las 3 leyes con trabajo. Conteos cuadrados contra BD (suma por bloques = 70 = contador global). Sin errores de consola.
+
 ### Completado — Pantalla de gestión de editores (migración 037, 12/07/2026)
 Hasta ahora dar de alta a un editor era un `INSERT` a mano. Ahora se hace desde la app. Decisiones confirmadas con el usuario antes de implementar: (1) solo los **administradores** gestionan la lista (nueva columna `rol`), no cualquier editor; (2) la app **bloquea** revocarse a uno mismo y quedarse sin ningún admin activo.
 

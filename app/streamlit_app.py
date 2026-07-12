@@ -16,6 +16,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_temas_por_bloques,
                            get_editor, listar_editores, alta_editor,
                            revocar_editor, cambiar_rol_editor,
+                           pendientes_por_bloque, pendientes_por_tema,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
@@ -172,11 +173,23 @@ def _selector_generar_test(oposicion_id: int) -> list[dict]:
 
 
 def _selector_revisar(oposicion_id: int) -> list[dict]:
-    """Filtro excluyente Por bloque / Por tema, selección única en ambos casos."""
+    """
+    Filtro excluyente Por bloque / Por tema, selección única en ambos casos.
+
+    Las etiquetas llevan el número de preguntas pendientes, para que el editor
+    vea de un vistazo dónde está el trabajo: el contador de arriba es global,
+    así que sin esto habría que ir probando bloques (o los 58 temas) a ciegas.
+    """
     if st.sidebar.radio("Filtrar por", ["Bloque", "Tema"], key="rev_filtro") == "Bloque":
+        por_bloque = pendientes_por_bloque(oposicion_id)
+
+        def _etiqueta_bloque(b: str) -> str:
+            n = por_bloque.get(b, 0)
+            return f"{_NOMBRES_BLOQUE.get(b, b)}{f'  ·  {n}' if n else ''}"
+
         bloque = st.sidebar.selectbox(
             "Bloque", _cargar_bloques(oposicion_id),
-            format_func=lambda b: _NOMBRES_BLOQUE.get(b, b), key="rev_bloque",
+            format_func=_etiqueta_bloque, key="rev_bloque",
         )
         leyes = _cargar_leyes(oposicion_id, (bloque,), excluir_test=True)
     else:
@@ -184,12 +197,20 @@ def _selector_revisar(oposicion_id: int) -> list[dict]:
         if not temas:
             st.sidebar.warning("No hay temas cargados para esta oposición.")
             st.stop()
+        por_tema = pendientes_por_tema(oposicion_id)
+
+        def _etiqueta_tema_pend(t: dict) -> str:
+            n = por_tema.get(t["epigrafe_id"], 0)
+            return f"{_etiqueta_tema(t)}{f'  ·  {n}' if n else ''}"
+
         tema = st.sidebar.selectbox(
-            "Tema", temas, format_func=_etiqueta_tema, key="rev_tema",
+            "Tema", temas, format_func=_etiqueta_tema_pend, key="rev_tema",
         )
         leyes = _cargar_leyes(
             oposicion_id, None, excluir_test=True, temas=(tema["epigrafe_id"],),
         )
+
+    st.sidebar.caption("El número indica las preguntas pendientes de revisión.")
 
     if not leyes:
         st.sidebar.warning("Ninguna ley cargada está asociada todavía a esta selección.")
@@ -1151,14 +1172,25 @@ elif modo == "Revisar preguntas":
                 use_container_width=True,
             )
 
-    nombres_sel = ", ".join(l["codigo"] for l in leyes_sel)
-    st.subheader(f"Pendientes de revisión — {nombres_sel}")
-
     pending = _get_pending([l["ley_id"] for l in leyes_sel])
 
     if not pending:
+        st.subheader("Pendientes de revisión")
         st.info("No hay preguntas pendientes de revisión para esta selección.")
+        # El contador de arriba es global: si hay trabajo en otro sitio, decir dónde
+        # en vez de dejar al editor probando bloques a ciegas.
+        otros = {b: n for b, n in pendientes_por_bloque(oposicion_id).items() if n}
+        if otros:
+            donde = " · ".join(
+                f"**{_NOMBRES_BLOQUE.get(b, b)}**: {n}"
+                for b, n in sorted(otros.items())
+            )
+            st.caption(f"Sí hay pendientes en: {donde}")
     else:
+        # Solo las leyes que realmente aportan preguntas: listar las 8 del bloque
+        # cuando solo 3 tienen trabajo era ruido.
+        con_pendientes = sorted({p["ley_codigo"] for p in pending})
+        st.subheader(f"Pendientes de revisión — {', '.join(con_pendientes)}")
         st.caption(f"{len(pending)} pregunta{'s' if len(pending) > 1 else ''} pendiente{'s' if len(pending) > 1 else ''}")
 
         for p in pending:

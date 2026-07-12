@@ -178,6 +178,53 @@ def cambiar_rol_editor(email: str, rol: str, quien: str) -> str | None:
     return None
 
 
+def pendientes_por_bloque(oposicion_id: int) -> dict[str, int]:
+    """
+    Preguntas IA pendientes de revisión, contadas por bloque.
+
+    Para que el editor vea DÓNDE está el trabajo sin ir probando bloques a
+    ciegas: el contador global dice cuántas hay, esto dice en cuál están.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT ol.bloque, COUNT(*)
+                FROM normas.preguntas_test pt
+                JOIN normas.oposicion_leyes ol ON ol.ley_id = pt.ley_id
+                                              AND ol.oposicion_id = %s
+                WHERE pt.fuente = 'ia'
+                  AND pt.revisada = FALSE
+                  AND ol.excluir_test = FALSE
+                GROUP BY ol.bloque
+            """, (oposicion_id,))
+            return {b: n for b, n in cur.fetchall()}
+
+
+def pendientes_por_tema(oposicion_id: int) -> dict[int, int]:
+    """
+    Preguntas IA pendientes por tema oficial (epígrafe).
+
+    Cuenta lo que el editor VERÍA al elegir ese tema, es decir, las pendientes
+    de las leyes asociadas al tema. Como una misma ley puede ser relevante para
+    varios temas, la suma de todos los temas puede exceder el total del banco:
+    no es un reparto, es "cuántas verás aquí".
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT el.epigrafe_id, COUNT(*)
+                FROM normas.preguntas_test pt
+                JOIN normas.epigrafe_leyes el  ON el.ley_id = pt.ley_id
+                JOIN normas.oposicion_leyes ol ON ol.ley_id = pt.ley_id
+                                              AND ol.oposicion_id = %s
+                WHERE pt.fuente = 'ia'
+                  AND pt.revisada = FALSE
+                  AND ol.excluir_test = FALSE
+                GROUP BY el.epigrafe_id
+            """, (oposicion_id,))
+            return {e: n for e, n in cur.fetchall()}
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:
