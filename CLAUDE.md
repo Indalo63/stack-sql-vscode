@@ -155,6 +155,19 @@ El banco REAL (209 oficiales) **no se ha tocado**: está separado por la marca `
 
 **Estado hoy: 155 de 1.819 (faltan 1.664).** El panel que lo muestre es la **Fase 6** del plan (`docs/plan-fases-alumno.md`).
 
+### Dificultad de las preguntas: provisional → empírica (migración 047, 12/07/2026)
+**El campo no estaba roto: nunca se había usado.** Las 297 preguntas tenían `dificultad = 2` (el default), así que el `ORDER BY dificultad` de la prueba de nivel **no ordenaba nada** y la promesa al alumno ("40 preguntas de dificultad creciente") **era falsa**. El editor tampoco podía asignarla: el campo nunca llegó a la pantalla de revisión.
+
+**Por qué no basta con que alguien la marque a mano:** la dificultad de un ítem **no es una opinión editorial, es una propiedad empírica** — en teoría de test se *define* como el % de examinandos que lo acierta. Y los expertos la estiman mal (cuando sabes la respuesta, no ves por qué es difícil). Un editor o una IA marcando "esta parece difícil" **está adivinando**.
+
+**Solución híbrida y autocorrectiva:**
+- `dificultad_origen = 'heuristica'` → valor **PROVISIONAL** de señales objetivas del texto: ¿pide un dato exacto (plazo, porcentaje, mayoría)? ¿se parecen mucho los distractores entre sí (hay que hilar fino)? ¿es conceptual (más fácil)? Los cortes salen de los **terciles del propio banco**, no de un umbral inventado. Reparto obtenido: 103 fáciles / 84 medias / 110 difíciles.
+- `dificultad_origen = 'empirica'` → valor **REAL** (% de acierto de los alumnos), que **sustituye a la heurística** en cuanto la pregunta acumula `min_respuestas_dificultad` respuestas (20, parámetro en BD).
+- **La heurística queda marcada como tal**: es una conjetura, no un dato, y el esquema lo dice para que nadie las confunda.
+- [✅ `scripts/calcular_dificultad.py`] Calcula ambas (`--dry-run`, `--solo-empirica` para reejecutar periódicamente con datos reales).
+
+**🐛 Bug que solo se vio al asignar por fin la dificultad:** la prueba de nivel hacía `ORDER BY dificultad ASC ... LIMIT n` por bloque, así que servía **las n MÁS FÁCILES**. Con todo a 2 daba igual; con dificultad real, la prueba habría servido **40 preguntas fáciles**: todo el mundo la aprueba y **no hay señal**. Lo que calibra es ver **dónde se rompe** el alumno. Corregido: ahora se toma un **abanico** (fácil/media/difícil a partes iguales por bloque) y **luego** se ordena creciente. Verificado: 10 fáciles → 20 medias → 10 difíciles, creciente, cubriendo los 6 bloques.
+
 ### Prueba de nivel: solo para quien viene de otra oposición (migración 046, 12/07/2026)
 **El valor pedagógico de la prueba de nivel es exactamente el INVERSO de lo que asumía el diseño**, que se la ofrecía por defecto a todo alumno nuevo.
 

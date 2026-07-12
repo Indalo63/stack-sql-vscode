@@ -1731,10 +1731,14 @@ def get_preguntas_prueba_nivel(oposicion_id: int, n: int = 40) -> list[dict]:
     oficial (oposicion_leyes.preguntas_simulacro) entre TODOS los bloques de
     la oposición — a diferencia del simulacro personal, no exige bloques
     "estudiado" (es la primera prueba del alumno, plan_estudio aún vacío).
-    Ordenadas por dificultad creciente (fácil → difícil) para calibrar el
-    nivel progresivamente. Nota: hoy casi todas las preguntas tienen
-    dificultad=2 (default, pendiente de reclasificación — ver TODO.md), así
-    que el efecto práctico del orden es limitado hasta reclasificar el banco.
+    Dentro de cada bloque se toma un ABANICO de dificultades (fácil, media y
+    difícil, a partes iguales) y luego se presentan en orden creciente.
+
+    Ojo con el matiz, que no es cosmético: ordenar por dificultad y cortar con
+    LIMIT servía **solo las más fáciles** del bloque. Para un test de calibración
+    eso es inútil — todo el mundo acierta y no hay señal. Lo que calibra es ver
+    dónde SE ROMPE el alumno, y para eso hacen falta preguntas difíciles.
+    (Detectado el 12/07/2026, al asignar por fin la dificultad: migración 047.)
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -1761,19 +1765,53 @@ def get_preguntas_prueba_nivel(oposicion_id: int, n: int = 40) -> list[dict]:
             for b, cantidad in reparto.items():
                 if cantidad <= 0:
                     continue
-                cur.execute(f"""
-                    SELECT {_COLUMNAS_PREGUNTA}, pt.dificultad
-                    FROM normas.preguntas_test pt
-                    JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
-                    JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
-                                                   AND ol.oposicion_id = %s
-                    WHERE ol.bloque = %s AND pt.revisada = TRUE AND pt.activa = TRUE
-                    ORDER BY pt.dificultad ASC, RANDOM()
-                    LIMIT %s
-                """, (oposicion_id, b, cantidad))
-                cols = [d[0] for d in cur.description]
-                preguntas += [dict(zip(cols, row)) for row in cur.fetchall()]
+                # Abanico de dificultades: se reparte la cuota del bloque entre
+                # fácil / media / difícil. Si de alguna no hay bastantes, la
+                # consulta final rellena con lo que haya (no deja huecos).
+                por_nivel = {1: cantidad // 3, 2: cantidad // 3, 3: cantidad // 3}
+                por_nivel[2] += cantidad - sum(por_nivel.values())   # el resto, a la media
 
+                elegidas: list[dict] = []
+                for nivel, cuota in por_nivel.items():
+                    if cuota <= 0:
+                        continue
+                    cur.execute(f"""
+                        SELECT {_COLUMNAS_PREGUNTA}, pt.dificultad
+                        FROM normas.preguntas_test pt
+                        JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                        JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                                       AND ol.oposicion_id = %s
+                        WHERE ol.bloque = %s AND pt.revisada AND pt.activa
+                          AND NOT pt.descartada AND pt.dificultad = %s
+                        ORDER BY RANDOM()
+                        LIMIT %s
+                    """, (oposicion_id, b, nivel, cuota))
+                    cols = [d[0] for d in cur.description]
+                    elegidas += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+                # Rellenar si alguna dificultad no tenía suficientes preguntas
+                faltan = cantidad - len(elegidas)
+                if faltan > 0:
+                    ya = [p["pregunta_id"] for p in elegidas] or [0]
+                    cur.execute(f"""
+                        SELECT {_COLUMNAS_PREGUNTA}, pt.dificultad
+                        FROM normas.preguntas_test pt
+                        JOIN normas.leyes l            ON l.ley_id        = pt.ley_id
+                        JOIN normas.oposicion_leyes ol ON ol.ley_id       = l.ley_id
+                                                       AND ol.oposicion_id = %s
+                        WHERE ol.bloque = %s AND pt.revisada AND pt.activa
+                          AND NOT pt.descartada
+                          AND NOT (pt.pregunta_id = ANY(%s::int[]))
+                        ORDER BY RANDOM()
+                        LIMIT %s
+                    """, (oposicion_id, b, ya, faltan))
+                    cols = [d[0] for d in cur.description]
+                    elegidas += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+                preguntas += elegidas
+
+    # Y AHORA sí: de fácil a difícil, para que el alumno entre en calor y se vea
+    # dónde se rompe.
     preguntas.sort(key=lambda p: p["dificultad"])
     return preguntas
 
