@@ -148,12 +148,14 @@ Aprobado por el usuario en la sesión del 12/07/2026. **Orden de ejecución: 1 �
 - [x] `analisis_distractores()` ya operativo: detecta **distractores muertos** y preguntas **sospechosas** (un distractor gana a la correcta → clave mal marcada o pregunta ambigua).
 - [x] El script de limpieza del MVP borra también esta tabla.
 
-#### 3. Discriminación del ítem + análisis de distractores
+#### 3. ✅ HECHO (12/07/2026, migración 049) — Discriminación del ítem
 La dificultad es solo **la mitad** de la teoría clásica de test. La otra mitad: ¿la pregunta **distingue** al que sabe del que no?
 
-- [ ] **Índice de discriminación** (D / correlación biserial-puntual). Una pregunta con discriminación **negativa** (los buenos la fallan más que los malos) está **rota**: enunciado ambiguo o **respuesta mal marcada**. Es un **detector automático de preguntas defectuosas** = control de calidad del banco = argumento B2B.
-- [ ] **Análisis de distractores**: un distractor que **nadie elige** es peso muerto (la pregunta es de 3 opciones, más fácil de lo que parece). Un distractor elegido por los alumnos **buenos** suele indicar que la clave está mal.
-- Depende del punto 2. **Madura con escala**, no con 2 alumnos.
+- [x] `scripts/analisis_items.py`: correlación biserial-puntual con la capacidad **corregida** (excluye el propio ítem, o se correlacionaría consigo misma). Alertas: `clave_sospechosa` · `no_discrimina` · `distractor_muerto`.
+- [x] **Validado plantando un defecto**: 30 alumnos sintéticos + una pregunta con la clave mal marcada a propósito. El detector la cazó (**discriminación −0,44**) sin falsas alarmas graves.
+- [x] Umbral corregido: la alerta grave exige `d < −0,10`. Con `d < 0` a secas, una pregunta sana con −0,02 (ruido) saltaba como grave — **un detector que grita "lobo" no sirve**.
+- [x] Sección **"Calidad del banco"** en el panel de admin.
+- [ ] ⚠️ **Ejecutarlo cuando haya alumnos**: con 2 no dice nada (no hay variabilidad de capacidad). Madura con decenas.
 
 #### 4. Calibración de confianza y decisión de dejar en blanco
 La fórmula oficial es **A − E/3**: responder a ciegas **resta**. Saber **cuándo NO contestar** es una destreza entrenable, y **ningún competidor la entrena**. Es específica de las oposiciones españolas.

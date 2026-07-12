@@ -697,6 +697,36 @@ def analisis_distractores(pregunta_id: int) -> dict:
     }
 
 
+def get_alertas_calidad(limite: int = 50) -> list[dict]:
+    """
+    Preguntas que el análisis psicométrico ha marcado como defectuosas
+    (migración 049). Para que el administrador las revise.
+
+    La más grave, `clave_sospechosa`, suele significar que **la respuesta está
+    mal marcada**: los alumnos que dominan la materia la fallan más que los que
+    no. Ningún editor puede cazar eso revisando preguntas a mano.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pt.pregunta_id, l.codigo AS ley_codigo, pt.articulo,
+                       pt.pregunta, pt.correcta, pt.alerta_calidad,
+                       pt.discriminacion, pt.discriminacion_n
+                FROM normas.preguntas_test pt
+                LEFT JOIN normas.leyes l ON l.ley_id = pt.ley_id
+                WHERE pt.alerta_calidad IS NOT NULL
+                  AND pt.revisada AND pt.activa AND NOT pt.descartada
+                ORDER BY CASE pt.alerta_calidad
+                             WHEN 'clave_sospechosa'  THEN 1
+                             WHEN 'no_discrimina'     THEN 2
+                             ELSE 3 END,
+                         pt.discriminacion NULLS LAST
+                LIMIT %s
+            """, (limite,))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:

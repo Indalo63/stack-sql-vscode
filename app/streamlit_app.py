@@ -20,6 +20,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_bloque_y_epigrafes,
                            descartar_pregunta, listar_descartadas, restaurar_pregunta,
                            get_cobertura_banco, proponer_pesos_bloque,
+                           get_alertas_calidad,
                            aplicar_pesos_bloque, get_historial_pesos,
                            get_preguntas_sm2, update_progreso_sm2,
                            registrar_respuesta, analisis_distractores,
@@ -1696,6 +1697,40 @@ elif modo == "Banco y pesos":
         f"Banco real: **{sum(c['actual'] for c in cob)}** · "
         f"Objetivo: **{sum(c['objetivo'] for c in cob)}** · Faltan: **{_falt}**"
     )
+
+    st.divider()
+
+    # ── Calidad del banco: preguntas que el análisis marca como defectuosas ───
+    st.subheader("Calidad del banco")
+    alertas = get_alertas_calidad()
+    if not alertas:
+        st.caption(
+            "Sin alertas. El análisis psicométrico (`scripts/analisis_items.py`) "
+            "necesita respuestas de alumnos: hasta que las haya, no puede decir nada."
+        )
+    else:
+        _ETIQ = {
+            "clave_sospechosa":  ("🔴", "Clave sospechosa — puede estar MAL MARCADA"),
+            "no_discrimina":     ("🟡", "No discrimina — no distingue al que sabe del que no"),
+            "distractor_muerto": ("⚪", "Distractor muerto — una opción no la elige nadie"),
+        }
+        graves = sum(1 for a in alertas if a["alerta_calidad"] == "clave_sospechosa")
+        if graves:
+            st.error(
+                f"**{graves} pregunta{'s' if graves > 1 else ''} con la clave sospechosa.** "
+                "Los alumnos que dominan la materia las fallan más que los que no: "
+                "lo más probable es que **la respuesta correcta esté mal marcada**."
+            )
+        for a in alertas:
+            icono, texto = _ETIQ.get(a["alerta_calidad"], ("•", a["alerta_calidad"]))
+            with st.expander(f"{icono} [{a['ley_codigo']}] {a['pregunta'][:70]}…"):
+                st.caption(f"**{texto}**")
+                st.markdown(a["pregunta"])
+                st.caption(
+                    f"Correcta marcada: **{a['correcta']}** · "
+                    f"discriminación: **{a['discriminacion']}** "
+                    f"(sobre {a['discriminacion_n']} respuestas)"
+                )
 
     st.divider()
 
