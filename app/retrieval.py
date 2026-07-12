@@ -23,6 +23,26 @@ def embed_query(text: str) -> list[float]:
     return _embedding_cache[text]
 
 
+def es_editor_autorizado(email: str) -> bool:
+    """
+    ¿Esta cuenta Google puede entrar en "Gestión banco de preguntas"?
+
+    Una sesión Google válida NO basta: el email debe estar en normas.editores
+    con activo=TRUE (lista blanca, migración 036). Sin esta comprobación,
+    cualquier cuenta de Google que completase el OAuth tendría acceso completo
+    de gestión, incluido borrar preguntas.
+    """
+    if not email:
+        return False
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 1 FROM normas.editores
+                WHERE LOWER(email) = LOWER(%s) AND activo = TRUE
+            """, (email,))
+            return cur.fetchone() is not None
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:

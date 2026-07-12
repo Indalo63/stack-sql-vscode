@@ -90,56 +90,95 @@ git push -u origin master
 
 ### 2.3 Configurar los secrets en Streamlit Cloud
 
-En el dashboard de tu app: **Settings → Secrets** y pega:
+En el dashboard de tu app: **Settings → Secrets**. El contenido completo (los valores
+reales viven en tu `.streamlit/secrets.toml` local, nunca en este repositorio):
 
 ```toml
 OPENAI_API_KEY    = "sk-..."
 ANTHROPIC_API_KEY = "sk-ant-..."
 
-DB_HOST     = "db.cbiwhcfkaarnhenkryza.supabase.co"
+DB_HOST     = "db.<ref>.supabase.co"
 DB_PORT     = "5432"
 DB_NAME     = "postgres"
 DB_USER     = "postgres"
 DB_PASSWORD = "<tu-password-supabase>"
+
+SUPABASE_URL      = "https://<ref>.supabase.co"
+SUPABASE_ANON_KEY = "<clave-anon>"
+
+[auth]
+redirect_uri  = "https://<tu-app>.streamlit.app/oauth2callback"
+cookie_secret = "<cadena-aleatoria-larga>"
+
+[auth.google]
+client_id           = "<client-id>.apps.googleusercontent.com"
+client_secret       = "<client-secret>"
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
 ```
 
-> Nota: para la **app en producción** se usa la conexión directa (no el session pooler), ya que Streamlit Cloud soporta IPv6 correctamente.
+> ⚠️ **El orden importa (regla de TOML).** Todas las claves sueltas (`OPENAI_API_KEY`,
+> `DB_*`, `SUPABASE_*`) deben ir **antes** de la primera cabecera `[seccion]`. En cuanto
+> se abre `[auth]`, todo lo que venga detrás se anida dentro de esa sección: si
+> `SUPABASE_URL` cayera debajo, el código la buscaría en la raíz, no la encontraría, y el
+> registro de alumnos fallaría con "no configurados". Este bug ya ocurrió una vez en local.
+
+> Nota sobre la conexión: en **producción** se usa la conexión **directa**, porque
+> Streamlit Cloud resuelve IPv6 correctamente. El rodeo por el **Session Pooler**
+> (`aws-1-eu-west-2.pooler.supabase.com`, usuario `postgres.<ref>`) hace falta **solo en
+> desarrollo** (WSL2 y el devcontainer no tienen salida IPv6). No cambies `DB_HOST`/
+> `DB_USER` en producción si la app conecta bien.
 
 Pulsa **Save** y la app se redesplegará automáticamente.
 
-### 2.4 Acceso para alumnos
+### 2.4 Acceso a la app
 
-La URL pública será `https://<tu-app>.streamlit.app`. Puedes compartirla directamente.
+**No hay acceso anónimo.** Al entrar, el sidebar obliga a elegir uno de los dos perfiles,
+y hasta entonces la app no muestra ningún contenido. Cada perfil usa su propio sistema de
+autenticación:
 
-Para acceso restringido por contraseña, añade en los secrets:
+| Perfil | Quién | Autenticación | Configuración |
+|---|---|---|---|
+| **Gestión banco de preguntas** | Editor / academia | **Google OAuth** (`st.login("google")`) | Secciones `[auth]` y `[auth.google]` de los secrets |
+| **Alumno** | Opositor | **Supabase Auth** (email + contraseña) | Claves `SUPABASE_URL` y `SUPABASE_ANON_KEY` |
 
-```toml
-[auth]
-password = "una-clave-compartida"
+La URL pública (`https://<tu-app>.streamlit.app`) se puede compartir con los alumnos:
+ellos se registran solos con email y contraseña. El acceso de gestión queda protegido por
+Google OAuth aunque la URL sea pública.
+
+> ⚠️ **`[auth]` es una sección reservada de Streamlit** (su OAuth nativo). No metas ahí
+> claves propias: manipular esa sección puede invalidar el login de Google. En particular,
+> **no existe ninguna contraseña compartida** en esta app — versiones antiguas de este
+> documento proponían una función `check_password()` que **nunca se implementó** y quedó
+> obsoleta al llegar Google OAuth y Supabase Auth.
+
+**Para que el login de Google funcione en producción**, la `redirect_uri` debe estar
+registrada en Google Cloud Console → Credenciales → OAuth → *URIs de redirección
+autorizados*. Si no, fallará en producción aunque funcione en local.
+
+#### Quién puede entrar como editor: lista blanca en BD
+
+**Una sesión Google válida no basta.** El email debe estar además en la tabla
+`normas.editores` con `activo = TRUE` (migración 036). Si no lo está, la app muestra
+"⛔ Acceso denegado" y no deja ver ningún dato ni opción de gestión.
+
+**Dar de alta a un editor nuevo** (no requiere tocar código ni redesplegar):
+
+```sql
+INSERT INTO normas.editores (email, nombre, creado_por)
+VALUES ('nuevo.editor@gmail.com', 'Nombre Apellido', 'indaleciopf@gmail.com');
 ```
 
-Y en `app/streamlit_app.py`, añade al inicio (antes del título):
+**Revocar el acceso** — mejor desactivar que borrar, para no perder la trazabilidad de qué
+preguntas revisó (`preguntas_test.revisado_por`):
 
-```python
-import hmac
-
-def check_password():
-    def password_entered():
-        if hmac.compare_digest(st.session_state["password"], st.secrets["auth"]["password"]):
-            st.session_state["password_correct"] = True
-        else:
-            st.session_state["password_correct"] = False
-
-    if st.session_state.get("password_correct", False):
-        return True
-    st.text_input("Contraseña", type="password", on_change=password_entered, key="password")
-    if "password_correct" in st.session_state:
-        st.error("Contraseña incorrecta")
-    return False
-
-if not check_password():
-    st.stop()
+```sql
+UPDATE normas.editores SET activo = FALSE WHERE email = 'antiguo.editor@gmail.com';
 ```
+
+> Esto no exime de configurar bien la pantalla de consentimiento de OAuth en Google Cloud
+> Console, pero ya no es la única barrera: aunque esa pantalla se publicara a producción y
+> cualquier usuario de Google pudiera completar el OAuth, una cuenta que no esté en
+> `normas.editores` no pasaría de "Acceso denegado".
 
 ---
 

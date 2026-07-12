@@ -13,7 +13,7 @@ from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_bloques_por_oposicion, get_temas_por_bloque,
-                           get_temas_por_bloques,
+                           get_temas_por_bloques, es_editor_autorizado,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
@@ -779,6 +779,29 @@ if not logged_in:
         "Inicia sesión con tu cuenta Google en la barra lateral para acceder "
         "a la generación y revisión de preguntas, Q&A y test."
     )
+    st.stop()
+
+# Una sesión Google válida no basta: el email debe estar en la lista blanca
+# (normas.editores, migración 036). Sin esto, cualquier cuenta de Google que
+# completase el OAuth tendría acceso completo de gestión.
+try:
+    autorizado = es_editor_autorizado(user["email"])
+except Exception as e:
+    st.error(f"No se pudo verificar la autorización: {e}")
+    st.stop()
+
+if not autorizado:
+    st.sidebar.markdown(f"👤 {user['email']}")
+    if st.sidebar.button("Cerrar sesión", key="denegado_logout"):
+        st.logout()
+
+    st.title("⛔ Acceso denegado")
+    st.error(
+        f"La cuenta **{user['email']}** no está autorizada para gestionar el banco "
+        "de preguntas. Si crees que es un error, pide al administrador que dé de "
+        "alta tu cuenta."
+    )
+    st.info("¿Eres opositor? Vuelve atrás y entra por **Alumno** (← Cambiar acceso).")
     st.stop()
 
 st.sidebar.markdown(f"👤 {user['email']}")
