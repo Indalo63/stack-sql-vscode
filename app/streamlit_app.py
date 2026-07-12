@@ -13,7 +13,9 @@ from app.qa_pipeline import run_qa
 from app.test_pipeline import run_gentest
 from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_bloques_por_oposicion, get_temas_por_bloque,
-                           get_temas_por_bloques, es_editor_autorizado,
+                           get_temas_por_bloques,
+                           get_editor, listar_editores, alta_editor,
+                           revocar_editor, cambiar_rol_editor,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
@@ -785,12 +787,12 @@ if not logged_in:
 # (normas.editores, migración 036). Sin esto, cualquier cuenta de Google que
 # completase el OAuth tendría acceso completo de gestión.
 try:
-    autorizado = es_editor_autorizado(user["email"])
+    editor = get_editor(user["email"])
 except Exception as e:
     st.error(f"No se pudo verificar la autorización: {e}")
     st.stop()
 
-if not autorizado:
+if not editor:
     st.sidebar.markdown(f"👤 {user['email']}")
     if st.sidebar.button("Cerrar sesión", key="denegado_logout"):
         st.logout()
@@ -804,17 +806,22 @@ if not autorizado:
     st.info("¿Eres opositor? Vuelve atrás y entra por **Alumno** (← Cambiar acceso).")
     st.stop()
 
+es_admin = editor["rol"] == "admin"
+
 st.sidebar.markdown(f"👤 {user['email']}")
+st.sidebar.caption("Administrador" if es_admin else "Editor")
 if st.sidebar.button("Cerrar sesión"):
     st.logout()
 
 st.sidebar.markdown("---")
 
 # El modo se elige antes que nada: cada uno monta después su propio selector.
-modo = st.sidebar.radio(
-    "Modo",
-    ["Q&A", "Nuevas preguntas", "Revisar preguntas", "Generar test", "Simulacros academia"],
-)
+# "Editores" solo lo ven los administradores (rol='admin', migración 037).
+_MODOS = ["Q&A", "Nuevas preguntas", "Revisar preguntas", "Generar test", "Simulacros academia"]
+if es_admin:
+    _MODOS.append("Editores")
+
+modo = st.sidebar.radio("Modo", _MODOS)
 
 # ── Cabecera ──────────────────────────────────────────────────────────────────
 st.title("⚖️ Asistente Jurídico")
@@ -1250,3 +1257,97 @@ elif modo == "Simulacros academia":
         else:
             st.caption(f"Autorizado por {s['autorizado_por']} — {s['autorizado_en'].strftime('%d/%m/%Y %H:%M')}")
         st.divider()
+
+# ── Modo Editores (solo administradores) ─────────────────────────────────────
+elif modo == "Editores":
+    st.header("Editores")
+    st.caption(
+        "Quién puede acceder a Gestión banco de preguntas. Una cuenta Google no "
+        "basta: debe estar dada de alta aquí."
+    )
+
+    # El aviso se guarda en session_state porque el st.rerun() posterior borraría
+    # cualquier st.success() emitido en la misma ejecución.
+    if _flash := st.session_state.pop("editores_flash", None):
+        st.success(_flash)
+
+    # ── Alta ──────────────────────────────────────────────────────────────────
+    with st.form("form_alta_editor"):
+        st.subheader("Dar de alta")
+        col_e, col_n = st.columns(2)
+        with col_e:
+            nuevo_email = st.text_input(
+                "Email de Google", placeholder="editor@gmail.com",
+                help="La cuenta Google con la que iniciará sesión.",
+            )
+        with col_n:
+            nuevo_nombre = st.text_input("Nombre", placeholder="Nombre Apellido")
+        nuevo_rol = st.radio(
+            "Rol", ["editor", "admin"], horizontal=True,
+            help="admin también puede gestionar esta lista de editores.",
+        )
+        if st.form_submit_button("Dar de alta", type="primary"):
+            error = alta_editor(nuevo_email, nuevo_nombre, nuevo_rol, user["email"])
+            if error:
+                st.error(error)
+            else:
+                st.session_state["editores_flash"] = (
+                    f"{nuevo_email.strip().lower()} autorizado. Ya puede entrar con su "
+                    "cuenta Google: envíale la URL de la app."
+                )
+                st.rerun()
+
+    st.divider()
+
+    # ── Listado ───────────────────────────────────────────────────────────────
+    st.subheader("Editores dados de alta")
+    for e in listar_editores():
+        activo = e["activo"]
+        soy_yo = e["email"].lower() == user["email"].lower()
+
+        col_info, col_rol, col_accion = st.columns([3, 1.4, 1.2])
+        with col_info:
+            marca = "🟢" if activo else "⚪"
+            etiqueta = "Administrador" if e["rol"] == "admin" else "Editor"
+            nombre = e["nombre"] or "—"
+            st.markdown(f"{marca} **{nombre}** · {e['email']}")
+            st.caption(
+                f"{etiqueta}{' · tú' if soy_yo else ''}"
+                f"{'' if activo else ' · revocado'}"
+            )
+
+        if activo:
+            with col_rol:
+                otro_rol = "editor" if e["rol"] == "admin" else "admin"
+                if st.button(f"Hacer {otro_rol}", key=f"rol_{e['email']}"):
+                    error = cambiar_rol_editor(e["email"], otro_rol, user["email"])
+                    if error:
+                        st.error(error)
+                    else:
+                        st.session_state["editores_flash"] = f"{e['email']} ahora es {otro_rol}."
+                        st.rerun()
+            with col_accion:
+                if st.button("Revocar", key=f"rev_{e['email']}", disabled=soy_yo,
+                             help="No puedes revocar tu propia cuenta." if soy_yo else None):
+                    error = revocar_editor(e["email"], user["email"])
+                    if error:
+                        st.error(error)
+                    else:
+                        st.session_state["editores_flash"] = f"Acceso revocado a {e['email']}."
+                        st.rerun()
+        else:
+            with col_accion:
+                if st.button("Reactivar", key=f"react_{e['email']}"):
+                    error = alta_editor(e["email"], e["nombre"], e["rol"], user["email"])
+                    if error:
+                        st.error(error)
+                    else:
+                        st.session_state["editores_flash"] = f"Acceso reactivado para {e['email']}."
+                        st.rerun()
+        st.divider()
+
+    st.caption(
+        "Revocar no borra la fila: conserva el rastro de qué preguntas revisó esa "
+        "persona. La app impide revocar tu propia cuenta y quedarse sin ningún "
+        "administrador activo."
+    )

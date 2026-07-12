@@ -43,6 +43,141 @@ def es_editor_autorizado(email: str) -> bool:
             return cur.fetchone() is not None
 
 
+def get_editor(email: str) -> dict | None:
+    """Ficha del editor (email, nombre, rol, activo) o None si no está autorizado."""
+    if not email:
+        return None
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT email, nombre, rol, activo, academia, creado_en, creado_por
+                FROM normas.editores
+                WHERE LOWER(email) = LOWER(%s) AND activo = TRUE
+            """, (email,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            cols = [d[0] for d in cur.description]
+            return dict(zip(cols, row))
+
+
+def listar_editores() -> list[dict]:
+    """Todos los editores, activos y revocados, para la pantalla de gestión."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT email, nombre, rol, activo, academia, creado_en, creado_por
+                FROM normas.editores
+                ORDER BY activo DESC, rol, email
+            """)
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def alta_editor(email: str, nombre: str, rol: str, creado_por: str) -> str | None:
+    """
+    Da de alta un editor. Devuelve None si fue bien, o el motivo del error.
+
+    Reactiva la fila si el email ya existía revocado (activo=FALSE), para no
+    perder la trazabilidad histórica de sus revisiones.
+    """
+    email = (email or "").strip().lower()
+    if not email or "@" not in email:
+        return "Indica un email válido."
+    if rol not in ("admin", "editor"):
+        return "Rol no válido."
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT activo FROM normas.editores WHERE LOWER(email) = %s", (email,))
+            row = cur.fetchone()
+            if row and row[0]:
+                return f"{email} ya está dado de alta."
+            cur.execute("""
+                INSERT INTO normas.editores (email, nombre, rol, activo, creado_por)
+                VALUES (%s, %s, %s, TRUE, %s)
+                ON CONFLICT (email) DO UPDATE
+                    SET activo = TRUE, nombre = EXCLUDED.nombre, rol = EXCLUDED.rol
+            """, (email, (nombre or "").strip() or None, rol, creado_por))
+        conn.commit()
+    return None
+
+
+def _admins_activos(cur, excluyendo: str | None = None) -> int:
+    sql = "SELECT COUNT(*) FROM normas.editores WHERE activo = TRUE AND rol = 'admin'"
+    params: list = []
+    if excluyendo:
+        sql += " AND LOWER(email) <> LOWER(%s)"
+        params.append(excluyendo)
+    cur.execute(sql, params)
+    return cur.fetchone()[0]
+
+
+def revocar_editor(email: str, quien: str) -> str | None:
+    """
+    Revoca a un editor (activo=FALSE, sin borrar la fila: conserva el histórico
+    de preguntas_test.revisado_por). Devuelve None si fue bien, o el motivo.
+
+    Dos protecciones anti-bloqueo, aplicadas aquí (no solo en la UI) para que
+    ninguna vía pueda dejar la app sin acceso de gestión:
+      1. Nadie puede revocarse a sí mismo.
+      2. No se puede dejar cero administradores activos.
+    """
+    if email.strip().lower() == (quien or "").strip().lower():
+        return "No puedes revocar tu propia cuenta."
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT rol, activo FROM normas.editores WHERE LOWER(email) = LOWER(%s)",
+                (email,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return "Ese editor no existe."
+            rol, activo = row
+            if not activo:
+                return "Ese editor ya estaba revocado."
+            if rol == "admin" and _admins_activos(cur, excluyendo=email) == 0:
+                return ("No puedes revocar al último administrador activo: "
+                        "la app se quedaría sin nadie que pueda gestionarla.")
+
+            cur.execute(
+                "UPDATE normas.editores SET activo = FALSE WHERE LOWER(email) = LOWER(%s)",
+                (email,),
+            )
+        conn.commit()
+    return None
+
+
+def cambiar_rol_editor(email: str, rol: str, quien: str) -> str | None:
+    """Cambia el rol. Misma protección: no dejar cero admins activos."""
+    if rol not in ("admin", "editor"):
+        return "Rol no válido."
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT rol, activo FROM normas.editores WHERE LOWER(email) = LOWER(%s)",
+                (email,),
+            )
+            row = cur.fetchone()
+            if not row or not row[1]:
+                return "Ese editor no existe o está revocado."
+            if row[0] == rol:
+                return None
+            if row[0] == "admin" and rol == "editor" and _admins_activos(cur, excluyendo=email) == 0:
+                return ("No puedes quitarte el rol de administrador al último admin activo: "
+                        "la app se quedaría sin nadie que pueda gestionarla.")
+
+            cur.execute(
+                "UPDATE normas.editores SET rol = %s WHERE LOWER(email) = LOWER(%s)",
+                (rol, email),
+            )
+        conn.commit()
+    return None
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:

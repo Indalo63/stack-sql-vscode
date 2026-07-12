@@ -161,19 +161,25 @@ autorizados*. Si no, fallará en producción aunque funcione en local.
 `normas.editores` con `activo = TRUE` (migración 036). Si no lo está, la app muestra
 "⛔ Acceso denegado" y no deja ver ningún dato ni opción de gestión.
 
-**Dar de alta a un editor nuevo** (no requiere tocar código ni redesplegar):
+Hay dos roles (columna `rol`, migración 037):
 
-```sql
-INSERT INTO normas.editores (email, nombre, creado_por)
-VALUES ('nuevo.editor@gmail.com', 'Nombre Apellido', 'indaleciopf@gmail.com');
-```
+- **`admin`** — además de todo lo anterior, gestiona la lista de editores desde la app.
+- **`editor`** — genera y revisa preguntas, pero no ve la pantalla de gestión.
 
-**Revocar el acceso** — mejor desactivar que borrar, para no perder la trazabilidad de qué
-preguntas revisó (`preguntas_test.revisado_por`):
+**Dar de alta a un editor nuevo:** desde la app, modo **"Editores"** (solo visible para
+admins). No se generan ni se envían credenciales: el editor entra con **su propia cuenta
+de Google**. El flujo es:
 
-```sql
-UPDATE normas.editores SET activo = FALSE WHERE email = 'antiguo.editor@gmail.com';
-```
+1. El editor te dice con qué cuenta de Google va a entrar.
+2. Lo das de alta en "Editores" (email + nombre + rol).
+3. Si la pantalla de consentimiento de OAuth sigue en modo *Testing*, añádelo **también**
+   como usuario de prueba en Google Cloud Console, o Google le cortará el paso antes
+   siquiera de llegar a la app.
+4. Le envías la URL. **Autoriza antes de enviarla**, o verá "Acceso denegado".
+
+**Revocar el acceso:** botón "Revocar" en esa misma pantalla. No borra la fila (conserva
+el rastro de qué preguntas revisó, `preguntas_test.revisado_por`) y se puede reactivar.
+La app impide revocar tu propia cuenta y quedarse sin ningún administrador activo.
 
 > Esto no exime de configurar bien la pantalla de consentimiento de OAuth en Google Cloud
 > Console, pero ya no es la única barrera: aunque esa pantalla se publicara a producción y

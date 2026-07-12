@@ -126,6 +126,18 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### ⏳ Pendiente — Pantalla de gestión de alumnos (12/07/2026)
+
+Contrapartida de la pantalla de "Editores" (ya hecha, migración 037), pero **no es simétrica** — conviene tenerlo claro antes de planificarla:
+
+- **Los editores viven en BD** (`normas.editores`) → alta/baja es un `INSERT`/`UPDATE` normal.
+- **Los alumnos viven en Supabase Auth**, no en una tabla nuestra. La app solo tiene la clave `anon`, que **no permite listar ni borrar usuarios** (por eso los usuarios de prueba de sesiones anteriores quedaron pendientes de limpieza manual). Gestionarlos de verdad exigiría la clave `service_role`, que da acceso total saltándose las políticas de seguridad y habría que meterla en los secrets — decisión no trivial.
+- **No hay vínculo alumno↔academia** todavía, que es justo lo que el modelo B2B necesita para que cada academia vea solo a sus alumnos.
+
+Dos alcances posibles (decidir cuál):
+- [ ] **A) Solo lectura, sin claves nuevas (recomendado para empezar):** listar alumnos y su progreso a partir de las tablas que ya tenemos (`progreso_usuario`, `plan_estudio`, `historial_simulacros`, todas con `user_id`). Cubre el "análisis de la academia sobre sus alumnos" que ya se menciona como valor B2B en la regla de producto del Paso 7, sin tocar Supabase Auth.
+- [ ] **B) Gestión completa:** dar de baja, resetear contraseña, etc. Requiere `service_role` en secrets + tabla/vínculo de alumnos + decidir el modelo multi-academia.
+
 ### ⏳ Pendiente — Auditar la pantalla de consentimiento de OAuth (Google Cloud) (12/07/2026)
 
 Requiere entrar a Google Cloud Console con la cuenta del proyecto (no accesible desde el entorno de desarrollo). Surge al implementar la lista blanca de editores (migración 036): el control de acceso ya no depende de esta pantalla, pero su configuración sigue afectando a quién puede loguearse y a si el login funciona en producción.
