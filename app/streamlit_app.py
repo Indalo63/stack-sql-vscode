@@ -25,6 +25,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_preguntas_sm2, update_progreso_sm2,
                            registrar_respuesta, analisis_distractores,
                            get_calibracion, get_umbral_rentabilidad,
+                           get_grupos_intercalados, get_preguntas_intercaladas,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
                            get_preguntas_prueba_nivel,
@@ -484,6 +485,122 @@ def _panel_estado_bloques(stats: dict) -> None:
         st.markdown("")
 
 
+def _repaso_intercalado(oposicion_id: int, user_id: str, repaso: dict) -> None:
+    """
+    Práctica intercalada: mezcla dos leyes que se confunden, alternándolas.
+
+    Lo que entrena esto y el repaso por tema NO entrena: **distinguir qué norma
+    aplica**. Practicando LPAC seguida, el alumno tiene el esquema de LPAC cargado
+    y acierta — y concluye que se la sabe. El examen se la mezcla con la LRJSP y
+    ahí se ve que no. La práctica en bloque produce **fluidez falsa**.
+
+    Hay que avisarle de que **va a fallar más**: es una "dificultad deseable" (peor
+    rendimiento mientras practica, mejor el día del examen). Si no se lo decimos,
+    creerá que la app ha empeorado y se volverá al modo que le engaña.
+    """
+    grupos = get_grupos_intercalados(user_id, oposicion_id)
+
+    if not grupos and not repaso["preguntas"]:
+        st.info(
+            "Todavía no hay ningún par de leyes que puedas intercalar. "
+            "**Y es a propósito.**"
+        )
+        st.markdown(
+            "Intercalar sirve para **distinguir** dos normas que ya conoces por "
+            "separado. Si aún no tienes base en ninguna de las dos, mezclarlas no "
+            "te enseña a diferenciarlas: te impide aprender la primera.\n\n"
+            "Practica un poco **Por tema** y, en cuanto tengas recorrido en dos "
+            "leyes que el temario estudia juntas (por ejemplo la LPAC y la LRJSP), "
+            "aparecerán aquí."
+        )
+        return
+
+    if grupos:
+        opciones = {g["etiqueta"]: g for g in grupos}
+        etiqueta = st.selectbox("Leyes que se confunden", list(opciones.keys()))
+        grupo = opciones[etiqueta]
+        st.caption(
+            f"Comparten **{grupo['temas_compartidos']} temas** del programa oficial. "
+            f"Por eso se confunden — y por eso el tribunal las cruza."
+        )
+
+        if not repaso["preguntas"]:
+            st.warning(
+                "⚠️ **Vas a fallar más que en el repaso por tema. Es la idea.** "
+                "Cuando practicas una ley seguida, tienes su esquema cargado y "
+                "aciertas sin esforzarte en recordar cuál es. Al mezclarlas, tienes "
+                "que decidir **qué norma aplica** en cada pregunta — que es "
+                "exactamente lo que te van a pedir en el examen. Cuesta más y se "
+                "retiene mejor."
+            )
+            if st.button("Iniciar práctica intercalada", type="primary"):
+                preguntas = get_preguntas_intercaladas(
+                    user_id, oposicion_id, grupo["ley_ids"], n=10
+                )
+                if not preguntas:
+                    st.warning("No hay preguntas suficientes de estas dos leyes todavía.")
+                else:
+                    repaso.update(
+                        preguntas=preguntas, respuestas={}, confianzas={},
+                        respondido=False, intercalada=True,
+                        bloque=None, epigrafe_id=None, tema_label=etiqueta,
+                    )
+                    st.rerun()
+            return
+
+    if not repaso["preguntas"]:
+        return
+
+    if not repaso["respondido"]:
+        st.caption(f"🔀 Práctica intercalada — {repaso['tema_label']}.")
+        _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso",
+                          respondido=False, confianzas=repaso["confianzas"])
+        if st.button("Comprobar respuestas", type="primary"):
+            temas_tocados = set()
+            for p in repaso["preguntas"]:
+                elegida = repaso["respuestas"].get(p["pregunta_id"])
+                registrar_respuesta(user_id, p["pregunta_id"], elegida,
+                                    elegida == p["correcta"], "repaso",
+                                    confianza=repaso["confianzas"].get(p["pregunta_id"]))
+                if elegida is not None:
+                    update_progreso_sm2(user_id, p["pregunta_id"], elegida == p["correcta"])
+                    if p.get("epigrafe_id"):
+                        temas_tocados.add(p["epigrafe_id"])
+            for epigrafe_id in temas_tocados:
+                get_fase_alumno(user_id, oposicion_id, epigrafe_id)
+            repaso["respondido"] = True
+            st.rerun()
+        return
+
+    _render_preguntas(repaso["preguntas"], repaso["respuestas"], "repaso",
+                      respondido=True, confianzas=repaso["confianzas"])
+
+    # El acierto por ley es lo que importa aquí: si una de las dos se hunde al
+    # mezclarlas, ahí está justo la confusión que hay que trabajar.
+    por_ley: dict[str, list[bool]] = {}
+    for p in repaso["preguntas"]:
+        ok = repaso["respuestas"].get(p["pregunta_id"]) == p["correcta"]
+        por_ley.setdefault(p["ley_codigo"], []).append(ok)
+
+    ok_total = sum(1 for v in por_ley.values() for x in v if x)
+    st.success(
+        f"Resultado: **{ok_total} / {len(repaso['preguntas'])}** correctas — "
+        f"{repaso['tema_label']}"
+    )
+    detalle = " · ".join(
+        f"**{cod}**: {sum(v)}/{len(v)}" for cod, v in sorted(por_ley.items())
+    )
+    st.info(
+        f"Por ley — {detalle}\n\nSi una de las dos va claramente peor que la otra, "
+        f"ahí está la confusión: no es que no te la sepas, es que **se te va detrás "
+        f"de la otra**."
+    )
+
+    if st.button("Nueva tanda intercalada →", type="primary"):
+        repaso.update(preguntas=[], respondido=False, confianzas={})
+        st.rerun()
+
+
 def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
     st.header("Repaso adaptativo")
 
@@ -495,13 +612,33 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
     if "repaso" not in st.session_state:
         st.session_state.repaso = {
             "preguntas": [], "respuestas": {}, "confianzas": {}, "respondido": False,
-            "bloque": None, "epigrafe_id": None, "tema_label": None,
+            "bloque": None, "epigrafe_id": None, "tema_label": None, "intercalada": False,
         }
     repaso = st.session_state.repaso
     repaso.setdefault("confianzas", {})
+    repaso.setdefault("intercalada", False)
 
     with st.expander("📊 Tu estado actual por bloque y tema", expanded=not repaso["preguntas"]):
         _panel_estado_bloques(stats)
+
+    tipo = st.radio(
+        "Tipo de práctica",
+        ["Por tema", "Intercalada"],
+        horizontal=True,
+        key="repaso_tipo",
+        help=(
+            "Por tema: practicas una materia seguida. Intercalada: mezclas dos leyes "
+            "que se parecen, para entrenar a distinguirlas."
+        ),
+    )
+    if tipo == "Intercalada":
+        _repaso_intercalado(oposicion_id, user_id, repaso)
+        return
+
+    # Volver a "Por tema" con una tanda intercalada a medias: se descarta, o se
+    # renderizaría con el flujo equivocado (bloque/tema que esa tanda no tiene).
+    if repaso["intercalada"]:
+        repaso.update(preguntas=[], respondido=False, confianzas={}, intercalada=False)
 
     accion = stats["proxima_accion"]
     bloque_recomendado = (

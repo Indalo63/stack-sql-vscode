@@ -1951,6 +1951,128 @@ def get_preguntas_adaptativo_tema(user_id: str, oposicion_id: int, epigrafe_id: 
     return tanda
 
 
+def get_grupos_intercalados(user_id: str, oposicion_id: int) -> list[dict]:
+    """
+    Pares de leyes confundibles que el alumno **está en condiciones de intercalar**
+    (migración 051).
+
+    Los pares salen de `pares_confundibles` (derivados del temario, no escritos a
+    mano). Pero no se ofrecen todos: se exige que el alumno ya haya visto al menos
+    `min_vistas_intercalada` preguntas de **cada una** de las dos leyes.
+
+    ⚠️ Esa condición no es una comodidad, es lo que hace que la técnica funcione.
+    Intercalar **perjudica la adquisición inicial**: a quien todavía no tiene base
+    de LPAC, mezclarle LRJSP no le entrena la distinción — le impide construir la
+    primera. La intercalación entrena a **discriminar** entre dos cosas que ya
+    conoces por separado. Sin ese "por separado", no hay nada que discriminar.
+    """
+    params = get_parametros_aprendizaje(oposicion_id)
+    min_vistas = params.get("min_vistas_intercalada", 5)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                WITH vistas AS (
+                    SELECT pt.ley_id, COUNT(*) AS n
+                    FROM normas.progreso_usuario pu
+                    JOIN normas.preguntas_test pt ON pt.pregunta_id = pu.pregunta_id
+                    WHERE pu.user_id = %s
+                    GROUP BY pt.ley_id
+                )
+                SELECT p.ley_a, p.ley_b, p.fuerza, p.temas_compartidos,
+                       la.codigo, la.nombre_corto, va.n,
+                       lb.codigo, lb.nombre_corto, vb.n
+                FROM normas.pares_confundibles p
+                JOIN normas.leyes la ON la.ley_id = p.ley_a
+                JOIN normas.leyes lb ON lb.ley_id = p.ley_b
+                JOIN vistas va ON va.ley_id = p.ley_a AND va.n >= %s
+                JOIN vistas vb ON vb.ley_id = p.ley_b AND vb.n >= %s
+                WHERE p.oposicion_id = %s
+                ORDER BY p.fuerza DESC
+            """, (user_id, min_vistas, min_vistas, oposicion_id))
+
+            return [{
+                "ley_ids":           (r[0], r[1]),
+                "fuerza":            float(r[2]),
+                "temas_compartidos": r[3],
+                "leyes": [
+                    {"ley_id": r[0], "codigo": r[4], "nombre_corto": r[5], "vistas": r[6]},
+                    {"ley_id": r[1], "codigo": r[7], "nombre_corto": r[8], "vistas": r[9]},
+                ],
+                "etiqueta": f"{r[4]} contra {r[7]}",
+            } for r in cur.fetchall()]
+
+
+def _intercalar(por_ley: dict[int, list[dict]]) -> list[dict]:
+    """
+    Ordena la tanda para que **dos preguntas seguidas nunca sean de la misma ley**
+    (mientras quede alternativa).
+
+    No vale con barajar al azar: el azar deja rachas, y una racha de cuatro
+    preguntas de LPAC es exactamente la práctica en bloque que estamos intentando
+    evitar — el alumno se instala en el esquema de LPAC y deja de discriminar.
+    Aquí se va tomando siempre de la ley que **más preguntas le quedan** y que no
+    sea la última servida.
+    """
+    restantes = {k: list(v) for k, v in por_ley.items()}
+    for v in restantes.values():
+        random.shuffle(v)
+
+    tanda: list[dict] = []
+    ultima: int | None = None
+    while any(restantes.values()):
+        candidatas = [k for k, v in restantes.items() if v and k != ultima]
+        if not candidatas:
+            # Solo queda la misma ley que acabamos de servir: no hay alternativa.
+            candidatas = [k for k, v in restantes.items() if v]
+        elegida = max(candidatas, key=lambda k: len(restantes[k]))
+        tanda.append(restantes[elegida].pop())
+        ultima = elegida
+    return tanda
+
+
+def get_preguntas_intercaladas(user_id: str, oposicion_id: int,
+                               ley_ids: tuple[int, ...], n: int = 10) -> list[dict]:
+    """
+    Tanda **intercalada**: preguntas de dos (o más) leyes confundibles, alternadas
+    para que nunca caigan dos seguidas de la misma.
+
+    Diferencia de fondo con `get_preguntas_adaptativo_tema`: allí el objetivo es
+    **aprender** un tema, así que se le sirve material de ese tema. Aquí el
+    objetivo es **discriminar** entre dos normas que ya conoce por separado, y el
+    orden importa tanto como el contenido.
+
+    Prioriza las que falla (`ultima_correcta = FALSE`), igual que el resto del
+    motor, y completa con las demás. El reparto entre leyes es a partes iguales:
+    intercalar 8 de LPAC y 2 de LRJSP no intercala nada.
+    """
+    if not ley_ids:
+        return []
+
+    por_ley: dict[int, list[dict]] = {}
+    n_por_ley = max(1, n // len(ley_ids))
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            for ley_id in ley_ids:
+                cur.execute(f"""
+                    SELECT {_COLUMNAS_PREGUNTA}, pt.ley_id,
+                           COALESCE(pu.ultima_correcta, TRUE) AS acertada
+                    FROM normas.preguntas_test pt
+                    JOIN normas.leyes l ON l.ley_id = pt.ley_id
+                    LEFT JOIN normas.progreso_usuario pu
+                           ON pu.pregunta_id = pt.pregunta_id AND pu.user_id = %s
+                    WHERE pt.ley_id = %s
+                      AND pt.revisada = TRUE AND pt.activa = TRUE AND NOT pt.descartada
+                    ORDER BY acertada ASC, RANDOM()
+                    LIMIT %s
+                """, (user_id, ley_id, n_por_ley))
+                cols = [d[0] for d in cur.description]
+                por_ley[ley_id] = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    return _intercalar(por_ley)
+
+
 def get_preguntas_simulacro_personal(user_id: str, oposicion_id: int, n: int = 50) -> dict:
     """
     Simulacro personal: n preguntas repartidas proporcionalmente (según el

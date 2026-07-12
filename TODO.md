@@ -170,10 +170,16 @@ La fórmula oficial es **A − E/3**: responder a ciegas **resta**. Saber **cuá
 - [⚠️ Regla] Con menos de `min_respuestas_calibracion` en un nivel **no se da diagnóstico**: un consejo mal fundado es peor que ninguno.
 - [✅ Validado plantando las dos patologías] Alumno de laboratorio con exceso de confianza (58,3% acertando cuando dice "seguro") y exceso de prudencia (41,7% de acierto con "ni idea" —por encima del 25%— y 6 en blanco): **las dos cazadas**, con el texto correcto. Datos borrados. Verificado además en navegador real: el selector aparece, el aviso de "dijiste que lo sabías" salta, y el panel de Mi progreso muestra el umbral 25,0% leído de BD. Sin errores de consola.
 
-#### 5. Práctica intercalada (interleaving)
-Hoy el repaso es **por tema, en bloque**. La evidencia dice que **intercalar** material parecido-pero-distinto mejora la **discriminación** — y eso es justo lo que el examen explota: confundir los plazos de la LPAC con los de la LRJSP. Practicar cada ley por separado **no entrena esa distinción**.
+#### 5. [✅ HECHO 12/07/2026 — migración 051] Práctica intercalada (interleaving)
+El repaso era **por tema, en bloque** — y la práctica en bloque produce **fluidez falsa**: mientras machacas LPAC tienes su esquema cargado, aciertas, y concluyes que te la sabes. El examen te la mezcla con la LRJSP y ahí se ve que no. Practicar cada ley por separado **no entrena la distinción**; entrena a responder cuando ya te han dicho de qué ley va.
 
-- [ ] Modo de repaso que **mezcla leyes confundibles** en la misma tanda.
+- [✅ Migración 051] `normas.pares_confundibles`. **Los pares no se escriben a mano: se DERIVAN de `epigrafe_leyes`** — dos leyes son confundibles si el programa oficial las estudia juntas. Se mide con **Jaccard** (compartidos / totales), no con el conteo bruto, porque el conteo premia a las leyes **ubicuas** (la CE1978 sale en 28 temas: comparte con todo, y no se confunde con todo).
+- [✅ `scripts/calcular_confundibles.py`] Re-ejecutable (borra e inserta). Resultado sobre GACE: **19 pares**, y son justo los que un opositor reconocería — **LPAC/LRJSP (0,75)**, ley y su reglamento (LGS/RLGS 0,80, LEF/RLEF), TUE/TFUE (1,00), TREBEP/RIRS, LGP/LOEPSF. **La fórmula sola encontró el par que el usuario había citado de memoria.**
+- [✅ `retrieval.get_grupos_intercalados()`] Solo ofrece los pares en los que el alumno **ya tiene base en las DOS leyes** (`min_vistas_intercalada`, 5, en BD).
+- [✅ `retrieval._intercalar()`] **No baraja al azar**: el azar deja rachas, y una racha de cuatro LPAC seguidas *es* la práctica en bloque que queremos evitar. Alterna estrictamente mientras haya alternativa. Verificado: 0 rachas en la tanda servida.
+- [✅ `streamlit_app.py`] Repaso gana un selector **Por tema / Intercalada**. Al terminar, **desglose de acierto por ley**: si una de las dos se hunde, ahí está la confusión ("no es que no te la sepas, es que se te va detrás de la otra").
+- [⚠️ **Dificultad deseable, y hay que decirlo**] Intercalar **empeora el rendimiento mientras se practica** y lo **mejora en el examen**. Dos consecuencias que NO son opcionales: (1) **no se le sirve a un principiante** en esa materia — mezclar antes de tener base impide construir la primera representación, no enseña a discriminar; (2) **se le avisa de que va a fallar más**, o creerá que la app ha empeorado y se volverá al modo que le engaña.
+- [✅ Verificado en navegador real] El par LPAC/LRJSP aparece, la tanda alterna **LPAC-LRJSP-LPAC-LRJSP…** (0 rachas), el aviso de "vas a fallar más" se muestra, y el resultado desglosa por ley. Sin errores de consola. Datos sembrados para la prueba, borrados.
 
 #### 6. Cronómetro y gestión del tiempo
 El examen real: 100 preguntas en 90 minutos = **54 segundos por pregunta**. Hoy el simulacro **no cronometra** (fue decisión explícita del usuario en su día; ahora se reconsidera).
