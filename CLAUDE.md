@@ -130,6 +130,17 @@ CE, LPAC, LRJSP, TREBEP, LGP, LCSP, GACE_NORM, LODP, LOTC, LGOB, LOCE, LBRL, LTB
 Flujo de carga de una ley nueva:
 `parse_boe.py <ELI> --output data/leyes/XX.json` → `load_ley.py XX.json --supabase --embeddings`
 
+## 🔴 SIGUIENTE TAREA (aprobada, sin empezar) — Teoría de test (12/07/2026)
+
+Detalle y checklist en **`TODO.md`**. Orden: 1 → 2 → resto.
+
+1. **🔴 URGENTE — Sesgo de la opción "a".** El **86,4%** de las 88 preguntas IA tienen la correcta en la **"a"** (el examen real: 27,8%). **Corrompe todo**: el alumno aprende "ante la duda, marca la a", acierta sin saber, y **invalida nuestras métricas** (dominio, dificultad, "¿estoy listo?"). Arreglo: barajar las opciones remapeando `correcta`, y **barajar en el generador**. Determinista, sin coste de API.
+2. **Guardar QUÉ opción eligió el alumno.** Hoy `progreso_usuario` solo guarda acierto/fallo: **se tira la señal pedagógica más valiosa**. Sin ella no hay análisis de distractores ni diagnóstico real del error. **Los datos que no se guardan hoy no se recuperan mañana.**
+3. **Discriminación del ítem + análisis de distractores.** La dificultad es solo la mitad de la teoría clásica de test. Discriminación **negativa** = pregunta **rota** (ambigua o con la clave mal marcada) → **detector automático de preguntas defectuosas** = control de calidad = argumento B2B. Depende del 2 y **madura con escala**.
+4. **Calibración de confianza / cuándo dejar en blanco.** La fórmula **A−E/3** penaliza: saber cuándo NO contestar es entrenable y **ningún competidor lo entrena**.
+5. **Práctica intercalada.** El repaso es hoy por tema, en bloque. Intercalar leyes confundibles (LPAC vs LRJSP) entrena la **discriminación**, que es justo lo que el examen explota.
+6. **Cronómetro.** 54 s/pregunta en el examen real. Hoy el simulacro no cronometra.
+
 ## 🔬 Deuda EMPÍRICA — lo que solo se cierra con alumnos reales (12/07/2026)
 
 No es deuda técnica: está todo **construido y funcionando**, pero **calibrado con conjeturas**. Detalle y checklist en **`TODO.md`**.

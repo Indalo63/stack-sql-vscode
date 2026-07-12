@@ -126,6 +126,52 @@ Se cargan **antes** de generar el banco de preguntas IA.
 
 ## Próximos pasos
 
+### 🔴 APROBADO Y PENDIENTE DE IMPLEMENTAR — Teoría de test (12/07/2026)
+
+Aprobado por el usuario en la sesión del 12/07/2026. **Orden de ejecución: 1 → 2 → resto.**
+
+#### 1. 🔴 URGENTE — Sesgo de la opción "a" (corrompe TODO lo demás)
+**Medido:** el **86,4%** de las 88 preguntas IA tienen la respuesta correcta en la **opción "a"** (b: 6,8% · c: 5,7% · d: 1,1%). El examen oficial real está equilibrado (a: 27,8% · b: 22,5% · c: 31,6% · d: 18,2%).
+
+**Por qué es grave:** el alumno aprende *"ante la duda, marca la a"*, acierta sin saber la ley, y esa costumbre **le perjudica en el examen real**. Además **invalida nuestras métricas** (dominio, dificultad empírica, "¿estoy listo?"): miden a alguien que adivina el patrón, no que aprende.
+
+- [ ] Barajar las opciones de las 88 preguntas ya generadas, **remapeando `correcta`**.
+- [ ] Añadir el barajado **al generador** (`build_test_bank`), para que no vuelva a pasar.
+- [ ] Comprobación posterior: la distribución debe quedar ~25% en cada opción.
+- Determinista, **sin coste de API**.
+
+#### 2. Guardar QUÉ opción eligió el alumno (hoy se tira)
+`progreso_usuario` solo guarda `ultima_correcta` (sí/no). **Se está tirando la señal pedagógica más valiosa.** Sin ella no hay análisis de distractores, ni diagnóstico real del error, ni detección de preguntas rotas.
+
+- [ ] Tabla de respuestas (una fila por respuesta: alumno, pregunta, opción elegida, correcta, fecha, tiempo).
+- **Urgente en el sentido de que los datos que no se guardan hoy NO se pueden recuperar mañana.**
+
+#### 3. Discriminación del ítem + análisis de distractores
+La dificultad es solo **la mitad** de la teoría clásica de test. La otra mitad: ¿la pregunta **distingue** al que sabe del que no?
+
+- [ ] **Índice de discriminación** (D / correlación biserial-puntual). Una pregunta con discriminación **negativa** (los buenos la fallan más que los malos) está **rota**: enunciado ambiguo o **respuesta mal marcada**. Es un **detector automático de preguntas defectuosas** = control de calidad del banco = argumento B2B.
+- [ ] **Análisis de distractores**: un distractor que **nadie elige** es peso muerto (la pregunta es de 3 opciones, más fácil de lo que parece). Un distractor elegido por los alumnos **buenos** suele indicar que la clave está mal.
+- Depende del punto 2. **Madura con escala**, no con 2 alumnos.
+
+#### 4. Calibración de confianza y decisión de dejar en blanco
+La fórmula oficial es **A − E/3**: responder a ciegas **resta**. Saber **cuándo NO contestar** es una destreza entrenable, y **ningún competidor la entrena**. Es específica de las oposiciones españolas.
+
+- [ ] Pedir la confianza del alumno antes de corregir (ej.: seguro / dudo / ni idea).
+- [ ] Medir su **calibración**: "fallas justo cuando dices estar seguro" / "dejas en blanco preguntas que sabías".
+- [ ] Entrenar la decisión óptima según la penalización.
+
+#### 5. Práctica intercalada (interleaving)
+Hoy el repaso es **por tema, en bloque**. La evidencia dice que **intercalar** material parecido-pero-distinto mejora la **discriminación** — y eso es justo lo que el examen explota: confundir los plazos de la LPAC con los de la LRJSP. Practicar cada ley por separado **no entrena esa distinción**.
+
+- [ ] Modo de repaso que **mezcla leyes confundibles** en la misma tanda.
+
+#### 6. Cronómetro y gestión del tiempo
+El examen real: 100 preguntas en 90 minutos = **54 segundos por pregunta**. Hoy el simulacro **no cronometra** (fue decisión explícita del usuario en su día; ahora se reconsidera).
+
+- [ ] Cronómetro en el simulacro + estadística de tiempo por pregunta.
+
+---
+
 ### 🔬 Pendiente — Lo que solo se puede cerrar CON ALUMNOS REALES (12/07/2026)
 
 Todo esto está **construido y funcionando**, pero calibrado con conjeturas o valores por defecto. **No se puede validar sin datos de alumnos.** No es deuda técnica: es deuda *empírica*.
