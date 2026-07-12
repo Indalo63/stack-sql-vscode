@@ -19,6 +19,8 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            pendientes_por_bloque, pendientes_por_tema,
                            get_bloque_y_epigrafes,
                            descartar_pregunta, listar_descartadas, restaurar_pregunta,
+                           get_cobertura_banco, proponer_pesos_bloque,
+                           aplicar_pesos_bloque, get_historial_pesos,
                            get_preguntas_sm2, update_progreso_sm2,
                            get_fase_alumno, get_stats_alumno,
                            get_preguntas_adaptativo, get_preguntas_adaptativo_tema,
@@ -913,10 +915,12 @@ st.session_state["_pie_datos"] = (
 )
 
 # El modo se elige antes que nada: cada uno monta después su propio selector.
-# "Editores" solo lo ven los administradores (rol='admin', migración 037).
+# "Editores" y "Banco y pesos" solo los ven los administradores (migración 037):
+# recalcular los pesos cambia el motor y el objetivo del banco, no es cosa de un
+# editor cualquiera.
 _MODOS = ["Q&A", "Nuevas preguntas", "Revisar preguntas", "Generar test", "Simulacros academia"]
 if es_admin:
-    _MODOS.append("Editores")
+    _MODOS += ["Banco y pesos", "Editores"]
 
 modo = st.sidebar.radio("Modo", _MODOS)
 
@@ -1557,6 +1561,102 @@ elif modo == "Editores":
         "persona. La app impide revocar tu propia cuenta y quedarse sin ningún "
         "administrador activo."
     )
+
+# ── Modo Banco y pesos (solo administradores) ────────────────────────────────
+elif modo == "Banco y pesos":
+    st.header("Banco y pesos del examen")
+
+    # ── Cobertura del banco frente al objetivo ────────────────────────────────
+    st.subheader("Cobertura del banco")
+    st.caption(
+        "El objetivo por bloque refleja el peso real del examen (migración 043). "
+        "Sin esto, el banco se sesga hacia donde es cómodo generar, no hacia donde "
+        "cae el examen. **No se cuentan las preguntas marcadas como prueba.**"
+    )
+    cob = get_cobertura_banco(oposicion_id)
+    st.dataframe(
+        [
+            {
+                "Bloque":      _NOMBRES_BLOQUE.get(c["bloque"], c["bloque"]),
+                "% examen":    f"{c['peso_examen']}%",
+                "En el banco": c["actual"],
+                "Objetivo":    c["objetivo"],
+                "Faltan":      c["faltan"],
+                "Cobertura":   f"{c['cobertura']}%",
+                "Desfase":     f"{c['desfase_pct']:+.1f} pts",
+            }
+            for c in cob
+        ],
+        hide_index=True, use_container_width=True,
+    )
+    _falt = sum(c["faltan"] for c in cob)
+    st.caption(
+        f"Banco real: **{sum(c['actual'] for c in cob)}** · "
+        f"Objetivo: **{sum(c['objetivo'] for c in cob)}** · Faltan: **{_falt}**"
+    )
+
+    st.divider()
+
+    # ── Recálculo de pesos: se propone, el admin autoriza ─────────────────────
+    st.subheader("Recalcular los pesos del examen")
+    st.caption(
+        "Los pesos salen de los exámenes oficiales cargados. Si cargas un examen "
+        "de otro año, el reparto real cambia. **No se recalcula solo**: un examen "
+        "cargado con errores desviaría en silencio el motor y el objetivo del banco."
+    )
+
+    prop = proponer_pesos_bloque(oposicion_id)
+    if not prop["posible"]:
+        st.warning(prop["motivo"])
+    else:
+        st.markdown(
+            f"Calculado sobre **{prop['n_preguntas']}** preguntas de: "
+            f"**{', '.join(prop['examenes'])}** "
+            f"(suelo del bloque menor: {prop['suelo']} preguntas)."
+        )
+        st.dataframe(
+            [
+                {
+                    "Bloque":     _NOMBRES_BLOQUE.get(b, b),
+                    "Peso ahora": prop["pesos_antes"].get(b, "—"),
+                    "Propuesto":  prop["pesos"][b],
+                    "Objetivo":   prop["objetivos"][b],
+                }
+                for b in ("I", "II", "III", "IV", "V", "VI")
+            ],
+            hide_index=True, use_container_width=True,
+        )
+
+        if not prop["cambia"]:
+            st.success("Los pesos vigentes ya coinciden con los exámenes cargados. No hay nada que aplicar.")
+        else:
+            st.warning(
+                "Aplicar esto cambia **el reparto de la prueba de nivel y de los "
+                "simulacros** y **el objetivo del banco**. Revisa la tabla antes de continuar."
+            )
+            if st.button("Aplicar los pesos propuestos", type="primary", key="btn_aplicar_pesos"):
+                error = aplicar_pesos_bloque(oposicion_id, prop, user["email"])
+                if error:
+                    st.error(error)
+                else:
+                    st.success("Pesos aplicados y registrados en el histórico.")
+                    st.rerun()
+
+    # ── Histórico de recálculos (auditoría) ───────────────────────────────────
+    hist = get_historial_pesos(oposicion_id)
+    if hist:
+        with st.expander(f"Histórico de recálculos ({len(hist)})"):
+            for h in hist:
+                st.markdown(
+                    f"**{h['aplicado_en'].strftime('%d/%m/%Y %H:%M')}** — {h['aplicado_por']}"
+                )
+                st.caption(
+                    f"Sobre {h['n_preguntas']} preguntas de: {h['examenes']} · "
+                    f"suelo {h['suelo']}"
+                )
+                st.caption(f"Antes: {h['pesos_antes']} → Después: {h['pesos_despues']}")
+                st.divider()
+
 
 # ── Pie del sidebar (siempre el último) ──────────────────────────────────────
 _pie_sidebar()

@@ -338,6 +338,230 @@ def get_cobertura_banco(oposicion_id: int, incluir_prueba: bool = False) -> list
     return out
 
 
+_ORDEN_BLOQUES = ("I", "II", "III", "IV", "V", "VI")
+
+
+def _bloques_por_posicion(seq: list[str | None]) -> list[str | None]:
+    """
+    Deduce el bloque de las preguntas sin ley asignada a partir de su POSICIÓN.
+
+    Los exámenes oficiales están ordenados por bloque (I → II → III → IV → V →
+    VI, igual que el programa). Las preguntas de actualidad o de normas no
+    cargadas no tienen ley y, por tanto, no tienen bloque… pero sí tienen
+    posición. Si sus vecinas de antes y después son del mismo bloque, ella
+    también lo es.
+
+    Sin esto, contar solo las preguntas con ley asignada INFRAVALORA a los
+    bloques II y III, precisamente porque su contenido apunta a normas que no
+    están cargadas. (Verificado el 12/07/2026: el bloque III pasaba del 9% real
+    al 11% al aplicar esta corrección.)
+
+    Las que caen justo en la frontera entre dos bloques quedan sin asignar: no
+    se adivina.
+    """
+    out: list[str | None] = list(seq)
+    for i, b in enumerate(seq):
+        if b:
+            continue
+        ant = next((seq[j] for j in range(i - 1, -1, -1) if seq[j]), None)
+        pos = next((seq[j] for j in range(i + 1, len(seq)) if seq[j]), None)
+        if ant and pos and ant == pos:
+            out[i] = ant          # dentro de un bloque: sin ambigüedad
+        elif ant and not pos:
+            out[i] = ant
+        elif pos and not ant:
+            out[i] = pos
+        else:
+            out[i] = None         # en la frontera: no se adivina
+    return out
+
+
+def proponer_pesos_bloque(oposicion_id: int) -> dict:
+    """
+    Recalcula los pesos de bloque a partir de los exámenes oficiales cargados
+    **sin aplicar nada**: devuelve la propuesta para que un administrador decida.
+
+    No es automático a propósito: un examen cargado con errores desviaría en
+    silencio el motor (prueba de nivel, simulacros) y el objetivo del banco.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT pt.fuente
+                FROM normas.preguntas_test pt
+                WHERE pt.fuente <> 'ia'
+                ORDER BY pt.fuente
+            """)
+            examenes = [r[0] for r in cur.fetchall()]
+
+            conteo = {b: 0 for b in _ORDEN_BLOQUES}
+            ambiguas = 0
+            for fuente in examenes:
+                cur.execute("""
+                    SELECT ol.bloque
+                    FROM normas.preguntas_test pt
+                    LEFT JOIN normas.oposicion_leyes ol
+                           ON ol.ley_id = pt.ley_id AND ol.oposicion_id = %s
+                    WHERE pt.fuente = %s
+                    ORDER BY pt.pregunta_id
+                """, (oposicion_id, fuente))
+                seq = [r[0] for r in cur.fetchall()]
+                for b in _bloques_por_posicion(seq):
+                    if b in conteo:
+                        conteo[b] += 1
+                    else:
+                        ambiguas += 1
+
+            cur.execute("""
+                SELECT bloque, peso_examen FROM normas.objetivo_banco
+                WHERE oposicion_id = %s
+            """, (oposicion_id,))
+            antes = dict(cur.fetchall())
+
+            cur.execute("""
+                SELECT suelo_bloque_min FROM normas.parametros_banco
+                WHERE oposicion_id = %s
+            """, (oposicion_id,))
+            fila = cur.fetchone()
+            suelo = fila[0] if fila else 200
+
+    total = sum(conteo.values())
+    if not total:
+        return {"posible": False, "motivo": "No hay exámenes oficiales cargados."}
+
+    # peso = % del examen, redondeado y cuadrado a 100
+    pesos = {b: round(100 * conteo[b] / total) for b in _ORDEN_BLOQUES}
+    dif = 100 - sum(pesos.values())
+    if dif:
+        mayor = max(pesos, key=lambda b: conteo[b])
+        pesos[mayor] += dif
+
+    # objetivo = peso escalado para que el bloque MENOR alcance el suelo
+    peso_menor = min(p for p in pesos.values() if p > 0)
+    factor = suelo / peso_menor
+    objetivos = {b: round(pesos[b] * factor) for b in _ORDEN_BLOQUES}
+
+    return {
+        "posible":     True,
+        "examenes":    examenes,
+        "n_preguntas": total,
+        "ambiguas":    ambiguas,
+        "suelo":       suelo,
+        "pesos_antes": antes,
+        "pesos":       pesos,
+        "objetivos":   objetivos,
+        "cambia":      antes != pesos,
+    }
+
+
+def aplicar_pesos_bloque(oposicion_id: int, propuesta: dict, quien: str) -> str | None:
+    """
+    Aplica una propuesta de pesos. **Solo debe llamarse tras autorización de un
+    administrador.** Devuelve None si fue bien, o el motivo del error.
+
+    Actualiza LOS DOS sitios donde vive el peso, en la misma transacción:
+      1. `oposicion_leyes.preguntas_simulacro` -> lo usa el MOTOR.
+      2. `objetivo_banco` -> lo usa el CONTROL del banco.
+    Si solo se tocara uno, el simulacro repartiría con unos pesos y el objetivo
+    del banco perseguiría otros.
+    """
+    if not propuesta.get("posible"):
+        return propuesta.get("motivo", "Propuesta no válida.")
+
+    pesos     = propuesta["pesos"]
+    objetivos = propuesta["objetivos"]
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # 1. Peso por ley (motor): el peso del bloque se reparte entre sus
+            #    leyes en proporción a lo que cada una aparece en los exámenes.
+            cur.execute("""
+                SELECT ol.bloque, ol.ley_id,
+                       COUNT(pt.pregunta_id) FILTER (WHERE pt.fuente <> 'ia') AS en_examen,
+                       COUNT(pt.pregunta_id) FILTER (WHERE pt.revisada AND pt.activa) AS en_banco
+                FROM normas.oposicion_leyes ol
+                LEFT JOIN normas.preguntas_test pt ON pt.ley_id = ol.ley_id
+                WHERE ol.oposicion_id = %s AND NOT ol.excluir_test
+                GROUP BY ol.bloque, ol.ley_id
+            """, (oposicion_id,))
+            por_bloque: dict[str, list[dict]] = {}
+            for bloque, ley_id, en_examen, en_banco in cur.fetchall():
+                por_bloque.setdefault(bloque, []).append(
+                    {"ley_id": ley_id, "ex": en_examen, "banco": en_banco}
+                )
+
+            cur.execute(
+                "UPDATE normas.oposicion_leyes SET preguntas_simulacro = 0 WHERE oposicion_id = %s",
+                (oposicion_id,),
+            )
+
+            for bloque, leyes in por_bloque.items():
+                peso = pesos.get(bloque, 0)
+                if not peso or not leyes:
+                    continue
+                base = sum(l["ex"] for l in leyes)
+                if base:
+                    for l in leyes:
+                        l["w"] = round(peso * l["ex"] / base)
+                else:
+                    # el bloque no aparece en los exámenes por ley: repartir
+                    # entre las que sí tienen preguntas en el banco
+                    cand = [l for l in leyes if l["banco"] > 0] or leyes
+                    base_b = sum(l["banco"] for l in cand) or len(cand)
+                    for l in leyes:
+                        l["w"] = round(peso * l["banco"] / base_b) if l in cand else 0
+                resto = peso - sum(l["w"] for l in leyes)
+                if resto:
+                    max(leyes, key=lambda l: l["w"])["w"] += resto
+                for l in leyes:
+                    if l["w"] > 0:
+                        cur.execute("""
+                            UPDATE normas.oposicion_leyes SET preguntas_simulacro = %s
+                             WHERE oposicion_id = %s AND ley_id = %s
+                        """, (l["w"], oposicion_id, l["ley_id"]))
+
+            # 2. Objetivo del banco (control de cobertura)
+            for b in _ORDEN_BLOQUES:
+                cur.execute("""
+                    INSERT INTO normas.objetivo_banco (oposicion_id, bloque, peso_examen, objetivo)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (oposicion_id, bloque) DO UPDATE
+                        SET peso_examen = EXCLUDED.peso_examen,
+                            objetivo    = EXCLUDED.objetivo
+                """, (oposicion_id, b, pesos[b], objetivos[b]))
+
+            # 3. Auditoría: quién, cuándo y con qué exámenes
+            import json
+            cur.execute("""
+                INSERT INTO normas.historial_pesos
+                    (oposicion_id, aplicado_por, examenes, n_preguntas, suelo,
+                     pesos_antes, pesos_despues)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                oposicion_id, quien, ", ".join(propuesta["examenes"]),
+                propuesta["n_preguntas"], propuesta["suelo"],
+                json.dumps(propuesta["pesos_antes"]), json.dumps(pesos),
+            ))
+        conn.commit()
+    return None
+
+
+def get_historial_pesos(oposicion_id: int, limite: int = 20) -> list[dict]:
+    """Recálculos de pesos aplicados, para auditoría."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT aplicado_por, aplicado_en, examenes, n_preguntas, suelo,
+                       pesos_antes, pesos_despues
+                FROM normas.historial_pesos
+                WHERE oposicion_id = %s
+                ORDER BY aplicado_en DESC
+                LIMIT %s
+            """, (oposicion_id, limite))
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
 def get_oposiciones() -> list[dict]:
     """Devuelve las oposiciones activas."""
     with get_connection() as conn:

@@ -155,6 +155,18 @@ El banco REAL (209 oficiales) **no se ha tocado**: está separado por la marca `
 
 **Estado hoy: 155 de 1.819 (faltan 1.664).** El panel que lo muestre es la **Fase 6** del plan (`docs/plan-fases-alumno.md`).
 
+### Recálculo autorizado de pesos (migración 044, 12/07/2026)
+Los pesos son una **foto fija** de los exámenes cargados (2024 y 2025). Si se carga el de 2023, el reparto real cambia. **El recálculo NO es automático a propósito**: un examen cargado con errores desviaría en silencio el motor y el objetivo del banco.
+
+- **⚠️ El peso vive en DOS sitios y hay que actualizar los dos a la vez** (si no, el simulacro repartiría con unos pesos y el objetivo del banco perseguiría otros):
+  1. `oposicion_leyes.preguntas_simulacro` → lo usa el **motor** (prueba de nivel, simulacros).
+  2. `objetivo_banco.peso_examen` + `objetivo` → lo usa el **control** de cobertura.
+  `aplicar_pesos_bloque()` los actualiza **en la misma transacción**.
+- [✅ `retrieval.py`] `proponer_pesos_bloque()` (calcula **sin aplicar nada**), `aplicar_pesos_bloque(propuesta, quien)` (solo tras autorización), `get_historial_pesos()`. `_bloques_por_posicion()` encapsula el método determinista (los exámenes están ordenados por bloque → el bloque de las preguntas sin ley se deduce por posición).
+- [✅ Migración 044] `parametros_banco.suelo_bloque_min` (el suelo de 200 pasa a ser **parámetro de BD**, ajustable sin tocar código) + `historial_pesos` (**auditoría**: quién, cuándo, con qué exámenes, pesos antes y después).
+- [✅ `streamlit_app.py`] Nuevo modo **"Banco y pesos"**, **solo administradores**: cobertura del banco frente al objetivo, propuesta de recálculo (dice de qué exámenes sale y avisa de que cambiaría el motor **y** el objetivo), botón de aplicar, e histórico. Es la **semilla del panel de la Fase 6**.
+- [✅ Verificado en vivo] La propuesta **reproduce exactamente** los pesos ya aplicados (`cambia=False` → el cálculo es correcto). Simulando un desvío (bloque III al 5%): detecta el cambio, muestra el aviso, exige el clic del admin, corrige, deja el recálculo en el histórico, y **los dos sitios quedan coherentes**.
+
 ### 🐛 Bug grave corregido al preparar el MVP (migración 042)
 **Los bloques II y III tenían peso 0** en `oposicion_leyes.preguntas_simulacro`, y los pesos sumaban **51, no 100**. Cadena de efectos: la prueba de nivel reparte por peso → nunca servía preguntas de II ni III → el simulacro personal (que exige datos en los 6 bloques) **quedaba bloqueado para siempre**. Los alumnos jamás habrían podido hacerlo.
 
