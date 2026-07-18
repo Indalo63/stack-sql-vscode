@@ -32,6 +32,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            guardar_perfil_alumno, get_perfil_alumno, get_plan_partida,
                            get_preguntas_simulacro_personal, calificar_simulacro,
                            guardar_resultado_simulacro, get_historial_simulacros,
+                           get_tiempo_simulacro, get_ritmo,
                            get_preguntas_simulacro_academia,
                            get_simulacros_academia_disponibles,
                            generar_simulacro_academia, autorizar_simulacro_academia,
@@ -752,6 +753,164 @@ def _modo_repaso(oposicion_id: int, user_id: str, stats: dict) -> None:
             st.rerun()
 
 
+# ── Cronómetro del simulacro (migración 052) ─────────────────────────────────
+# El examen real da 54 s/pregunta. Un simulacro sin reloj simula el examen menos
+# la restricción que más gente tumba, y no entrena la destreza de repartir el
+# tiempo: atascarse en la 12 y no llegar a las 20 últimas cuesta más puntos que
+# no saberse un tema.
+
+# A partir de qué fracción del tiempo restante se avisa al alumno.
+_AVISO_TIEMPO = 0.15
+
+
+def _simulacro_vacio() -> dict:
+    """Estado inicial de un simulacro. Es una factoría, no una constante: una
+    copia superficial compartiría los diccionarios internos entre intentos."""
+    return {
+        "preguntas": [], "respuestas": {}, "confianzas": {}, "segundos": {},
+        "respondido": False, "guardado": False, "agotado": False,
+        "inicio": None, "t_ultimo": None, "fin": None,
+        "limite": None, "objetivo": None,
+    }
+
+
+def _mmss(segundos: float) -> str:
+    segundos = max(0, int(segundos))
+    return f"{segundos // 60:02d}:{segundos % 60:02d}"
+
+
+def _plural(n: int, singular: str, plural: str) -> str:
+    return f"{n} {singular if n == 1 else plural}"
+
+
+def _sincronizar_respuestas(estado: dict, key_prefix: str) -> None:
+    """
+    Vuelca lo que el alumno tiene marcado en pantalla al estado del simulacro.
+
+    Hace falta al entregar por reloj: el cronómetro corre en un fragmento y no
+    reejecuta el render de las preguntas, así que se leen los widgets directamente
+    para que la última respuesta marcada no se pierda al cerrarse el examen.
+    """
+    for p in estado["preguntas"]:
+        pid = p["pregunta_id"]
+        estado["respuestas"][pid] = st.session_state.get(f"{key_prefix}_{pid}")
+        if "confianzas" in estado:
+            estado["confianzas"][pid] = st.session_state.get(f"{key_prefix}_conf_{pid}")
+
+
+def _sellar_tiempos(estado: dict) -> None:
+    """
+    Sella los segundos de las preguntas recién contestadas por primera vez.
+
+    Mide el hueco entre una respuesta y la anterior. En un examen de una sola
+    página —donde se puede saltar y volver, como en el real— eso es una
+    APROXIMACIÓN: el rato que se pasa leyendo las preguntas que salta se le
+    atribuye a la siguiente que contesta. Solo se sella la primera vez, para que
+    volver a repasarla al final no le achaque de golpe media hora.
+    """
+    ahora = time.time()
+    nuevas = [
+        p["pregunta_id"] for p in estado["preguntas"]
+        if estado["respuestas"].get(p["pregunta_id"]) is not None
+        and p["pregunta_id"] not in estado["segundos"]
+    ]
+    if not nuevas:
+        return
+    delta = max(1, int(round((ahora - estado["t_ultimo"]) / len(nuevas))))
+    for pid in nuevas:
+        estado["segundos"][pid] = delta
+    estado["t_ultimo"] = ahora
+
+
+@st.fragment(run_every=1)
+def _cronometro(estado: dict, key_prefix: str) -> None:
+    """
+    Cuenta atrás en vivo, con entrega automática al llegar a cero.
+
+    Va en un fragmento para que cada segundo se repinte SOLO el reloj: volver a
+    dibujar las 50 preguntas una vez por segundo sería insufrible.
+
+    El tiempo restante se calcula contra la marca de inicio del servidor, no con
+    un contador: así el reloj sobrevive a los reruns y sigue corriendo aunque el
+    alumno cierre la pestaña o recargue — exactamente como en el examen.
+    """
+    limite = estado["limite"]
+    restante = limite - (time.time() - estado["inicio"])
+
+    if restante <= 0:
+        _sincronizar_respuestas(estado, key_prefix)
+        estado["fin"] = estado["inicio"] + limite
+        estado["agotado"] = True
+        estado["respondido"] = True
+        st.rerun(scope="app")
+        return
+
+    st.progress(
+        min(1.0, restante / limite),
+        text=f"⏱️ **{_mmss(restante)}** — se entrega solo al llegar a cero",
+    )
+    if restante <= limite * _AVISO_TIEMPO:
+        st.warning(
+            f"Quedan {_mmss(restante)}. Lo que no hayas contestado se corregirá "
+            f"en blanco: repasa lo que puedas descartar antes de que suene."
+        )
+
+
+def _resumen_tiempo(estado: dict, n_preguntas: int, sin_llegar: int) -> dict:
+    """
+    Tiempo empleado y ritmo del intento, ya cerrado.
+
+    El ritmo se divide entre las preguntas a las que LLEGÓ, no entre las del
+    examen: quien agota el reloj consume el tiempo entero, así que dividir entre
+    el total le daría exactamente el ritmo objetivo y parecería ir puntual
+    justo por haber ido lento.
+    """
+    empleados = int(round(estado["fin"] - estado["inicio"]))
+    empleados = max(1, min(empleados, estado["limite"]))
+    alcanzadas = max(1, n_preguntas - sin_llegar)
+    return {
+        "empleados":  empleados,
+        "limite":     estado["limite"],
+        "alcanzadas": alcanzadas,
+        "ritmo":      round(empleados / alcanzadas, 1),
+        "objetivo":   estado["objetivo"],
+    }
+
+
+def _pintar_tiempo(res: dict, sin_llegar: int, agotado: bool) -> None:
+    objetivo = res["objetivo"]
+    if agotado:
+        st.error(
+            f"⏱️ **Se te acabó el tiempo** ({_mmss(res['limite'])}). "
+            + (
+                f"No llegaste a leer "
+                f"**{_plural(sin_llegar, 'pregunta', 'preguntas')}** — y eso no es dejar "
+                f"nada en blanco, es ir lento. En el examen real son puntos que ni "
+                f"siquiera te juegas."
+                if sin_llegar else
+                "Llegaste a todas, pero sin margen para revisar ninguna."
+            )
+        )
+        if sin_llegar:
+            st.caption(
+                f"Al ritmo que llevabas —**{res['ritmo']} s por pregunta**, frente a los "
+                f"{objetivo} s que da el examen— habrías necesitado "
+                f"{_mmss(res['ritmo'] * (res['alcanzadas'] + sin_llegar))} para terminarlo."
+            )
+        return
+
+    st.success(f"⏱️ Entregado en **{_mmss(res['empleados'])}** de {_mmss(res['limite'])}.")
+    veredicto = (
+        "vas sobrado de tiempo" if res["ritmo"] <= objetivo * 0.8
+        else "vas justo, pero llegas" if res["ritmo"] <= objetivo
+        else "vas lento para el examen real"
+    )
+    st.caption(
+        f"Ritmo: **{res['ritmo']} s/pregunta** frente a los {objetivo} s que da el "
+        f"examen oficial — {veredicto}."
+    )
+
+
 def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
     st.header("Simulacro personal")
     st.caption(
@@ -772,56 +931,91 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
         )
 
     if "simulacro" not in st.session_state:
-        st.session_state.simulacro = {
-            "preguntas": [], "respuestas": {}, "confianzas": {},
-            "respondido": False, "guardado": False,
-        }
+        st.session_state.simulacro = _simulacro_vacio()
     simulacro = st.session_state.simulacro
-    simulacro.setdefault("confianzas", {})
 
     if not simulacro["preguntas"]:
+        tiempo = get_tiempo_simulacro(oposicion_id, 50)
+        if tiempo["disponible"]:
+            st.caption(
+                f"⏱️ **Contra reloj**, como el examen: {tiempo['tiempo_minutos_examen']} minutos "
+                f"para {tiempo['num_preguntas_examen']} preguntas son "
+                f"**{tiempo['segundos_pregunta']} segundos por pregunta**. Al agotarse el "
+                f"tiempo el examen se entrega solo, con lo que hayas contestado."
+            )
         if st.button("Empezar simulacro personal", type="primary"):
             resultado = get_preguntas_simulacro_personal(user_id, oposicion_id, n=50)
             if not resultado["disponible"]:
                 st.warning(resultado["motivo"])
+            elif not tiempo["disponible"]:
+                st.warning(tiempo["motivo"])
             else:
+                preguntas = resultado["preguntas"]
+                # El reloj se ajusta a las preguntas que REALMENTE se sirven (el
+                # banco puede dar menos de 50), manteniendo el ritmo del examen.
+                reloj = get_tiempo_simulacro(oposicion_id, len(preguntas))
+                ahora = time.time()
                 simulacro.update(
-                    preguntas=resultado["preguntas"], respuestas={}, confianzas={},
-                    respondido=False, guardado=False,
+                    preguntas=preguntas, respuestas={}, confianzas={}, segundos={},
+                    respondido=False, guardado=False, agotado=False,
+                    inicio=ahora, t_ultimo=ahora, fin=None,
+                    limite=reloj["segundos_total"], objetivo=reloj["segundos_pregunta"],
                 )
                 st.rerun()
         return
 
     if not simulacro["respondido"]:
+        _cronometro(simulacro, "simulacro")
         _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro",
                           respondido=False, confianzas=simulacro["confianzas"])
+        _sellar_tiempos(simulacro)
         respondidas = sum(1 for v in simulacro["respuestas"].values() if v is not None)
         st.caption(f"{respondidas} / {len(simulacro['preguntas'])} respondidas")
         if st.button("Comprobar respuestas", type="primary"):
+            simulacro["fin"] = time.time()
             simulacro["respondido"] = True
             st.rerun()
     else:
         _render_preguntas(simulacro["preguntas"], simulacro["respuestas"], "simulacro",
                           respondido=True, confianzas=simulacro["confianzas"])
         preguntas = simulacro["preguntas"]
+
+        # Un blanco por reloj NO es un blanco estratégico: es una pregunta que
+        # ni llegó a leer. Se distingue por que no la tocó en absoluto (ni
+        # respuesta, ni confianza declarada) en un intento cerrado por el reloj.
+        sin_tocar = {
+            p["pregunta_id"] for p in preguntas
+            if simulacro["respuestas"].get(p["pregunta_id"]) is None
+            and simulacro["confianzas"].get(p["pregunta_id"]) is None
+        }
+        blancos_reloj = sin_tocar if simulacro["agotado"] else set()
+
         if not simulacro["guardado"]:
             for p in preguntas:
-                elegida = simulacro["respuestas"].get(p["pregunta_id"])
-                registrar_respuesta(user_id, p["pregunta_id"], elegida,
+                pid = p["pregunta_id"]
+                elegida = simulacro["respuestas"].get(pid)
+                registrar_respuesta(user_id, pid, elegida,
                                     elegida == p["correcta"], "simulacro_personal",
-                                    confianza=simulacro["confianzas"].get(p["pregunta_id"]))
+                                    segundos=simulacro["segundos"].get(pid),
+                                    confianza=simulacro["confianzas"].get(pid),
+                                    blanco_por_tiempo=pid in blancos_reloj)
         aciertos = sum(
             1 for p in preguntas if simulacro["respuestas"].get(p["pregunta_id"]) == p["correcta"]
         )
         blancos = sum(1 for p in preguntas if simulacro["respuestas"].get(p["pregunta_id"]) is None)
         errores = len(preguntas) - aciertos - blancos
 
+        res_tiempo = _resumen_tiempo(simulacro, len(preguntas), len(blancos_reloj))
         resultado = calificar_simulacro(oposicion_id, aciertos, errores, blancos, len(preguntas))
         if resultado["disponible"]:
             if not simulacro["guardado"]:
                 guardar_resultado_simulacro(
                     user_id, oposicion_id, "personal", len(preguntas),
                     aciertos, errores, blancos, resultado["nota"], resultado["aprobado"],
+                    segundos_empleados=res_tiempo["empleados"],
+                    segundos_limite=res_tiempo["limite"],
+                    tiempo_agotado=simulacro["agotado"],
+                    sin_llegar=len(blancos_reloj),
                 )
                 simulacro["guardado"] = True
 
@@ -835,15 +1029,13 @@ def _modo_simulacro_personal(oposicion_id: int, user_id: str) -> None:
                 f"**{resultado['nota']} / {resultado['escala_max']}** — {veredicto} "
                 f"(mínimo {resultado['nota_minima']})"
             )
+            _pintar_tiempo(res_tiempo, len(blancos_reloj), simulacro["agotado"])
             st.caption("Este resultado no afecta a tu progreso de repaso.")
         else:
             st.warning(resultado["motivo"])
 
         if st.button("Nuevo simulacro →", type="primary"):
-            st.session_state.simulacro = {
-                "preguntas": [], "respuestas": {}, "confianzas": {},
-                "respondido": False, "guardado": False,
-            }
+            st.session_state.simulacro = _simulacro_vacio()
             st.rerun()
 
 
@@ -851,14 +1043,17 @@ def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
     st.header("Simulacro de academia")
     st.caption(
         "Mismas preguntas para todos los alumnos, dentro de la ventana de tiempo "
-        "fijada por la academia. Un único intento por simulacro."
+        "fijada por la academia. Contra reloj, con el ritmo del examen oficial. "
+        "Un único intento por simulacro."
     )
 
     if "simulacro_academia" not in st.session_state:
-        st.session_state.simulacro_academia = {
-            "simulacro_id": None, "preguntas": [], "respuestas": {},
-            "respondido": False, "guardado": False,
-        }
+        sa_inicial = _simulacro_vacio()
+        # La academia no pide confianza: es su examen, no un entrenamiento.
+        # Sin la clave, _sincronizar_respuestas no toca los widgets de confianza.
+        sa_inicial.pop("confianzas")
+        sa_inicial["simulacro_id"] = None
+        st.session_state.simulacro_academia = sa_inicial
     sa = st.session_state.simulacro_academia
 
     if not sa["preguntas"]:
@@ -879,37 +1074,59 @@ def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
         if st.button("Empezar simulacro de academia", type="primary"):
             simulacro_id = opciones[elegido]
             resultado = get_preguntas_simulacro_academia(simulacro_id)
+            tiempo = (get_tiempo_simulacro(oposicion_id, len(resultado["preguntas"]))
+                      if resultado["disponible"] else {"disponible": False, "motivo": ""})
             if not resultado["disponible"]:
                 st.warning(resultado["motivo"])
+            elif not tiempo["disponible"]:
+                st.warning(tiempo["motivo"])
             else:
+                ahora = time.time()
                 sa.update(
                     simulacro_id=simulacro_id, preguntas=resultado["preguntas"],
-                    respuestas={}, respondido=False, guardado=False,
+                    respuestas={}, segundos={}, respondido=False, guardado=False,
+                    agotado=False, inicio=ahora, t_ultimo=ahora, fin=None,
+                    limite=tiempo["segundos_total"], objetivo=tiempo["segundos_pregunta"],
                 )
                 st.rerun()
         return
 
     if not sa["respondido"]:
+        _cronometro(sa, "simulacro_academia")
         _render_preguntas(sa["preguntas"], sa["respuestas"], "simulacro_academia", respondido=False)
+        _sellar_tiempos(sa)
         respondidas = sum(1 for v in sa["respuestas"].values() if v is not None)
         st.caption(f"{respondidas} / {len(sa['preguntas'])} respondidas")
         if st.button("Comprobar respuestas", type="primary", key="btn_comprobar_academia"):
+            sa["fin"] = time.time()
             sa["respondido"] = True
             st.rerun()
     else:
         _render_preguntas(sa["preguntas"], sa["respuestas"], "simulacro_academia", respondido=True)
         preguntas = sa["preguntas"]
+
+        # Aquí no se pide confianza, así que el único indicio de "no llegué" es
+        # no haberla contestado en un examen que cerró el reloj.
+        blancos_reloj = {
+            p["pregunta_id"] for p in preguntas
+            if sa["respuestas"].get(p["pregunta_id"]) is None
+        } if sa["agotado"] else set()
+
         if not sa["guardado"]:
             for p in preguntas:
-                elegida = sa["respuestas"].get(p["pregunta_id"])
-                registrar_respuesta(user_id, p["pregunta_id"], elegida,
-                                    elegida == p["correcta"], "simulacro_academia")
+                pid = p["pregunta_id"]
+                elegida = sa["respuestas"].get(pid)
+                registrar_respuesta(user_id, pid, elegida,
+                                    elegida == p["correcta"], "simulacro_academia",
+                                    segundos=sa["segundos"].get(pid),
+                                    blanco_por_tiempo=pid in blancos_reloj)
         aciertos = sum(
             1 for p in preguntas if sa["respuestas"].get(p["pregunta_id"]) == p["correcta"]
         )
         blancos = sum(1 for p in preguntas if sa["respuestas"].get(p["pregunta_id"]) is None)
         errores = len(preguntas) - aciertos - blancos
 
+        res_tiempo = _resumen_tiempo(sa, len(preguntas), len(blancos_reloj))
         resultado = calificar_simulacro(oposicion_id, aciertos, errores, blancos, len(preguntas))
         if resultado["disponible"]:
             if not sa["guardado"]:
@@ -917,6 +1134,10 @@ def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
                     user_id, oposicion_id, "academia", len(preguntas),
                     aciertos, errores, blancos, resultado["nota"], resultado["aprobado"],
                     simulacro_academia_id=sa["simulacro_id"],
+                    segundos_empleados=res_tiempo["empleados"],
+                    segundos_limite=res_tiempo["limite"],
+                    tiempo_agotado=sa["agotado"],
+                    sin_llegar=len(blancos_reloj),
                 )
                 sa["guardado"] = True
 
@@ -930,6 +1151,7 @@ def _modo_simulacro_academia(oposicion_id: int, user_id: str) -> None:
                 f"**{resultado['nota']} / {resultado['escala_max']}** — {veredicto} "
                 f"(mínimo {resultado['nota_minima']})"
             )
+            _pintar_tiempo(res_tiempo, len(blancos_reloj), sa["agotado"])
         else:
             st.warning(resultado["motivo"])
 
@@ -1022,6 +1244,8 @@ def _modo_mi_progreso(oposicion_id: int, user_id: str) -> None:
         )
         return
 
+    _panel_ritmo(oposicion_id, user_id)
+
     for h in historial:
         tipo_label = "Personal" if h["tipo"] == "personal" else "Academia"
         fecha = h["realizado_en"].strftime("%d/%m/%Y %H:%M")
@@ -1030,8 +1254,54 @@ def _modo_mi_progreso(oposicion_id: int, user_id: str) -> None:
             f"**{fecha}** — {tipo_label} ({h['n_preguntas']} preguntas) — "
             f"nota **{h['nota']}** — {veredicto}"
         )
-        st.caption(f"{h['aciertos']} aciertos · {h['errores']} fallos · {h['blancos']} en blanco")
+        pie = f"{h['aciertos']} aciertos · {h['errores']} fallos · {h['blancos']} en blanco"
+        if h["segundos_empleados"]:
+            reloj = "⏱️ se agotó el tiempo" if h["tiempo_agotado"] else f"⏱️ {_mmss(h['segundos_empleados'])}"
+            alcanzadas = max(1, h["n_preguntas"] - h["sin_llegar"])
+            ritmo = round(h["segundos_empleados"] / alcanzadas, 1)
+            pie += f" · {reloj} ({ritmo} s/pregunta)"
+            if h["sin_llegar"]:
+                pie += f" · {h['sin_llegar']} sin leer"
+        st.caption(pie)
         st.divider()
+
+
+def _panel_ritmo(oposicion_id: int, user_id: str) -> None:
+    """
+    ¿Le da el tiempo? La nota dice si sabe; el ritmo dice si va a poder
+    demostrarlo. Y los dos problemas tienen remedios opuestos: al que va lento
+    no se le arregla estudiando más temas.
+    """
+    ritmo = get_ritmo(user_id, oposicion_id)
+    if not ritmo["disponible"] or not ritmo["objetivo"]:
+        return
+
+    objetivo = ritmo["objetivo"]
+    col1, col2 = st.columns(2)
+    # El delta ya se pinta verde en positivo y rojo en negativo: ir sobrado de
+    # tiempo es bueno e ir lento es malo, así que el color por defecto acierta.
+    col1.metric("Tu ritmo", f"{ritmo['ritmo']} s/pregunta",
+                delta=f"{ritmo['margen_pct']}% de margen")
+    col2.metric("Ritmo del examen", f"{objetivo} s/pregunta")
+
+    if ritmo["sin_llegar"]:
+        st.error(
+            f"Te has quedado sin leer **{_plural(ritmo['sin_llegar'], 'pregunta', 'preguntas')}** "
+            f"por falta de tiempo, en "
+            f"{_plural(ritmo['agotados'], 'simulacro que cerró', 'simulacros que cerró')} el reloj. "
+            f"No es que fallaras: es que no llegaste a verlas. Son puntos que ni te juegas, y no "
+            f"se arreglan estudiando más temas."
+        )
+    elif ritmo["ritmo"] > objetivo:
+        st.warning(
+            f"Vas por encima del ritmo del examen. De momento llegas, pero sin margen: "
+            f"en el examen real no hay segundas oportunidades para la última pregunta."
+        )
+    else:
+        st.caption(
+            f"Vas dentro del ritmo del examen, con un {ritmo['margen_pct']}% de margen. "
+            f"Ese margen es el que te deja releer las dudosas al final."
+        )
 
 
 def _onboarding_perfil(user_id: str) -> bool:

@@ -638,7 +638,8 @@ def get_plan_partida(oposicion_id: int, n_temas: int = 8) -> list[dict]:
 
 def registrar_respuesta(user_id: str, pregunta_id: int, opcion_elegida: str | None,
                         correcta: bool, contexto: str, segundos: int | None = None,
-                        confianza: str | None = None) -> None:
+                        confianza: str | None = None,
+                        blanco_por_tiempo: bool = False) -> None:
     """
     Guarda UNA respuesta con la opción que eligió el alumno (migración 048).
 
@@ -649,6 +650,11 @@ def registrar_respuesta(user_id: str, pregunta_id: int, opcion_elegida: str | No
     corrección: 'seguro' | 'dudo' | 'ni_idea', o None si no se le pidió. Sin
     ese dato, acertar por saberlo y acertar por suerte se ven exactamente igual.
 
+    `blanco_por_tiempo` (migración 052) distingue el blanco que NO fue una
+    decisión: la pregunta a la que no llegó antes de que sonara el reloj. Se
+    excluye de la calibración y de los análisis del ítem — si no, las preguntas
+    del final del examen parecerían imposibles solo por estar al final.
+
     Es la base del análisis de distractores, del índice de discriminación (que
     detecta preguntas rotas o mal marcadas) y del diagnóstico real del error.
     Se llama SIEMPRE que el alumno responde, en cualquier modo.
@@ -658,10 +664,10 @@ def registrar_respuesta(user_id: str, pregunta_id: int, opcion_elegida: str | No
             cur.execute("""
                 INSERT INTO normas.respuestas
                     (user_id, pregunta_id, opcion_elegida, correcta, contexto,
-                     segundos, confianza)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                     segundos, confianza, blanco_por_tiempo)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (user_id, pregunta_id, opcion_elegida, correcta, contexto,
-                  segundos, confianza))
+                  segundos, confianza, blanco_por_tiempo))
         conn.commit()
 
 
@@ -740,6 +746,10 @@ def get_calibracion(user_id: str, oposicion_id: int) -> dict:
     responder SIEMPRE — sus corazonadas valen puntos. Si no, los distractores le
     arrastran y ahí sí debe callar.
 
+    No entran los blancos por reloj (migración 052): la pregunta a la que no
+    llegó no la dejó en blanco, se le acabó el tiempo. Contarla como prudencia
+    le daría el consejo justo al revés ("contesta más" cuando va lento).
+
     Devuelve `disponible=False` mientras no haya muestra suficiente: un consejo
     mal fundado es peor que ninguno.
     """
@@ -756,6 +766,7 @@ def get_calibracion(user_id: str, oposicion_id: int) -> dict:
                        COUNT(*) FILTER (WHERE correcta)               AS aciertos
                 FROM normas.respuestas
                 WHERE user_id = %s AND confianza IS NOT NULL
+                  AND NOT blanco_por_tiempo
                 GROUP BY confianza
             """, (user_id,))
             filas = {r[0]: {"total": r[1], "blancos": r[2], "aciertos": r[3]}
@@ -890,13 +901,16 @@ def analisis_distractores(pregunta_id: int) -> dict:
       · Distractor DEMASIADO bueno: lo eligen más que a la correcta. O la clave
         está mal marcada, o el distractor es defendible (pregunta ambigua).
       · Tasa de blancos: si es alta, la pregunta desconcierta.
+
+    No cuenta los blancos por reloj (migración 052): quien no llegó a la
+    pregunta no eligió nada, así que no dice nada de sus distractores.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT opcion_elegida, COUNT(*)
                 FROM normas.respuestas
-                WHERE pregunta_id = %s
+                WHERE pregunta_id = %s AND NOT blanco_por_tiempo
                 GROUP BY opcion_elegida
             """, (pregunta_id,))
             conteo = {(o or "blanco"): n for o, n in cur.fetchall()}
@@ -2466,17 +2480,30 @@ def calificar_simulacro(oposicion_id: int, aciertos: int, errores: int, blancos:
 
 def guardar_resultado_simulacro(user_id: str, oposicion_id: int, tipo: str, n_preguntas: int,
                                 aciertos: int, errores: int, blancos: int, nota: float,
-                                aprobado: bool, simulacro_academia_id: int | None = None) -> None:
-    """Inserta un intento cerrado de simulacro en normas.historial_simulacros."""
+                                aprobado: bool, simulacro_academia_id: int | None = None,
+                                segundos_empleados: int | None = None,
+                                segundos_limite: int | None = None,
+                                tiempo_agotado: bool = False,
+                                sin_llegar: int = 0) -> None:
+    """
+    Inserta un intento cerrado de simulacro en normas.historial_simulacros.
+
+    El reloj (migración 052) se guarda CON el intento —incluido el límite que
+    tenía— para que el ritmo siga siendo interpretable aunque mañana cambie la
+    convocatoria. NULL = intento sin cronómetro, no un ritmo desconocido que
+    haya que estimar.
+    """
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO normas.historial_simulacros
                     (user_id, oposicion_id, tipo, simulacro_academia_id, n_preguntas,
-                     aciertos, errores, blancos, nota, aprobado)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     aciertos, errores, blancos, nota, aprobado,
+                     segundos_empleados, segundos_limite, tiempo_agotado, sin_llegar)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (user_id, oposicion_id, tipo, simulacro_academia_id, n_preguntas,
-                  aciertos, errores, blancos, nota, aprobado))
+                  aciertos, errores, blancos, nota, aprobado,
+                  segundos_empleados, segundos_limite, tiempo_agotado, sin_llegar))
         conn.commit()
 
 
@@ -2489,10 +2516,105 @@ def get_historial_simulacros(user_id: str, oposicion_id: int) -> list[dict]:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT tipo, n_preguntas, aciertos, errores, blancos, nota,
-                       aprobado, realizado_en
+                       aprobado, realizado_en,
+                       segundos_empleados, segundos_limite, tiempo_agotado, sin_llegar
                 FROM normas.historial_simulacros
                 WHERE user_id = %s AND oposicion_id = %s
                 ORDER BY realizado_en DESC
             """, (user_id, oposicion_id))
             cols = [d[0] for d in cur.description]
             return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def get_tiempo_simulacro(oposicion_id: int, n_preguntas: int) -> dict:
+    """
+    Cuánto tiempo tiene el alumno para un simulacro de `n_preguntas`.
+
+    **No se hardcodea**: sale de la convocatoria vigente (migración 022), que ya
+    guarda `tiempo_minutos` y `num_preguntas`. GACE: 90 minutos para 100
+    preguntas, o sea **54 segundos por pregunta**; un simulacro de 50 hereda
+    45 minutos. Si mañana la convocatoria cambia el reloj, el simulacro cambia
+    solo — que es justo por lo que esos datos viven en BD.
+
+    El ritmo objetivo (segundos por pregunta) es la cifra que de verdad entrena
+    al alumno: es contra ella contra la que se compara su ritmo real.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT tiempo_minutos, num_preguntas
+                FROM normas.convocatorias
+                WHERE oposicion_id = %s
+                ORDER BY año DESC
+                LIMIT 1
+            """, (oposicion_id,))
+            row = cur.fetchone()
+
+    if row is None or not row[1]:
+        return {"disponible": False,
+                "motivo": "No hay convocatoria configurada: sin ella no se sabe "
+                          "cuánto tiempo da el examen real."}
+
+    tiempo_minutos, num_oficial = row
+    seg_por_pregunta = tiempo_minutos * 60 / num_oficial
+    total = int(round(seg_por_pregunta * n_preguntas))
+    return {
+        "disponible":          True,
+        "segundos_total":      total,
+        "segundos_pregunta":   round(seg_por_pregunta, 1),
+        "minutos_total":       round(total / 60),
+        "tiempo_minutos_examen": tiempo_minutos,
+        "num_preguntas_examen":  num_oficial,
+    }
+
+
+def get_ritmo(user_id: str, oposicion_id: int) -> dict:
+    """
+    ¿Le da el tiempo? (migración 052)
+
+    La nota dice si sabe; el ritmo dice si va a poder demostrarlo. Son fallos
+    distintos y tienen remedios opuestos: al que va lento no se le arregla
+    estudiando más temas.
+
+    Solo mira intentos cronometrados (`segundos_empleados IS NOT NULL`): los
+    simulacros que se hicieron sin reloj no tienen ritmo, y estimárselo sería
+    inventar el dato.
+
+    OJO AL DENOMINADOR: el ritmo se mide sobre las preguntas a las que LLEGÓ, no
+    sobre las del examen. Quien se queda sin tiempo agota el reloj entero, así
+    que dividir entre el total le daría clavado el ritmo objetivo — y parecería
+    puntual justo por haber ido lento.
+    """
+    tiempo = get_tiempo_simulacro(oposicion_id, 1)
+    objetivo = tiempo["segundos_pregunta"] if tiempo["disponible"] else None
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*)                               AS intentos,
+                       SUM(n_preguntas - sin_llegar)          AS alcanzadas,
+                       SUM(segundos_empleados)                AS segundos,
+                       COUNT(*) FILTER (WHERE tiempo_agotado) AS agotados,
+                       SUM(sin_llegar)                        AS sin_llegar
+                FROM normas.historial_simulacros
+                WHERE user_id = %s AND oposicion_id = %s
+                  AND segundos_empleados IS NOT NULL
+            """, (user_id, oposicion_id))
+            intentos, alcanzadas, segundos, agotados, sin_llegar = cur.fetchone()
+
+    if not intentos or not alcanzadas:
+        return {"disponible": False,
+                "motivo": "Todavía no has hecho ningún simulacro cronometrado.",
+                "objetivo": objetivo}
+
+    ritmo = segundos / alcanzadas
+    return {
+        "disponible":  True,
+        "intentos":    intentos,
+        "objetivo":    objetivo,
+        "ritmo":       round(ritmo, 1),
+        "agotados":    agotados,
+        "sin_llegar":  sin_llegar,      # preguntas que nunca llegó a leer
+        # Margen sobre el ritmo del examen. Negativo = va lento.
+        "margen_pct":  round(100 * (objetivo - ritmo) / objetivo, 1) if objetivo else None,
+    }

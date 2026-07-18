@@ -90,11 +90,17 @@ def run(dry_run: bool = False) -> None:
             """)
             min_n = cur.fetchone()[0]
 
+            # Los blancos por reloj quedan fuera (migración 052): quien no llegó a
+            # la pregunta no la falló, no la leyó. Contarlos haría que las
+            # preguntas del FINAL del examen —a las que menos gente llega—
+            # parecieran imposibles, y el detector señalaría preguntas sanas
+            # por su posición.
             cur.execute("""
                 SELECT r.user_id, r.pregunta_id, r.opcion_elegida, r.correcta
                 FROM normas.respuestas r
                 JOIN normas.preguntas_test pt ON pt.pregunta_id = r.pregunta_id
                 WHERE pt.revisada AND pt.activa AND NOT pt.descartada
+                  AND NOT r.blanco_por_tiempo
             """)
             respuestas = cur.fetchall()
 
