@@ -28,6 +28,10 @@ DB_CONFIG = {
     "password": _get("DB_PASSWORD", "postgres"),
 }
 
+# Entorno derivado del host, no de una variable aparte: así nunca se
+# desincroniza de a qué BD se conecta realmente la app.
+DB_ENTORNO = "supabase" if "supabase" in DB_CONFIG["host"] else "local"
+
 OPENAI_API_KEY  = _get("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = _get("ANTHROPIC_API_KEY")
 

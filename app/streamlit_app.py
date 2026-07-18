@@ -37,7 +37,7 @@ from app.retrieval import (get_leyes_disponibles, get_oposiciones,
                            get_simulacros_academia_disponibles,
                            generar_simulacro_academia, autorizar_simulacro_academia,
                            listar_simulacros_academia)
-from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from app.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, DB_ENTORNO
 from app.auth_alumno import registrar_alumno, login_alumno
 from app.db import get_connection
 from scripts.build_test_bank import (
@@ -67,6 +67,13 @@ st.markdown("""
   .st-key-sidebar_footer p { font-size: .78rem; margin-bottom: .2rem; }
 </style>
 """, unsafe_allow_html=True)
+
+# Aviso de entorno de BD, lo primero que se pinta: si esto dice "producción"
+# y la intención era trabajar en local, hay que parar antes de tocar nada.
+if DB_ENTORNO == "supabase":
+    st.sidebar.error("🔴 BD: SUPABASE (producción)")
+else:
+    st.sidebar.success("🟢 BD: Postgres local")
 
 
 # El pie va al final del sidebar. Como los selectores llaman a st.stop() cuando no
